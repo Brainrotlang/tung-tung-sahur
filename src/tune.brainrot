@@ -1,0 +1,73 @@
+🚽 tune.brainrot — every tuning constant in the game, in one place.
+🚽
+🚽 Brainrot has no top-level globals and no preprocessor constants, so the
+🚽 single source of truth is a set of zero-argument accessor functions. They
+🚽 are cooked into both the game and the tests, which is what keeps the
+🚽 golden files honest: change a number here and the tests move with it.
+🚽
+🚽 `skibidi main` caches these into `deadass` locals once at startup, so the
+🚽 per-frame cost is zero. See DESIGN.md section 5.
+
+🚽 --- screen ---
+rizz t_screen_w()        { bussin 1280; }
+rizz t_screen_h()        { bussin 720; }
+chad t_ground_y()        { bussin 560.0; }
+
+🚽 --- player ---
+chad t_player_x()        { bussin 200.0; }
+chad t_player_w()        { bussin 48.0; }
+chad t_player_h()        { bussin 96.0; }
+chad t_gravity()         { bussin 2600.0; }
+chad t_jump_v()          { bussin -1000.0; }
+rizz t_hearts_max()      { bussin 3; }
+chad t_iframe_time()     { bussin 1.2; }
+chad t_hit_slowdown()    { bussin 0.75; }
+
+🚽 --- bat ---
+chad t_attack_total()    { bussin 0.45; }
+chad t_attack_active()   { bussin 0.30; }
+chad t_hitbox_dx()       { bussin 40.0; }
+chad t_hitbox_dy()       { bussin 16.0; }
+chad t_hitbox_w()        { bussin 56.0; }
+chad t_hitbox_h()        { bussin 56.0; }
+
+🚽 --- world ---
+chad t_speed_start()     { bussin 260.0; }
+chad t_speed_accel()     { bussin 3.0; }
+chad t_speed_max()       { bussin 900.0; }
+chad t_enemy_close()     { bussin 40.0; }
+chad t_dt_max()          { bussin 0.05; }
+chad t_sahur_distance()  { bussin 200000.0; }   🚽 M3
+
+🚽 --- spawning ---
+chad t_spawn_x()         { bussin 1340.0; }
+chad t_gap_base()        { bussin 1.55; }
+chad t_gap_slope()       { bussin 0.0011; }
+chad t_gap_min()         { bussin 0.55; }
+chad t_gap_jitter()      { bussin 0.20; }
+chad t_fair_jump_jump()  { bussin 0.95; }
+chad t_fair_any()        { bussin 0.60; }
+
+🚽 --- pools ---
+rizz t_max_obstacles()   { bussin 16; }
+rizz t_max_enemies()     { bussin 16; }
+
+🚽 --- entity kinds ---
+🚽 0 crate  48x48 grounded  -> jump
+🚽 1 post   40x96 grounded  -> jump
+🚽 2 brr brr patapim 64x64  -> bonk
+rizz t_kind_crate()      { bussin 0; }
+rizz t_kind_post()       { bussin 1; }
+rizz t_kind_patapim()    { bussin 2; }
+
+🚽 --- run states ---
+rizz t_state_title()     { bussin 0; }
+rizz t_state_run()       { bussin 1; }
+rizz t_state_over()      { bussin 2; }
+
+🚽 --- keys (raylib keycodes; see docs/brainray.md) ---
+rizz t_key_space()       { bussin 32; }
+rizz t_key_up()          { bussin 265; }
+rizz t_key_x()           { bussin 88; }
+rizz t_key_z()           { bussin 90; }
+rizz t_key_r()           { bussin 82; }

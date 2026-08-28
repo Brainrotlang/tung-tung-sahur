@@ -1,0 +1,163 @@
+🚽 unit_curve.brainrot — src/curve.brainrot: the difficulty curve, the
+🚽 spawn table, and the fairness invariant.
+
+#cooked "../src/tune.brainrot"
+#cooked "../src/math.brainrot"
+#cooked "../src/curve.brainrot"
+
+skibidi main {
+    🚽 --- speed_to_lvl -----------------------------------------------
+    🚽 Eight segments, matching the eight the HUD draws.
+    yapping("-- speed_to_lvl --");
+    yapping("below start %d", speed_to_lvl(0.0));
+    yapping("at start    %d", speed_to_lvl(260.0));
+    yapping("349         %d", speed_to_lvl(349.0));
+    yapping("350         %d", speed_to_lvl(350.0));
+    yapping("620         %d", speed_to_lvl(620.0));
+    yapping("at cap      %d", speed_to_lvl(900.0));
+    yapping("above cap   %d", speed_to_lvl(5000.0));
+
+    🚽 --- spawn_gap ---------------------------------------------------
+    🚽 Must fall as speed rises and then sit on the floor -- never below.
+    yapping("-- spawn_gap --");
+    chad prev = 999.0;
+    cap  monotonic = W;
+    cap  above_floor = W;
+    flex (rizz s = 260; s <= 1200; s = s + 20) {
+        chad g = spawn_gap(s);
+        edgy (g > prev) { monotonic = L; }
+        edgy (g < t_gap_min()) { above_floor = L; }
+        prev = g;
+    }
+    yapping("monotonic=%b above_floor=%b", monotonic, above_floor);
+    yapping("at 260 %.3f   at 620 %.3f   at 900 %.3f   at 1200 %.3f",
+            spawn_gap(260.0), spawn_gap(620.0), spawn_gap(900.0), spawn_gap(1200.0));
+
+    🚽 --- the fairness invariant --------------------------------------
+    🚽 Air time for one jump, derived from gravity and the jump impulse
+    🚽 rather than hardcoded, so that retuning either one without
+    🚽 retuning FAIR_JUMP_JUMP fails here instead of in someone's run.
+    chad air_time = 2.0 * absf(t_jump_v()) / t_gravity();
+    yapping("-- fairness --");
+    yapping("air time %.3fs, jump-jump floor %.3fs", air_time, t_fair_jump_jump());
+
+    cap jump_floor_ok = W;
+    edgy (t_fair_jump_jump() < air_time) { jump_floor_ok = L; }
+    yapping("jump-jump floor clears one full arc: %b", jump_floor_ok);
+
+    🚽 Sweep every speed the game can reach, every kind pair, and the
+    🚽 full jitter range. No combination may produce a gap that is
+    🚽 unreactable. An unavoidable spawn is a bug, not a difficulty
+    🚽 setting -- this is the test that says so.
+    cap  fair_everywhere = W;
+    chad worst_jump_jump = 999.0;
+    chad worst_any       = 999.0;
+    flex (rizz s = 260; s <= 1200; s = s + 10) {
+        flex (rizz pk = 0; pk < 3; pk = pk + 1) {
+            flex (rizz nk = 0; nk < 3; nk = nk + 1) {
+                flex (rizz j = -1; j <= 1; j = j + 1) {
+                    chad raw = spawn_gap(s) + j * t_gap_jitter();
+                    chad gap = fair_clamp(raw, pk, nk);
+
+                    cap a = kind_is_jump(pk);
+                    cap b = kind_is_jump(nk);
+                    cap both_jump = L;
+                    edgy (a) { edgy (b) { both_jump = W; } }
+
+                    edgy (both_jump) {
+                        edgy (gap < worst_jump_jump) { worst_jump_jump = gap; }
+                        edgy (gap < air_time) { fair_everywhere = L; }
+                    }
+                    amogus {
+                        edgy (gap < worst_any) { worst_any = gap; }
+                    }
+                    edgy (gap < t_fair_any()) { fair_everywhere = L; }
+                }
+            }
+        }
+    }
+    yapping("fair everywhere=%b  worst jump-jump %.3fs  worst any %.3fs",
+            fair_everywhere, worst_jump_jump, worst_any);
+
+    🚽 --- kind_is_jump ------------------------------------------------
+    yapping("-- kinds --");
+    yapping("crate is jump   %b", kind_is_jump(t_kind_crate()));
+    yapping("post is jump    %b", kind_is_jump(t_kind_post()));
+    yapping("patapim is jump %b", kind_is_jump(t_kind_patapim()));
+    yapping("crate   %.0fx%.0f", kind_w(t_kind_crate()),   kind_h(t_kind_crate()));
+    yapping("post    %.0fx%.0f", kind_w(t_kind_post()),    kind_h(t_kind_post()));
+    yapping("patapim %.0fx%.0f", kind_w(t_kind_patapim()), kind_h(t_kind_patapim()));
+
+    🚽 --- pick_kind ---------------------------------------------------
+    🚽 The tall post must not appear at level 1: the opening seconds
+    🚽 teach the crate jump on its own.
+    yapping("-- pick_kind --");
+    rizz lvl1_posts = 0;
+    rizz s1 = 7;
+    flex (rizz i = 0; i < 10000; i = i + 1) {
+        s1 = rng_next(s1);
+        edgy (pick_kind(s1, 1) == t_kind_post()) { lvl1_posts = lvl1_posts + 1; }
+    }
+    yapping("posts at lvl 1: %d", lvl1_posts);
+
+    rizz c_crate = 0;
+    rizz c_post  = 0;
+    rizz c_pat   = 0;
+    rizz s2 = 7;
+    flex (rizz i = 0; i < 10000; i = i + 1) {
+        s2 = rng_next(s2);
+        rizz k = pick_kind(s2, 5);
+        edgy (k == t_kind_crate())   { c_crate = c_crate + 1; }
+        edgy (k == t_kind_post())    { c_post  = c_post + 1; }
+        edgy (k == t_kind_patapim()) { c_pat   = c_pat + 1; }
+    }
+    yapping("lvl 5 over 10000: crate %d post %d patapim %d",
+            c_crate, c_post, c_pat);
+
+    🚽 --- the curve over time ------------------------------------------
+    🚽 The headless harness cannot cover this: its input tape is blind, so
+    🚽 it dies every ten seconds or so and `speed` never leaves level 1.
+    🚽 What a *clean* run looks like is therefore integrated here, at the
+    🚽 same 60Hz the game steps at, and checked against the feel table in
+    🚽 DESIGN.md section 7.2. If those numbers and this output disagree,
+    🚽 one of them is a lie.
+    yapping("-- clean run, 60hz --");
+    chad sp = t_speed_start();
+    chad ds = 0.0;
+    chad step = 1.0 / 60.0;
+    flex (rizz f = 0; f <= 18000; f = f + 1) {
+        edgy (f % 3600 == 0) {
+            yapping("%d:%02d  speed %7.2f  lvl %d  dist %9.0f  gap %.3f",
+                    f / 3600, 0, sp, speed_to_lvl(sp), ds, spawn_gap(sp));
+        }
+        sp = sp + t_speed_accel() * step;
+        edgy (sp > t_speed_max()) { sp = t_speed_max(); }
+        ds = ds + sp * step;
+    }
+
+    🚽 Sahur is a fixed distance, not a fixed time, so that the challenge
+    🚽 is the same every run. This is how long a clean run actually takes
+    🚽 to get there.
+    chad sp2 = t_speed_start();
+    chad ds2 = 0.0;
+    rizz frames_to_sahur = -1;
+    flex (rizz f = 0; f < 60000; f = f + 1) {
+        sp2 = sp2 + t_speed_accel() * step;
+        edgy (sp2 > t_speed_max()) { sp2 = t_speed_max(); }
+        ds2 = ds2 + sp2 * step;
+        edgy (ds2 >= t_sahur_distance()) {
+            edgy (frames_to_sahur < 0) { frames_to_sahur = f; }
+        }
+    }
+    yapping("sahur at %.0f px reached after %d frames (%d:%02d)",
+            t_sahur_distance(), frames_to_sahur,
+            frames_to_sahur / 3600, (frames_to_sahur % 3600) / 60);
+
+    🚽 --- sky palette --------------------------------------------------
+    yapping("-- sky --");
+    flex (rizz l = 1; l <= 8; l = l + 1) {
+        yapping("lvl %d: %d %d %d", l, sky_r(l), sky_g(l), sky_b(l));
+    }
+
+    bussin 0;
+}

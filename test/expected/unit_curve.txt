@@ -1,0 +1,42 @@
+-- speed_to_lvl --
+below start 1
+at start    1
+349         1
+350         2
+620         5
+at cap      8
+above cap   8
+-- spawn_gap --
+monotonic=W above_floor=W
+at 260 1.264   at 620 0.868   at 900 0.560   at 1200 0.550
+-- fairness --
+air time 0.769s, jump-jump floor 0.950s
+jump-jump floor clears one full arc: W
+fair everywhere=W  worst jump-jump 0.950s  worst any 0.600s
+-- kinds --
+crate is jump   W
+post is jump    W
+patapim is jump L
+crate   48x48
+post    40x96
+patapim 64x64
+-- pick_kind --
+posts at lvl 1: 0
+lvl 5 over 10000: crate 2985 post 2464 patapim 4551
+-- clean run, 60hz --
+0:00  speed  260.00  lvl 1  dist         0  gap 1.264
+1:00  speed  439.96  lvl 2  dist     21000  gap 1.066
+2:00  speed  619.91  lvl 4  dist     52798  gap 0.868
+3:00  speed  799.87  lvl 6  dist     95393  gap 0.670
+4:00  speed  900.00  lvl 8  dist    147722  gap 0.560
+5:00  speed  900.00  lvl 8  dist    201722  gap 0.560
+sahur at 200000 px reached after 17885 frames (4:58)
+-- sky --
+lvl 1: 12 14 34
+lvl 2: 12 14 34
+lvl 3: 18 20 48
+lvl 4: 18 20 48
+lvl 5: 38 30 64
+lvl 6: 38 30 64
+lvl 7: 78 44 66
+lvl 8: 140 74 60

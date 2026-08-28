@@ -1,0 +1,69 @@
+🚽 math.brainrot — the arithmetic stdrot doesn't have.
+🚽
+🚽 stdrot is yapping/yappin/baka/ragequit/chill/slorp/bet. There is no rand,
+🚽 no sqrt, no floor, no abs, no min/max. Everything the game needs lives
+🚽 here, in pure Brainrot, over scalars only.
+
+🚽 Park-Miller "minimal standard" PRNG via Schrage's method.
+🚽
+🚽 The obvious LCG (s * 1103515245 + 12345) overflows int32, and the
+🚽 interpreter is built with -fsanitize=undefined, so that aborts the run
+🚽 rather than wrapping. Schrage's factorisation never leaves int32 by
+🚽 construction: 16807 * lo with lo < 127773 tops out at 2,147,469,111,
+🚽 just under 2^31.
+🚽
+🚽 Period 2^31-2. Valid seeds are 1 .. 2147483646; 0 is a fixed point.
+rizz rng_next(rizz s) {
+    rizz hi = s / 127773;
+    rizz lo = s % 127773;
+    rizz v = 16807 * lo - 2836 * hi;
+    edgy (v < 0) { v = v + 2147483647; }
+    bussin v;
+}
+
+🚽 A seed mapped to roughly 0.0 .. 1.0. Used for spawn jitter.
+chad rng_unit(rizz s) {
+    bussin (s % 10000) / 10000.0;
+}
+
+🚽 A seed mapped to -1.0 .. 1.0.
+chad rng_signed(rizz s) {
+    bussin ((s % 20000) / 10000.0) - 1.0;
+}
+
+chad clampf(chad v, chad lo, chad hi) {
+    edgy (v < lo) { bussin lo; }
+    edgy (v > hi) { bussin hi; }
+    bussin v;
+}
+
+chad maxf(chad a, chad b) {
+    edgy (a > b) { bussin a; }
+    bussin b;
+}
+
+chad minf(chad a, chad b) {
+    edgy (a < b) { bussin a; }
+    bussin b;
+}
+
+chad absf(chad v) {
+    edgy (v < 0.0) { bussin -v; }
+    bussin v;
+}
+
+chad lerpf(chad a, chad b, chad t) {
+    bussin a + (b - a) * t;
+}
+
+🚽 Truncate a chad to a rizz.
+🚽
+🚽 `rizz k = someChadVariable;` reinterprets the float's bit pattern rather
+🚽 than converting (17.5 becomes 1099694080) -- but any arithmetic
+🚽 *expression* or function call on the right-hand side converts correctly.
+🚽 Routing every conversion through this function means the bug is worked
+🚽 around in exactly one place, and deleting it once the fix lands upstream
+🚽 is a single commit. See DESIGN.md C2.
+rizz truncf(chad v) {
+    bussin v * 1.0;
+}

@@ -1,0 +1,26 @@
+🚽 draw_fake.brainrot — no-op rendering for the headless harness.
+🚽
+🚽 Same signatures as src/draw.brainrot, no raylib. The calls still happen
+🚽 every frame so the loop's shape is identical to the real one; they just
+🚽 don't put anything on a screen.
+🚽
+🚽 Drawing is not testable headlessly, and simulation must never depend on
+🚽 it. If a `draw_*` function ever needs to mutate game state, that is the
+🚽 bug -- not this file.
+
+skibidi draw_begin() { rizz noop = 0; }
+skibidi draw_end()   { rizz noop = 0; }
+
+skibidi draw_sky(rizz lvl)    { rizz noop = 0; }
+skibidi draw_ground()         { rizz noop = 0; }
+
+skibidi draw_player(chad x, chad y) { rizz noop = 0; }
+skibidi draw_bat(chad x, chad y)    { rizz noop = 0; }
+
+skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind) { rizz noop = 0; }
+
+skibidi draw_hearts(rizz hearts)   { rizz noop = 0; }
+skibidi draw_speedbar(rizz lvl)    { rizz noop = 0; }
+skibidi draw_hud_labels()          { rizz noop = 0; }
+skibidi draw_title(chad t)         { rizz noop = 0; }
+skibidi draw_gameover()            { rizz noop = 0; }

@@ -1,0 +1,902 @@
+# TUNG TUNG TUNG SAHUR: RUN — Design Document
+
+> An endless runner written in [Brainrot](https://github.com/Brainrotlang/brainrot),
+> rendered through [`brainray`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md).
+>
+> **The game repository contains zero C.** Anything the game needs that raylib
+> can't reach from Brainrot today gets implemented *upstream*, in `brainrot` or
+> `brainray`. This repo is `.brainrot` files and assets, nothing else.
+
+---
+
+## 1. Pitch
+
+Canabalt + Chrome Dino + a baseball bat, at 03:30 AM in an Indonesian
+neighbourhood. Tung Tung Tung Sahur runs east to wake the village for the
+pre-dawn meal. Brr Brr Patapim keeps getting in the way.
+
+One rule, learned in ten seconds:
+
+> **Jump what you can't hit. Hit what you can't jump.**
+
+Then, from LVL 4 onward, the game starts breaking that rule on purpose.
+
+The goal is not "an infinite score counter". The goal is **SURVIVE UNTIL SAHUR** —
+a fixed distance, roughly five minutes, after which the sky turns orange and you
+unlock **ENDLESS SCHIZO MODE**, where the acceleration never stops.
+
+## 2. Design pillars
+
+1. **One number drives everything.** `speed` scrolls the world, spawns entities,
+   picks the sky colour, and sets the LVL. There are no difficulty *levels*, only
+   a difficulty *curve* that the HUD quantises for readability.
+2. **Small mechanical core, deep tail.** Jump, bonk, and a rising number. Every
+   later mechanic is a variation on those three.
+3. **Hard, never unfair.** Spacing is measured in *seconds of reaction time*, not
+   pixels, so the game stays reactable as it accelerates. Unavoidable spawns are
+   a bug, not a difficulty setting.
+4. **Deterministic.** A seeded PRNG means a run is reproducible, a bug report is
+   a seed, and the simulation is testable in CI without a window.
+5. **The game proves the language.** Real-time state, entity pools, collision,
+   input, and tens of thousands of consecutive frames without exploding. If
+   Brainrot can't do something, that's an upstream issue, not a workaround.
+
+---
+
+## 3. Platform constraints
+
+This section is not background reading. Brainrot has sharp edges that shape the
+architecture, and every claim below was verified by running the interpreter on
+`main` @ `3ce8a3a` with raylib 6.0.0 and `brainray/raylib.so` built.
+
+### 3.1 What works, and is load-bearing
+
+| Feature | Status | Used for |
+| --- | --- | --- |
+| `gang Ent pool[16];` — **arrays of structs** | ✅ ([#287](https://github.com/Brainrotlang/brainrot/pull/287)) | Entity pools |
+| `pool[i].field = v;` read and write by index | ✅ | Entity update loops |
+| `cap` struct fields in conditions (`edgy (pool[i].alive)`) | ✅ | Liveness checks |
+| Scalar-only functions with many params, returning `cap` / `chad` / `rizz` | ✅ | `aabb`, `clampf`, `rng_next` |
+| **One** `gang X *` parameter, called as `helper(&pool[i])` with a variable index | ✅ | Per-entity helpers |
+| `chad` → `int` coercion at the **native call boundary** | ✅ | `rl_draw_rectangle(px, py, ...)` with `chad` args |
+| `#cooked "file.brainrot"` splicing | ✅ | Splitting the source |
+| Seeded PRNG (Park–Miller / Schrage) | ✅ | Spawn tables |
+
+### 3.2 What does not work
+
+Each of these is an upstream issue (§11), and each has a workaround the game
+uses until it lands.
+
+| Limitation | Verified behaviour | Workaround in this design |
+| --- | --- | --- |
+| **`!` on `cap` is a no-op** | `!L` evaluates to `L`; `edgy (!a)` takes the wrong branch | Always write `edgy (a == L)` |
+| **A bare `chad` variable assigned to a `rizz` reinterprets bits** | `chad g = 17.5; rizz k = g;` → `k == 1099694080`. The trigger is specifically a *bare variable or struct field* on the right-hand side — any arithmetic expression or function call converts correctly (`g * 1.0` → `17`). Also `yapping("%d", g)` prints nothing | Every conversion routes through `truncf()` in `src/math.brainrot`, so the workaround lives in one place and removing it is a one-line commit |
+| **Struct-pointer params are checked in reverse order** | `f(gang A *x, gang B *y)` *rejects* the correct call and *accepts* the swapped one; runtime binding is positionally correct, so "fixing" the call silently corrupts memory | **A function may reference at most one struct type across its parameters.** Multiple params of the *same* type are safe (the reversal is invisible) |
+| **A struct field cannot be an array of structs** | `gang Game { gang Enemy es[4]; };` → parse error | No "God struct". Pools are `skibidi main` locals |
+| **No pointer arithmetic on struct pointers** | `gang E *p = &es[0]; p = p + 1;` → *"type-erased pointer — pointee size is unknown"* | Iterate with an index in `main`; helpers take one already-resolved `&pool[i]` |
+| **No top-level globals** | `rizz g_score = 0;` at file scope → parse error | All state is local to `skibidi main` |
+| **No `*(p + i) = v` or `p[i] = v` through a pointer param** | Both rejected | `rizz *q = p + i; *q = v;` |
+| **No math library** | `stdrot/` is `yapping`, `yappin`, `baka`, `ragequit`, `chill`, `slorp`, `bet` | Hand-rolled `rng_next`, `clampf`, `absf` in `src/math.brainrot` |
+| **Signed overflow aborts** | The interpreter is built `-fsanitize=address,undefined`; `42 * 1103515245` kills the run | PRNG uses Schrage's method, which provably never leaves int32 |
+| **`W` and `L` are keywords** | `gang W { ... }` → parse error | Never name anything `W` or `L` |
+
+### 3.3 The `brainray` surface
+
+Twenty-one functions total:
+
+```
+rl_init_window          rl_window_should_close  rl_close_window
+rl_set_target_fps       rl_get_screen_width     rl_get_screen_height
+rl_begin_drawing        rl_end_drawing          rl_clear_background
+rl_get_frame_time       rl_draw_fps             rl_measure_text
+rl_draw_circle          rl_draw_rectangle       rl_draw_line
+rl_draw_text            rl_is_key_down          rl_is_key_pressed
+rl_load_texture         rl_draw_texture         rl_unload_texture
+```
+
+Three gaps matter:
+
+- **No numeric text.** `rl_draw_text` takes a string literal and Brainrot has no
+  `sprintf`. *Literal* HUD labels — `SCORE`, `SPEED`, `LVL`, `GAME OVER`, the
+  title card — all work today. **Digits do not.** → upstream **B1**.
+- **No `DrawTextureRec`.** `rl_draw_texture` blits a whole texture at integer
+  `x, y` with a tint: no source rectangle, no scaling, no flip, no rotation.
+  That rules out sprite atlases, animation frames, and tiled parallax. → **B2**.
+- **No audio at all.** → **B3**.
+
+M0 is designed to need none of them.
+
+---
+
+## 4. Screen and coordinates
+
+1280×720, fixed, non-resizable, `rl_set_target_fps(60)`. There is no
+`DrawTexturePro`, so there is no clean way to upscale a smaller internal
+resolution; native it is.
+
+```
+ (0,0)
+   ┌────────────────────────────────────────────────────────────────┐
+   │ ♥♥♥                                        SPEED ▓▓▓▓▓░░░       │  HUD band, y 0..80
+   │ SCORE ──────                                     LVL ─          │
+   │                                                                 │
+   │        sky (colour is a function of LVL)                        │
+   │                                                                 │
+   │          ▓▓                                                     │
+   │          ▓▓ ← Tung, x fixed at 200                              │
+   │          ▓▓            ██          ▓▓▓                          │
+   ├──────────▓▓────────────██──────────▓▓▓──────────────────────────┤  GROUND_Y = 560
+   │                     ground                                      │
+   └────────────────────────────────────────────────────────────────┘
+                                                            (1280,720)
+```
+
+The camera does not exist. Tung's `x` never changes; the world moves toward him.
+Every entity is `x = x - speed * dt`, and the difficulty curve is one variable.
+
+---
+
+## 5. Tuning constants
+
+Declared as `deadass` locals at the top of `skibidi main`. Every number here is
+a starting point to be felt out in playtesting, not a law.
+
+```c
+🚽 --- screen ---
+SCREEN_W          1280
+SCREEN_H          720
+GROUND_Y          560.0
+
+🚽 --- player ---
+PLAYER_X          200.0
+PLAYER_W          48.0
+PLAYER_H          96.0
+GRAVITY           2600.0     🚽 px/s^2
+JUMP_V           -1000.0     🚽 px/s  -> apex 192px, air time 0.77s
+HEARTS_MAX        3
+IFRAME_TIME       1.2        🚽 s
+HIT_SLOWDOWN      0.75       🚽 speed multiplier on damage, floored at SPEED_START
+
+🚽 --- bat ---
+ATTACK_TOTAL      0.45       🚽 s; timer counts down
+ATTACK_ACTIVE     0.30       🚽 hitbox live while atk_t > this, i.e. first 0.15s
+HITBOX_DX         40.0       🚽 relative to player x
+HITBOX_DY         16.0
+HITBOX_W          56.0
+HITBOX_H          56.0
+
+🚽 --- world ---
+SPEED_START       260.0      🚽 px/s
+SPEED_ACCEL       3.0        🚽 px/s^2
+SPEED_MAX_STORY   900.0      🚽 uncapped in endless mode
+SAHUR_DISTANCE    200000.0   🚽 px  (~5 min)
+
+🚽 --- spawning ---
+SPAWN_X           1340.0     🚽 just off the right edge
+GAP_BASE          1.55       🚽 s
+GAP_SLOPE         0.0011     🚽 gap = GAP_BASE - speed * GAP_SLOPE
+GAP_MIN           0.55       🚽 s
+GAP_JITTER        0.20       🚽 s, +/-
+FAIR_JUMP_JUMP    0.95       🚽 s, minimum between two jump-required spawns
+FAIR_ANY          0.60       🚽 s, absolute minimum between any two spawns
+
+🚽 --- pools ---
+MAX_OBSTACLES     16
+MAX_ENEMIES       16
+MAX_PROJECTILES   32         🚽 reserved for M2 (Bombardiro's bombs)
+```
+
+**Jump geometry.** With `GRAVITY = 2600` and `JUMP_V = -1000`, apex is
+`1000² / (2·2600) ≈ 192 px` and total air time is `2·1000 / 2600 ≈ 0.77 s`. A
+64 px crate clears comfortably; a 96 px tall obstacle needs a timely jump. Those
+two numbers set `FAIR_JUMP_JUMP` (§8.2) and must be changed together.
+
+---
+
+## 6. The player
+
+### 6.1 State
+
+```c
+gang Player {
+    chad y;          🚽 top edge; x is fixed at PLAYER_X
+    chad vy;
+    cap  grounded;
+    chad atk_t;      🚽 attack timer, counts down; 0 = idle
+    chad iframe_t;   🚽 invulnerability timer
+    rizz hearts;
+};
+```
+
+### 6.2 Jump
+
+Fixed arc, M0. No variable height, no double jump.
+
+- `SPACE` or `UP`, edge-triggered *and* gated on `grounded`, so holding the key
+  does not autohop.
+- `vy = vy + GRAVITY * dt; y = y + vy * dt;`
+- Landing clamps: `edgy (y > GROUND_Y - PLAYER_H) { y = GROUND_Y - PLAYER_H; vy = 0.0; grounded = W; }`
+
+**Duck** (`DOWN`) is deferred to M1. It only becomes meaningful once flying
+Patapim variants exist to duck under.
+
+### 6.3 Bat
+
+`X` or `Z`, edge-triggered via `rl_is_key_pressed`, refused while `atk_t > 0.0`.
+
+```
+atk_t = ATTACK_TOTAL (0.45s)
+├── 0.45 → 0.30 : ACTIVE   — hitbox live, 0.15s
+└── 0.30 → 0.00 : COOLDOWN — no hitbox, no re-swing, 0.30s
+```
+
+The hitbox is a rectangle in front of Tung, not an arc:
+`(x + 40, y + 16, 56 × 56)`. Because it is relative to `y`, it rises with him —
+**you can swing mid-air, and it hits exactly the same.** That is deliberate: it
+keeps the airborne bonk available without a separate air-attack to balance.
+
+### 6.4 Damage
+
+Colliding with a live entity while `iframe_t <= 0.0`:
+
+1. `hearts = hearts - 1`
+2. `iframe_t = IFRAME_TIME` (1.2 s; player flashes, drawn on alternate 0.1 s ticks)
+3. `speed = speed * HIT_SLOWDOWN`, floored at `SPEED_START`
+4. combo resets to zero
+5. the entity that hit you is despawned, so one obstacle cannot drain three hearts
+
+The slowdown is a mercy *and* a punishment: it buys reaction time but costs
+score rate. Three hearts total; at zero, game over.
+
+---
+
+## 7. The speed curve
+
+One variable, integrated every frame:
+
+```c
+speed = speed + SPEED_ACCEL * dt;
+edgy (speed > SPEED_MAX_STORY) { speed = SPEED_MAX_STORY; }   🚽 story mode only
+dist  = dist + speed * dt;
+```
+
+`SPEED_ACCEL = 3.0` takes `speed` from 260 to the 900 cap in about 213 seconds,
+which is *after* both bosses. Endless mode simply removes the clamp.
+
+### 7.1 LVL is a display, not a state
+
+The HUD in the mockup shows `LVL 1` and a segmented SPEED bar, which implies
+discrete tiers. It does not. **The underlying value is continuous; the HUD
+quantises it:**
+
+```c
+rizz lvl = 1 + (speed - SPEED_START) / 90.0;
+edgy (lvl > 8) { lvl = 8; }
+```
+
+Eight segments, eight levels, matching the eight-segment bar. Nothing in the
+simulation ever branches on `lvl` except the sky palette (§10.2) and the
+enemy-variant gate (§9.3) — and both of those are cosmetic-tier decisions that
+*want* to be steppy.
+
+### 7.2 The feel target
+
+Measured, not estimated — `test/unit_curve.brainrot` integrates the curve at
+60 Hz and prints this table, so it cannot drift away from the code:
+
+| Elapsed | speed | LVL | gap | Intent |
+| --- | --- | --- | --- | --- |
+| 0:00 | 260 | 1 | 1.26 s | tung.... tung.... tung.... |
+| 1:00 | 440 | 2 | 1.07 s | okay |
+| 2:00 | 620 | 4 | 0.87 s | concentration required |
+| 3:00 | 800 | 6 | 0.67 s | TUNGTUNGTUNGTUNGTUNG |
+| 3:30 | 890 | 8 | 0.56 s | last tier |
+| 3:33 | 900 | 8 | 0.56 s | story cap |
+| 4:58 | 900 | 8 | 0.56 s | **SAHUR** — 200,000 px |
+| endless | ∞ | 8 | 0.55 s | humanly questionable |
+
+A clean run reaches Sahur at 4:58. Note that the LVL boundaries land a hair
+*after* the round speed numbers — at 1:00 the integrated speed is 439.96, just
+under the 440 needed for tier 3 — which is why the column reads 2 rather than 3.
+That is the code being precise, not the table being wrong.
+
+---
+
+## 8. Entities and spawning
+
+### 8.1 Pools
+
+No allocator, no globals, no struct-typed array fields (§3.2). Pools are
+fixed-size arrays of structs, declared in `skibidi main`:
+
+```c
+gang Ent {
+    chad x; chad y; chad w; chad h;
+    rizz kind;
+    cap  alive;
+};
+
+skibidi main {
+    gang Ent obstacles[16];
+    gang Ent enemies[16];
+    ...
+}
+```
+
+Spawning is a linear scan for the first `alive == L` slot. Sixteen is generous:
+at `SPEED_MAX_STORY` with `GAP_MIN`, at most ~4 obstacles are on screen at once.
+A full pool silently skips the spawn — which is correct behaviour, not an error.
+
+**Kinds, M0:**
+
+| kind | Entity | Size | Answer |
+| --- | --- | --- | --- |
+| 0 | Crate | 48 × 48, grounded | jump |
+| 1 | Post | 40 × 96, grounded | jump |
+| 2 | Brr Brr Patapim | 64 × 64, grounded | bonk |
+
+### 8.2 Spacing is measured in time
+
+This is the difference between "hard" and "unfair", and it is the single most
+important rule in the document. Spacing is **never** a pixel constant, because a
+pixel gap that is generous at 260 px/s is lethal at 900 px/s.
+
+```c
+chad gap = GAP_BASE - speed * GAP_SLOPE;      🚽 1.26s at LVL1 -> 0.56s at LVL8
+edgy (gap < GAP_MIN) { gap = GAP_MIN; }
+gap = gap + jitter;                            🚽 +/- GAP_JITTER, from the PRNG
+```
+
+Then the fairness clamp, applied *after* jitter:
+
+- Two consecutive **jump-required** spawns: `gap >= FAIR_JUMP_JUMP` (0.95 s).
+  Derived directly from air time (0.77 s) plus a reaction buffer (0.18 s) — you
+  must be able to land before the next thing arrives.
+- Any two spawns: `gap >= FAIR_ANY` (0.60 s).
+
+Because both are in seconds and the clamp runs every spawn, the curve tightens
+until it hits the floor and then *stops getting harder in spacing* — the
+remaining difficulty comes from raw scroll speed shrinking the reaction window
+inside a fixed gap. That is the correct place for the difficulty to live.
+
+**Any spawn the player cannot avoid is a bug.** File it as such.
+
+### 8.3 Determinism
+
+`stdrot` has no `rand()`, and the naive LCG overflows int32 and aborts under
+UBSan. Park–Miller with Schrage's method stays in range by construction —
+`16807 * lo` where `lo < 127773` is at most 2,147,469,111, just under 2³¹:
+
+```c
+rizz rng_next(rizz s) {
+    rizz hi = s / 127773;
+    rizz lo = s % 127773;
+    rizz v = 16807 * lo - 2836 * hi;
+    edgy (v < 0) { v = v + 2147483647; }
+    bussin v;
+}
+```
+
+The seed is fixed per run and **printed on the game-over screen**, so a bug
+report is a seed and a frame number. It is also what makes §12 possible.
+
+---
+
+## 9. Combat and scoring
+
+### 9.1 Collision
+
+Axis-aligned bounding boxes, scalars only — no struct params, so this sidesteps
+the reversal bug entirely:
+
+```c
+cap aabb(chad ax, chad ay, chad aw, chad ah,
+         chad bx, chad by, chad bw, chad bh) {
+    edgy (ax + aw < bx) { bussin L; }
+    edgy (bx + bw < ax) { bussin L; }
+    edgy (ay + ah < by) { bussin L; }
+    edgy (by + bh < ay) { bussin L; }
+    bussin W;
+}
+```
+
+Resolution order per entity, per frame — **bat before body**, so a frame-perfect
+swing always beats the collision:
+
+1. If the entity is bonkable and the bat is active → test bat hitbox. On hit:
+   despawn, award, bump combo. **Stop.**
+2. Otherwise test the player body. On hit and `iframe_t <= 0.0` → damage (§6.4).
+
+### 9.2 Score
+
+```
+score = dist / 10  +  sum of bonk awards
+bonk award = 100 * combo_multiplier
+```
+
+`combo_multiplier` is the count of consecutive bonks without taking damage,
+clamped to 8: ×1, ×2, ×3 … ×8. It resets to zero on any heart lost. Missing a
+bonk does not reset it — only getting hit does, which keeps the incentive
+aggressive rather than cautious.
+
+### 9.3 Breaking the rule
+
+"Jump what you can't hit, hit what you can't jump" is taught for three levels,
+then violated. Variants unlock at `lvl >= 4` (M1):
+
+| Variant | Twist |
+| --- | --- |
+| Small Patapim | Faster closing speed; the bonk window is genuinely tight |
+| Big Patapim | Two bonks; the first staggers, the second kills |
+| Jumping Patapim | Leaps on approach — bonk on the ground or duck the leap |
+| Armored Patapim | **Cannot be bonked.** Must be jumped. This is the rule breaking |
+
+Armored Patapim is deliberately introduced *alone*, on a wide gap, the first
+time it appears. The lesson has to be survivable.
+
+### 9.4 Enemy motion
+
+Enemies scroll with the world *plus* a small closing speed, so they arrive
+sooner than the geometry suggests and can't be pattern-memorised purely by
+spacing:
+
+```c
+enemies[i].x = enemies[i].x - (speed + ENEMY_CLOSE) * dt;   🚽 ENEMY_CLOSE = 40.0
+```
+
+---
+
+## 10. Presentation
+
+### 10.1 M0 renders in primitives
+
+Per §3.3, sprite atlases need upstream **B2**, and one-PNG-per-animation-frame
+would mean six `rl_load_texture` handles for a run cycle alone. M0 therefore
+ships in `rl_draw_rectangle`:
+
+| Thing | Primitive |
+| --- | --- |
+| Sky | `rl_clear_background` in the LVL palette |
+| Ground | one rectangle, `0, 560, 1280, 160` |
+| Tung | 48 × 96 wood-brown rectangle |
+| Bat swing | 56 × 56 pale-yellow rectangle, drawn only while active |
+| Patapim | 64 × 64 rectangle |
+| Crate / post | grey rectangles |
+| Hearts | 20 × 20 red rectangles |
+| Speed bar | 8 segment rectangles |
+
+This is not a placeholder to be ashamed of — it is a playable game that proves
+the loop before a single asset exists, and it keeps M0 free of upstream blockers.
+
+Parallax (mountains / palms / houses / foreground foliage, per the concept art)
+is **M1**, and needs **B2** to tile without a texture per screen-width.
+
+### 10.2 Sky palette
+
+Discrete per LVL tier — the 03:30 → 05:00 progression. A smooth lerp needs no
+new API and can replace this later; steps are chosen because they make the
+player *notice* they survived another tier.
+
+| LVL | Time | RGB |
+| --- | --- | --- |
+| 1–2 | 03:30 | `12, 14, 34` deep night |
+| 3–4 | 04:00 | `18, 20, 48` |
+| 5–6 | 04:30 | `38, 30, 64` pre-dawn purple |
+| 7 | 04:50 | `78, 44, 66` |
+| 8 | 05:00 | `140, 74, 60` dawn |
+
+### 10.3 HUD
+
+Literal text works today; only digits are blocked. M0 ships everything except
+the numbers, and **B1** fills them in without touching game code.
+
+```
+♥♥♥                                    SPEED ▓▓▓▓▓░░░
+SCORE  [digits: B1]                    LVL   [digits: B1]
+```
+
+- Hearts: `hearts` red rectangles at `(20 + i*28, 20)`.
+- Speed bar: 8 segments at `(1130 + i*14, 30)`; filled while `i < lvl`.
+- `rl_draw_fps` bottom-right, debug builds only.
+
+---
+
+## 11. Input
+
+| Action | Keys | Codes | Trigger |
+| --- | --- | --- | --- |
+| Jump | `SPACE`, `UP` | 32, 265 | `is_key_down`, gated on `grounded` |
+| Bat | `X`, `Z` | 88, 90 | `is_key_pressed`, gated on `atk_t <= 0` |
+| Duck (M1) | `DOWN` | 264 | `is_key_down` |
+| Restart | `R`, `SPACE` | 82, 32 | `is_key_pressed`, game-over screen only |
+| Quit | `ESC` | 256 | raylib default + `rl_window_should_close` |
+
+No pause. It's an arcade runner.
+
+---
+
+## 12. Bosses (M2)
+
+Tralalero and Bombardiro are too good to spend as generic enemies. They are set
+pieces. When a boss is active **the normal spawner pauses** — the boss owns the
+pattern — and **you can still die**, hearts and all.
+
+Both use the same three-cycle shape: *survive a phase → an opening appears →
+one bonk → repeat ×3*. Score thresholds line up with the distance curve
+(§7.2) at roughly 1:55 and 3:06.
+
+### 12.1 TRALALERO TRALALA — score 5,000
+
+The three-legged shark, characterised by speed, chases from the left. The game
+becomes pure obstacle survival: a dense scripted sequence with no bonkable
+enemies, the shark closing a little with each mistake.
+
+```
+                         🦈👟  ← closes on every obstacle you clip
+ 🪵    █       █
+ /|\  █ █     █ █
+_/ \____________________________
+```
+
+After each survival phase he over-commits and drifts into bat range for a
+1.0 s window. Three of those and he's out. Then the run resumes, faster.
+
+### 12.2 BOMBARDIRO CROCODILO — score 10,000
+
+He does not chase. He flies overhead and bombs, so the whole vertical axis
+becomes hostile while you're still running:
+
+```
+                🐊✈️
+            💣       💣
+                💣
+ 🪵
+ /|\       💥
+_/ \____________________
+```
+
+Bombs are the `projectiles[32]` pool: spawned at his `x`, falling under the same
+`GRAVITY`, exploding into a ground hazard on impact. Between volleys he descends
+to bat height for the opening. Three bonks.
+
+---
+
+## 13. Run structure
+
+```
+TITLE ──SPACE──► RUN ──dist >= SAHUR_DISTANCE──► SAHUR (win) ──► unlocks ENDLESS
+                  │
+                  └──hearts == 0──► GAME OVER ──R/SPACE──► RUN
+```
+
+- **Title.** Literal text, so it's M0. The `TUNG... TUNG... TUNG... SAHUR` beat
+  plays out on a timer — four words, then he starts running. It's the best joke
+  in the concept and it costs four `rl_draw_text` calls.
+- **Sahur.** At `SAHUR_DISTANCE`, the sky finishes its turn and the run ends on
+  `SAHUR SAVED / NEIGHBOURHOOD WOKEN / W`.
+- **Endless Schizo Mode.** Unlocked by a Sahur clear, selectable from the title
+  thereafter. Identical simulation with `SPEED_MAX_STORY` removed.
+- **High score** is in-session only. Brainrot has no file I/O, so persistence is
+  a known gap, not an oversight — noted in §15.
+
+---
+
+## 14. Architecture
+
+### 14.1 One fat `skibidi main`
+
+M0 keeps the entire frame loop in `skibidi main`, exactly like
+`examples/raylib/ohio_engine.brainrot`. This is not laziness — it is forced by
+three constraints acting together (§3.2):
+
+- No globals, so all state is a `main` local.
+- No struct pointer arithmetic, so a helper cannot walk a pool.
+- **At most one struct type per function signature**, so a helper cannot take
+  both `gang Ent *e` and a `gang World *w`.
+
+That last one is decisive. The clean architecture — a `gang World` of shared
+scalars passed alongside each entity — is *specifically* what the parameter
+reversal bug breaks, and the failure mode is silent memory corruption rather
+than an error. Until **C3** lands, the loop stays in `main` and the helpers stay
+scalar-only.
+
+Once C3 and C4 are fixed, the refactor is mechanical: extract
+`skibidi ent_step(gang Ent *e, gang World *w)` and the body moves out unchanged.
+The design is written to make that a one-commit change, not a rewrite.
+
+### 14.2 What *can* be extracted today
+
+Pure functions over scalars, and single-struct-type helpers. These are also
+exactly the parts worth testing (§16):
+
+| File | Contents |
+| --- | --- |
+| `src/math.brainrot` | `rng_next`, `clampf`, `absf`, `lerpf` |
+| `src/collide.brainrot` | `aabb` (8 `chad` params, returns `cap`) |
+| `src/curve.brainrot` | `speed_to_lvl`, `spawn_gap`, `fair_clamp` |
+| `src/draw.brainrot` | HUD helpers — scalar params, `rl_*` calls |
+| `src/main.brainrot` | `skibidi main`: state, frame loop, pools |
+
+### 14.3 Frame loop order
+
+Order matters; this is the contract:
+
+```
+1.  dt = rl_get_frame_time(), clamped to 0.05      🚽 don't let a hitch teleport entities
+2.  speed integration, dist, score, lvl
+3.  input sample (jump, bat)
+4.  player physics + ground clamp
+5.  timers tick down (atk_t, iframe_t)
+6.  spawn tick -> gap -> fairness clamp -> pool slot
+7.  entity scroll + despawn offscreen
+8.  collision: bat pass, then body pass
+9.  state transitions (sahur reached? hearts zero?)
+10. draw: sky, ground, entities, player, bat, HUD
+11. rl_window_should_close
+```
+
+Step 1's clamp is not optional. `rl_get_frame_time` after a window drag or a
+first-frame shader compile can return a large `dt`, and at 900 px/s an unclamped
+spike tunnels every entity straight through the player.
+
+### 14.4 Verified skeleton
+
+This compiles and runs against `main` @ `3ce8a3a`. Note `pool[i].alive == L`
+rather than `!pool[i].alive`, and `chad` values passed directly into the
+int-typed `rl_draw_rectangle`:
+
+```c
+#cooked <raylib>
+
+gang Ent { chad x; chad y; chad w; chad h; rizz kind; cap alive; };
+
+skibidi main {
+    rl_init_window(1280, 720, "TUNG TUNG TUNG SAHUR: RUN");
+    rl_set_target_fps(60);
+
+    chad px = 200.0;  chad py = 464.0;  chad pvy = 0.0;
+    cap  grounded = W;
+    chad speed = 260.0;
+    chad dist  = 0.0;
+
+    gang Ent pool[16];
+    flex (rizz i = 0; i < 16; i = i + 1) { pool[i].alive = L; }
+
+    cap running = W;
+    goon (running) {
+        chad dt = rl_get_frame_time();
+        edgy (dt > 0.05) { dt = 0.05; }
+
+        speed = speed + 3.0 * dt;
+        dist  = dist + speed * dt;
+
+        cap jump = rl_is_key_down(32);
+        edgy (jump) { edgy (grounded) { pvy = 0.0 - 1000.0; grounded = L; } }
+
+        pvy = pvy + 2600.0 * dt;
+        py  = py + pvy * dt;
+        edgy (py > 560.0 - 96.0) { py = 560.0 - 96.0; pvy = 0.0; grounded = W; }
+
+        flex (rizz i = 0; i < 16; i = i + 1) {
+            edgy (pool[i].alive) {
+                pool[i].x = pool[i].x - speed * dt;
+                edgy (pool[i].x < 0.0 - pool[i].w) { pool[i].alive = L; }
+            }
+        }
+
+        rl_begin_drawing();
+        rl_clear_background(12, 14, 34, 255);
+        rl_draw_rectangle(0, 560, 1280, 160, 34, 28, 24, 255);
+        rl_draw_rectangle(px, py, 48.0, 96.0, 196, 148, 92, 255);
+        rl_end_drawing();
+
+        cap wants_close = rl_window_should_close();
+        edgy (wants_close) { running = L; }
+    }
+
+    rl_close_window();
+    bussin 0;
+}
+```
+
+---
+
+## 15. Upstream dependencies
+
+The zero-C rule means every gap below is a PR to `Brainrotlang/brainrot`. **M0
+depends on none of them.**
+
+### 15.1 `brainray` additions
+
+| ID | Ask | Unblocks | Milestone |
+| --- | --- | --- | --- |
+| **B1** | `rl_draw_text_int(text, value, x, y, size, r,g,b,a)` — or a general formatted-text wrapper | SCORE / LVL / high-score digits, i.e. all numeric HUD | M1 |
+| **B2** | `rl_draw_texture_rec(handle, sx, sy, sw, sh, x, y, r,g,b,a)` | Sprite atlases, animation frames, tiled parallax | M1 |
+| **B3** | `rl_init_audio_device`, `rl_load_sound`, `rl_play_sound`, `rl_unload_sound`, `rl_close_audio_device` | The `TUNG` on every bat hit. The entire joke | M2 |
+| **B4** | `rl_draw_texture_pro` (scale / flip / rotate), `rl_draw_rectangle_lines`, `rl_get_time` | Facing flips, debug hitbox overlays | M3 |
+
+B1 is the smallest possible change with the largest payoff and should be first.
+
+### 15.2 `brainrot` core bugs
+
+Filed with the reproductions from §3.2. C3 is the one that changes this
+document's architecture.
+
+| ID | Bug | Severity |
+| --- | --- | --- |
+| **C1** | `!` on `cap` returns the operand unchanged; `edgy (!a)` branches wrongly | High — silent wrong behaviour |
+| **C2** | `rizz k = someChad;` reinterprets the float's bit pattern; `yapping("%d", chadValue)` prints nothing | High — silent wrong values |
+| **C3** | Semantic checker reverses the parameter list for functions with struct-pointer params: correct calls are rejected, swapped calls are accepted and corrupt memory | **Critical** — unblocks the whole entity-helper architecture |
+| **C4** | A struct field cannot be an array of structs (`gang Game { gang Ent es[4]; };`) | Medium |
+| **C5** | No pointer arithmetic on struct pointers | Medium |
+| **C6** | No top-level globals | Medium |
+| **C7** | No `*(p + i) = v` / `p[i] = v` through a pointer parameter | Low — workaround is fine |
+| **C8** | No math builtins (`sqrt`, `floor`, `abs`, `min`, `max`, `rand`) | Low — hand-rolled |
+
+---
+
+## 16. Testing
+
+A game loop cannot run headlessly in CI. The simulation can — and making that
+true is a design requirement, not a nicety.
+
+**Rule: no `rl_*` call may appear outside step 10 of the frame loop (§14.3) or
+`src/draw.brainrot`.** Simulation never draws; drawing never mutates state.
+
+That split is enforced by two seams, both of which ship in the real game:
+
+- `src/platform.brainrot` — `plat_dt`, `plat_jump_down`, `plat_bat_pressed`,
+  `plat_should_close`, and a `plat_trace` that does nothing.
+- `src/draw.brainrot` — every `rl_draw_*` call in the game.
+
+`test/platform_fake.brainrot` and `test/draw_fake.brainrot` implement the same
+signatures with a fixed timestep, a scripted input tape, and no rendering.
+Every seam takes the frame number even where it doesn't need it, purely so the
+two implementations stay interchangeable.
+
+**The harness is generated, not copied.** `make headless` produces
+`src/.headless.gen.brainrot` from `src/main.brainrot` with three `sed` edits
+that swap those two `#cooked` lines and drop `<raylib>`. The entity pools, the
+spawner, the fairness clamp, both collision passes and the state machine are the
+code that ships — a hand-written copy would drift, and this cannot. The
+generation step asserts that all three substitutions actually landed.
+
+Two layers, both pure Brainrot, mirroring the upstream `test_cases/*.brainrot`
++ `tests/expected_results.json` convention. Neither needs raylib or a display:
+
+1. **Unit** (`test/unit_*.brainrot`). `rng_next` pinned against the *published*
+   Park–Miller sequence from seed 1, plus 10,000 draws to prove Schrage's method
+   never leaves int32. `aabb` overlap/miss/edge-touch, and the real bat geometry
+   — the grounded swing window measured in pixels of approach, the proof that
+   the bat reaches further right than the body, and that an apex swing correctly
+   misses a grounded enemy. `speed_to_lvl` at tier boundaries, `spawn_gap`
+   monotonicity and floor, `pick_kind`'s level gate, the sky palette.
+2. **Integration** (`make headless`). 3000 frames at a fixed `dt`, with the
+   state sampled every 250 frames into the golden file. The tape's periods were
+   swept rather than guessed, so one run covers the combo path, the damage path,
+   the restart path and the attack cooldown.
+
+### 16.1 What each layer can and cannot reach
+
+The blind tape dies roughly every ten seconds, so `speed` never leaves LVL 1 in
+the integration run and the difficulty curve is **not** covered there. Making
+the tape a better player is not possible — the seams give it the frame number,
+not the game state.
+
+So the curve is covered at unit level instead: `unit_curve.brainrot` integrates
+`speed` and `dist` at the same 60 Hz the game steps at and prints the feel table
+in §7.2 directly, including the measured 4:58 to Sahur. That table is generated
+from the code, so the two cannot disagree.
+
+The fairness invariant gets the treatment it deserves — a sweep over every speed
+from 260 to 1200, all nine kind pairs, and the full jitter range, asserting that
+no combination produces a gap shorter than one jump arc. The arc is *derived*
+from `t_gravity()` and `t_jump_v()` rather than hardcoded, so retuning gravity
+without retuning `FAIR_JUMP_JUMP` fails in CI instead of in someone's run.
+
+Because the interpreter is built with ASan and UBSan, a leak, an overflow or a
+stray write is a loud test failure rather than a silent corruption.
+
+---
+
+## 17. Repository layout
+
+```
+tung-tung-sahur/
+├── DESIGN.md
+├── README.md
+├── Makefile              🚽 `make play`, `make test`
+├── src/
+│   ├── main.brainrot     🚽 skibidi main: state + frame loop
+│   ├── math.brainrot     🚽 rng_next, clampf, absf, lerpf
+│   ├── collide.brainrot  🚽 aabb
+│   ├── curve.brainrot    🚽 speed_to_lvl, spawn_gap, fair_clamp
+│   └── draw.brainrot     🚽 HUD + entity draw helpers
+├── test/
+│   ├── unit_*.brainrot
+│   ├── headless.brainrot
+│   └── expected/
+└── assets/               🚽 empty until B2 lands
+```
+
+`#cooked` splices, so every file under `src/` other than `main.brainrot` holds
+definitions only — no second `skibidi main`.
+
+### 17.1 Build and run
+
+The game does not vendor Brainrot. It expects a `brainrot` checkout with
+`brainray` built, as a sibling directory by default and overridable:
+
+```bash
+# once, in the brainrot checkout
+make && make brainray
+
+# here
+make play
+# == BRAINROT_PATH=$(BRAINROT_DIR)/brainray $(BRAINROT_DIR)/brainrot src/main.brainrot
+```
+
+`BRAINROT_PATH` must point at a directory containing `raylib.so`, or
+`#cooked <raylib>` cannot resolve. See
+[`docs/brainray.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md)
+for raylib installation — it is the single source of truth and this repo will
+not duplicate it.
+
+---
+
+## 18. Milestones
+
+### M0 — "Rectangles at 03:30 AM" *(no upstream dependencies)*
+
+Playable core, primitives only. Title card, run, game over, restart.
+
+- [x] Fixed-arc jump, gravity, ground clamp
+- [x] Bat: 0.15 s active / 0.30 s cooldown, works airborne
+- [x] Obstacle + Patapim pools (16 each), spawn, scroll, despawn
+- [x] AABB collision, bat pass before body pass
+- [x] Continuous speed curve; LVL derived for display
+- [x] Time-based spawn gaps with the fairness clamp
+- [x] 3 hearts, i-frames, hit slowdown
+- [x] Score + combo multiplier
+- [x] Seeded PRNG; seed shown on game over
+- [x] HUD: hearts, 8-segment speed bar, literal labels
+- [x] Sky palette stepping with LVL
+- [x] Title screen with the `TUNG... TUNG... TUNG... SAHUR` beat
+- [x] Headless test harness + golden files
+
+### M1 — "Sprites and sky" *(needs B1, B2)*
+
+- [ ] Numeric HUD (B1)
+- [ ] Sprite sheets and the run cycle (B2)
+- [ ] Parallax: mountains, palms, houses, foreground foliage
+- [ ] Duck
+- [ ] Patapim variants; armored breaks the rule at LVL 4
+
+### M2 — "Bosses and noise" *(needs B3)*
+
+- [ ] Tralalero Tralala at 5,000
+- [ ] Bombardiro Crocodilo at 10,000, projectile pool
+- [ ] Audio: the `TUNG`, footsteps, ambience
+
+### M3 — "Sahur"
+
+- [ ] `SAHUR_DISTANCE` win state and ending card
+- [ ] Endless Schizo Mode unlock
+- [ ] Facing flips, debug hitbox overlay (B4)
+
+---
+
+## 19. Non-goals and known gaps
+
+- **No persistence.** Brainrot has no file I/O; high scores are in-session.
+  Revisit if a `stdrot` file API ever lands.
+- **No pause, no menus beyond title/game-over.** It's an arcade runner.
+- **No resolution scaling.** 1280×720 fixed until B4.
+- **No meme canon fidelity.** Tung Tung Sahur has no unified continuity —
+  characters are allies in one fan version and enemies in another. Patapim as
+  the recurring rival is a design choice grounded in how the two are commonly
+  powerscaled against each other, not a claim about lore. Variants are invented
+  freely and that's fine.
+- **No C in this repository.** If the game needs something the engine can't do,
+  the engine gets better. That constraint is the point: this game is a forcing
+  function for Brainrot, and every gap in §15 is a gap the language had anyway.
