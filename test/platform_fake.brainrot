@@ -1,0 +1,74 @@
+🚽 platform_fake.brainrot — the headless input tape.
+🚽
+🚽 Implements the same signatures as src/platform.brainrot, backed by a
+🚽 fixed timestep and a scripted, purely-deterministic input pattern
+🚽 instead of raylib. Swapping this file in is what lets `make test` run
+🚽 the real frame loop from src/main.brainrot without opening a window --
+🚽 see the `headless` target in the Makefile.
+🚽
+🚽 Every seam takes the frame number, which is why the real platform layer
+🚽 takes one too even where it doesn't need it.
+
+🚽 How many frames the harness simulates before asking to quit.
+rizz fake_frame_budget() { bussin 3000; }
+
+skibidi plat_open() {
+    yapping("headless: %d frames at 60hz", fake_frame_budget());
+}
+
+skibidi plat_close() {
+    yapping("headless: done");
+}
+
+🚽 Fixed timestep. Real time is the one thing a golden file cannot have.
+chad plat_dt(rizz frame) {
+    bussin 0.016666;
+}
+
+🚽 The tape is a coverage instrument, not a good player. These two
+🚽 periods were picked by sweeping them against the spawn rhythm: over
+🚽 3000 frames they land 7 bonks, take 4 deaths, and get ~54 swings
+🚽 refused by the cooldown, so a single headless run walks the combo
+🚽 path, the damage path, the restart path and the cooldown path.
+🚽 Changing them is fine -- just re-sweep, don't guess.
+
+🚽 Hold jump for 4 frames out of every 130. One jump arc is 46 frames at
+🚽 the shipped gravity, so the player lands with time to spare before the
+🚽 next window and spends most of the run grounded, where the bat works.
+cap plat_jump_down(rizz frame) {
+    edgy (frame % 130 < 4) { bussin W; }
+    bussin L;
+}
+
+🚽 Swing every 26 frames against a 27-frame attack timer, so roughly half
+🚽 the swings bounce off the cooldown.
+cap plat_bat_pressed(rizz frame) {
+    edgy (frame % 26 == 0) { bussin W; }
+    bussin L;
+}
+
+cap plat_start_pressed(rizz frame) {
+    bussin W;
+}
+
+🚽 Auto-restart, so a single headless run covers several deaths and the
+🚽 reset path between them.
+cap plat_restart_pressed(rizz frame) {
+    bussin W;
+}
+
+cap plat_should_close(rizz frame) {
+    edgy (frame >= fake_frame_budget()) { bussin W; }
+    bussin L;
+}
+
+🚽 Sample the whole scalar state every 250 frames. `score` is downstream
+🚽 of the spawn table, the fairness clamp, every collision pass and the
+🚽 combo rules, so drift anywhere in the simulation moves these numbers.
+skibidi plat_trace(rizz frame, rizz score, rizz lvl, rizz hearts,
+                   rizz combo, chad speed, chad py, chad dist) {
+    edgy (frame % 250 == 0) {
+        yapping("f%-5d score %-6d lvl %d hearts %d combo %d speed %8.3f py %8.3f dist %10.3f",
+                frame, score, lvl, hearts, combo, speed, py, dist);
+    }
+}

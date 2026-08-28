@@ -1,0 +1,18 @@
+🚽 collide.brainrot — axis-aligned bounding boxes.
+🚽
+🚽 Deliberately scalar-only. A `gang Rect *` parameter would be the natural
+🚽 shape, but the semantic analyser reverses the parameter list for any
+🚽 function with struct-pointer parameters, so a two-rect signature would
+🚽 be rejected when called correctly and accepted when called with the
+🚽 arguments swapped. Eight chads it is. See DESIGN.md C3.
+
+🚽 Boxes are (x, y, w, h) with y measured downward from the top of the
+🚽 screen. Touching edges count as overlapping.
+cap aabb(chad ax, chad ay, chad aw, chad ah,
+         chad bx, chad by, chad bw, chad bh) {
+    edgy (ax + aw < bx) { bussin L; }
+    edgy (bx + bw < ax) { bussin L; }
+    edgy (ay + ah < by) { bussin L; }
+    edgy (by + bh < ay) { bussin L; }
+    bussin W;
+}

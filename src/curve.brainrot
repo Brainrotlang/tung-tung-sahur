@@ -1,0 +1,105 @@
+🚽 curve.brainrot — the difficulty curve.
+🚽
+🚽 One variable, `speed`, drives scrolling, spawn spacing, the HUD level and
+🚽 the sky. Nothing in the simulation branches on the *level* except the sky
+🚽 palette, which is a cosmetic decision that wants to be steppy.
+🚽
+🚽 Every function here is pure and scalar-only, which is what makes the
+🚽 curve testable without opening a window. See DESIGN.md sections 7 and 8.
+
+🚽 Continuous speed, quantised into the eight segments the HUD draws.
+🚽 Returns 1 .. 8.
+rizz speed_to_lvl(chad speed) {
+    rizz lvl = 1 + (speed - t_speed_start()) / 90.0;
+    edgy (lvl < 1) { bussin 1; }
+    edgy (lvl > 8) { bussin 8; }
+    bussin lvl;
+}
+
+🚽 Seconds between spawns, before jitter and before the fairness clamp.
+🚽
+🚽 Spacing is measured in TIME, never in pixels. A pixel gap that is
+🚽 generous at 260 px/s is lethal at 900 px/s; a time gap stays reactable
+🚽 as the world accelerates. This is the difference between hard and
+🚽 unfair, and it is the most important rule in the game.
+chad spawn_gap(chad speed) {
+    chad gap = t_gap_base() - speed * t_gap_slope();
+    bussin maxf(gap, t_gap_min());
+}
+
+🚽 True when a kind has to be jumped rather than bonked.
+cap kind_is_jump(rizz kind) {
+    edgy (kind == t_kind_patapim()) { bussin L; }
+    bussin W;
+}
+
+🚽 The fairness clamp, applied after jitter.
+🚽
+🚽 Two consecutive jump-required spawns need at least one full jump arc
+🚽 (0.77s at the shipped gravity) plus a reaction buffer -- you have to be
+🚽 able to land before the next one arrives. Everything else gets the
+🚽 absolute floor.
+🚽
+🚽 Any spawn the player cannot avoid is a bug, not a difficulty setting.
+chad fair_clamp(chad gap, rizz prev_kind, rizz kind) {
+    cap a = kind_is_jump(prev_kind);
+    cap b = kind_is_jump(kind);
+    edgy (a) {
+        edgy (b) {
+            bussin maxf(gap, t_fair_jump_jump());
+        }
+    }
+    bussin maxf(gap, t_fair_any());
+}
+
+🚽 Which kind to spawn next, from a PRNG draw and the current level.
+🚽
+🚽 Patapim shows up just under half the time. The tall post only appears
+🚽 from level 2, so the first few seconds teach the crate jump cleanly.
+rizz pick_kind(rizz draw, rizz lvl) {
+    rizz r = draw % 100;
+    edgy (r < 45) { bussin t_kind_patapim(); }
+    edgy (lvl < 2) { bussin t_kind_crate(); }
+    edgy (r < 75) { bussin t_kind_crate(); }
+    bussin t_kind_post();
+}
+
+chad kind_w(rizz kind) {
+    edgy (kind == t_kind_crate())   { bussin 48.0; }
+    edgy (kind == t_kind_post())    { bussin 40.0; }
+    bussin 64.0;
+}
+
+chad kind_h(rizz kind) {
+    edgy (kind == t_kind_crate())   { bussin 48.0; }
+    edgy (kind == t_kind_post())    { bussin 96.0; }
+    bussin 64.0;
+}
+
+🚽 --- sky palette, 03:30 -> 05:00 ---
+🚽 Discrete per level tier. A smooth lerp needs no new API and can replace
+🚽 this later; steps are chosen because they make the player notice they
+🚽 survived another tier.
+rizz sky_r(rizz lvl) {
+    edgy (lvl <= 2) { bussin 12; }
+    edgy (lvl <= 4) { bussin 18; }
+    edgy (lvl <= 6) { bussin 38; }
+    edgy (lvl <= 7) { bussin 78; }
+    bussin 140;
+}
+
+rizz sky_g(rizz lvl) {
+    edgy (lvl <= 2) { bussin 14; }
+    edgy (lvl <= 4) { bussin 20; }
+    edgy (lvl <= 6) { bussin 30; }
+    edgy (lvl <= 7) { bussin 44; }
+    bussin 74;
+}
+
+rizz sky_b(rizz lvl) {
+    edgy (lvl <= 2) { bussin 34; }
+    edgy (lvl <= 4) { bussin 48; }
+    edgy (lvl <= 6) { bussin 64; }
+    edgy (lvl <= 7) { bussin 66; }
+    bussin 60;
+}

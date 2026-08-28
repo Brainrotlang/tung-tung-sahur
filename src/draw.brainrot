@@ -1,0 +1,132 @@
+🚽 draw.brainrot — every rl_draw_* call in the game lives here.
+🚽
+🚽 M0 renders in primitives. Sprite atlases need rl_draw_texture_rec
+🚽 upstream (DESIGN.md B2), and one PNG per animation frame would mean six
+🚽 texture handles for a run cycle alone. Rectangles ship a playable game
+🚽 with no upstream blockers, which is the whole point of M0.
+🚽
+🚽 Numeric HUD text needs rl_draw_text_int upstream (B1). Literal labels
+🚽 work today, so the labels are here and the numbers go to the console on
+🚽 game over. See DESIGN.md section 10.3.
+🚽
+🚽 Requires `#cooked <raylib>` earlier in the including file.
+
+skibidi draw_begin() {
+    rl_begin_drawing();
+}
+
+skibidi draw_end() {
+    rl_end_drawing();
+}
+
+skibidi draw_sky(rizz lvl) {
+    rl_clear_background(sky_r(lvl), sky_g(lvl), sky_b(lvl), 255);
+}
+
+skibidi draw_ground() {
+    chad g = t_ground_y();
+    rl_draw_rectangle(0, g, t_screen_w(), t_screen_h() - g, 34, 28, 24, 255);
+    rl_draw_rectangle(0, g, t_screen_w(), 6, 58, 48, 38, 255);
+}
+
+🚽 Tung himself: body, then the bat he is always carrying.
+skibidi draw_player(chad x, chad y) {
+    rl_draw_rectangle(x, y, t_player_w(), t_player_h(), 196, 148, 92, 255);
+    rl_draw_rectangle(x + 8.0, y + 18.0, 10.0, 10.0, 30, 22, 16, 255);
+    rl_draw_rectangle(x + 30.0, y + 18.0, 10.0, 10.0, 30, 22, 16, 255);
+    rl_draw_rectangle(x + 12.0, y + 46.0, 24.0, 6.0, 30, 22, 16, 255);
+}
+
+🚽 The bat hitbox, drawn only while it is actually live. What you see is
+🚽 exactly what collides -- no generous invisible margin.
+skibidi draw_bat(chad x, chad y) {
+    rl_draw_rectangle(x + t_hitbox_dx(), y + t_hitbox_dy(),
+                      t_hitbox_w(), t_hitbox_h(), 240, 220, 120, 255);
+}
+
+skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind) {
+    edgy (kind == t_kind_patapim()) {
+        rl_draw_rectangle(x, y, w, h, 150, 80, 44, 255);
+        rl_draw_rectangle(x + 10.0, y + 16.0, 12.0, 12.0, 240, 240, 240, 255);
+        rl_draw_rectangle(x + 40.0, y + 16.0, 12.0, 12.0, 240, 240, 240, 255);
+        rl_draw_rectangle(x + 14.0, y + 42.0, 36.0, 8.0, 40, 20, 12, 255);
+    }
+    amogus {
+        edgy (kind == t_kind_post()) {
+            rl_draw_rectangle(x, y, w, h, 120, 110, 96, 255);
+            rl_draw_rectangle(x, y, w, 8.0, 150, 138, 120, 255);
+        }
+        amogus {
+            rl_draw_rectangle(x, y, w, h, 96, 92, 100, 255);
+            rl_draw_rectangle(x + 4.0, y + 4.0, w - 8.0, h - 8.0, 76, 72, 80, 255);
+        }
+    }
+}
+
+skibidi draw_hearts(rizz hearts) {
+    flex (rizz i = 0; i < hearts; i = i + 1) {
+        rl_draw_rectangle(20 + i * 28, 20, 20, 20, 220, 60, 60, 255);
+    }
+}
+
+🚽 Eight segments, one per level, matching speed_to_lvl's range.
+skibidi draw_speedbar(rizz lvl) {
+    rl_draw_text("SPEED", 1064, 18, 20, 220, 220, 220, 255);
+    flex (rizz i = 0; i < 8; i = i + 1) {
+        edgy (i < lvl) {
+            rl_draw_rectangle(1136 + i * 16, 18, 12, 20, 240, 150, 40, 255);
+        }
+        amogus {
+            rl_draw_rectangle(1136 + i * 16, 18, 12, 20, 60, 56, 52, 255);
+        }
+    }
+}
+
+🚽 Labels only. The digits need B1; until then the run's numbers are
+🚽 printed to the console on game over.
+skibidi draw_hud_labels() {
+    rl_draw_text("SCORE", 20, 52, 20, 220, 200, 120, 255);
+    rl_draw_text("LVL", 1064, 46, 20, 220, 220, 220, 255);
+}
+
+🚽 The title beat: TUNG... TUNG... TUNG... SAHUR, one word at a time.
+skibidi draw_title(chad t) {
+    rizz cx = t_screen_w() / 2;
+
+    edgy (t > 0.0) {
+        rizz w1 = rl_measure_text("TUNG...", 64);
+        rl_draw_text("TUNG...", cx - w1 / 2, 150, 64, 200, 170, 120, 255);
+    }
+    edgy (t > 0.5) {
+        rizz w2 = rl_measure_text("TUNG...", 64);
+        rl_draw_text("TUNG...", cx - w2 / 2, 220, 64, 210, 180, 130, 255);
+    }
+    edgy (t > 1.0) {
+        rizz w3 = rl_measure_text("TUNG...", 64);
+        rl_draw_text("TUNG...", cx - w3 / 2, 290, 64, 220, 190, 140, 255);
+    }
+    edgy (t > 1.5) {
+        rizz w4 = rl_measure_text("SAHUR", 96);
+        rl_draw_text("SAHUR", cx - w4 / 2, 360, 96, 245, 200, 90, 255);
+    }
+    edgy (t > 2.2) {
+        rizz w5 = rl_measure_text("SPACE to run   X to TUNG   ESC to quit", 24);
+        rl_draw_text("SPACE to run   X to TUNG   ESC to quit",
+                     cx - w5 / 2, 480, 24, 190, 190, 190, 255);
+    }
+}
+
+skibidi draw_gameover() {
+    rizz cx = t_screen_w() / 2;
+    rl_draw_rectangle(0, 240, t_screen_w(), 200, 0, 0, 0, 190);
+
+    rizz w1 = rl_measure_text("GAME OVER", 80);
+    rl_draw_text("GAME OVER", cx - w1 / 2, 270, 80, 230, 70, 60, 255);
+
+    rizz w2 = rl_measure_text("score and seed printed to the console", 22);
+    rl_draw_text("score and seed printed to the console",
+                 cx - w2 / 2, 366, 22, 170, 170, 170, 255);
+
+    rizz w3 = rl_measure_text("R or SPACE to run again", 24);
+    rl_draw_text("R or SPACE to run again", cx - w3 / 2, 398, 24, 210, 210, 210, 255);
+}

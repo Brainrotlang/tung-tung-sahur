@@ -1,0 +1,96 @@
+🚽 unit_collide.brainrot — src/collide.brainrot, plus the real hitbox
+🚽 geometry the game plays with.
+
+#cooked "../src/tune.brainrot"
+#cooked "../src/math.brainrot"
+#cooked "../src/curve.brainrot"
+#cooked "../src/collide.brainrot"
+
+skibidi main {
+    🚽 --- aabb basics -------------------------------------------------
+    yapping("-- aabb --");
+    yapping("overlap      %b", aabb(0.0, 0.0, 10.0, 10.0,  5.0,  5.0, 10.0, 10.0));
+    yapping("identical    %b", aabb(0.0, 0.0, 10.0, 10.0,  0.0,  0.0, 10.0, 10.0));
+    yapping("contained    %b", aabb(0.0, 0.0, 10.0, 10.0,  2.0,  2.0,  2.0,  2.0));
+    yapping("clear right  %b", aabb(0.0, 0.0, 10.0, 10.0, 20.0,  0.0, 10.0, 10.0));
+    yapping("clear left   %b", aabb(20.0, 0.0, 10.0, 10.0, 0.0,  0.0, 10.0, 10.0));
+    yapping("clear below  %b", aabb(0.0, 0.0, 10.0, 10.0,  0.0, 20.0, 10.0, 10.0));
+    yapping("clear above  %b", aabb(0.0, 20.0, 10.0, 10.0, 0.0,  0.0, 10.0, 10.0));
+
+    🚽 Touching edges count as a hit. That is a deliberate choice: it
+    🚽 makes the bat one pixel more generous than the crate, and the
+    🚽 player never dies to a gap they visually cleared.
+    yapping("edge touch x %b", aabb(0.0, 0.0, 10.0, 10.0, 10.0,  0.0, 10.0, 10.0));
+    yapping("edge touch y %b", aabb(0.0, 0.0, 10.0, 10.0,  0.0, 10.0, 10.0, 10.0));
+    yapping("one px apart %b", aabb(0.0, 0.0, 10.0, 10.0, 10.1,  0.0, 10.0, 10.0));
+
+    🚽 --- the bat, at the numbers the game actually uses ---------------
+    🚽 Player grounded: y = GROUND - PLAYER_H = 464. Patapim grounded:
+    🚽 y = GROUND - 64 = 496. Bat: (x+40, y+16, 56x56) = 240..296 wide.
+    yapping("-- bat geometry --");
+    chad ground   = t_ground_y();
+    chad px       = t_player_x();
+    chad py_grnd  = ground - t_player_h();
+    chad pat_h    = kind_h(t_kind_patapim());
+    chad pat_w    = kind_w(t_kind_patapim());
+    chad pat_y    = ground - pat_h;
+
+    chad bx = px + t_hitbox_dx();
+    chad by = py_grnd + t_hitbox_dy();
+    yapping("bat box  x %.0f..%.0f  y %.0f..%.0f",
+            bx, bx + t_hitbox_w(), by, by + t_hitbox_h());
+    yapping("patapim  y %.0f..%.0f", pat_y, pat_y + pat_h);
+
+    🚽 Sweep a Patapim in from the right and report the exact window in
+    🚽 which a grounded swing connects. If this window ever shrinks below
+    🚽 a few frames of travel, the bat has become unusable.
+    rizz first_hit = -1;
+    rizz last_hit  = -1;
+    flex (rizz i = 0; i < 400; i = i + 1) {
+        chad ex = 400.0 - i;
+        cap hit = aabb(bx, by, t_hitbox_w(), t_hitbox_h(),
+                       ex, pat_y, pat_w, pat_h);
+        edgy (hit) {
+            edgy (first_hit < 0) { first_hit = i; }
+            last_hit = i;
+        }
+    }
+    yapping("grounded swing connects over %d px of approach",
+            last_hit - first_hit + 1);
+
+    🚽 The body box, for comparison. The bat must reach further right
+    🚽 than the body, or a correctly-timed swing would never beat the
+    🚽 collision.
+    rizz body_first = -1;
+    flex (rizz i = 0; i < 400; i = i + 1) {
+        chad ex = 400.0 - i;
+        cap hit = aabb(px, py_grnd, t_player_w(), t_player_h(),
+                       ex, pat_y, pat_w, pat_h);
+        edgy (hit) {
+            edgy (body_first < 0) { body_first = i; }
+        }
+    }
+    cap bat_reaches_first = L;
+    edgy (first_hit < body_first) { bat_reaches_first = W; }
+    yapping("bat reaches before body: %b (bat %d, body %d)",
+            bat_reaches_first, first_hit, body_first);
+
+    🚽 At the apex of a jump the player is 192px up, so the bat is well
+    🚽 clear of a grounded enemy. Swinging in the air is allowed and
+    🚽 harmless -- it simply misses, which is the intended geometry.
+    chad py_apex = py_grnd - 192.0;
+    cap apex_hit = aabb(px + t_hitbox_dx(), py_apex + t_hitbox_dy(),
+                        t_hitbox_w(), t_hitbox_h(),
+                        260.0, pat_y, pat_w, pat_h);
+    yapping("apex swing hits grounded patapim: %b", apex_hit);
+
+    🚽 A jump must actually clear the tall post, or the level-2 spawn is
+    🚽 a death sentence. Post is 96 tall; apex clearance is 192.
+    chad post_h = kind_h(t_kind_post());
+    chad post_y = ground - post_h;
+    cap apex_clears_post = aabb(px, py_apex, t_player_w(), t_player_h(),
+                                px, post_y, kind_w(t_kind_post()), post_h);
+    yapping("apex still collides with post: %b", apex_clears_post);
+
+    bussin 0;
+}

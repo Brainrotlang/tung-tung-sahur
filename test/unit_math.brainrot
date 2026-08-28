@@ -1,0 +1,76 @@
+🚽 unit_math.brainrot — src/math.brainrot
+
+#cooked "../src/tune.brainrot"
+#cooked "../src/math.brainrot"
+
+skibidi main {
+    🚽 --- rng_next: Park-Miller minimal standard ---------------------
+    🚽 From seed 1 the sequence is published and fixed. If these five
+    🚽 numbers ever change, the generator is not Park-Miller any more and
+    🚽 every golden file in this repo is meaningless.
+    yapping("-- park-miller from seed 1 --");
+    rizz s = 1;
+    flex (rizz i = 0; i < 5; i = i + 1) {
+        s = rng_next(s);
+        yapping("%d", s);
+    }
+
+    🚽 The interpreter is built with -fsanitize=undefined, so if Schrage's
+    🚽 method ever stopped holding the intermediate products inside int32
+    🚽 this loop would abort rather than print. Ten thousand draws is a
+    🚽 cheap way to say "it never overflows".
+    yapping("-- 10000 draws stay in range --");
+    rizz t = 20260827;
+    rizz lo_seen = 2147483647;
+    rizz hi_seen = 0;
+    flex (rizz i = 0; i < 10000; i = i + 1) {
+        t = rng_next(t);
+        edgy (t < lo_seen) { lo_seen = t; }
+        edgy (t > hi_seen) { hi_seen = t; }
+    }
+    cap in_range = W;
+    edgy (lo_seen < 1) { in_range = L; }
+    edgy (hi_seen > 2147483646) { in_range = L; }
+    yapping("in_range=%b final=%d", in_range, t);
+
+    🚽 --- rng_unit / rng_signed bounds -------------------------------
+    yapping("-- unit and signed bounds --");
+    cap unit_ok   = W;
+    cap signed_ok = W;
+    rizz u = 42;
+    flex (rizz i = 0; i < 5000; i = i + 1) {
+        u = rng_next(u);
+        chad a = rng_unit(u);
+        edgy (a < 0.0) { unit_ok = L; }
+        edgy (a >= 1.0) { unit_ok = L; }
+        chad b = rng_signed(u);
+        edgy (b < -1.0) { signed_ok = L; }
+        edgy (b >= 1.0) { signed_ok = L; }
+    }
+    yapping("unit_ok=%b signed_ok=%b", unit_ok, signed_ok);
+
+    🚽 --- clampf / maxf / minf / absf / lerpf -------------------------
+    yapping("-- scalar helpers --");
+    yapping("clamp below  %.2f", clampf(-3.0, 0.0, 10.0));
+    yapping("clamp inside %.2f", clampf(4.5, 0.0, 10.0));
+    yapping("clamp above  %.2f", clampf(99.0, 0.0, 10.0));
+    yapping("clamp at lo  %.2f", clampf(0.0, 0.0, 10.0));
+    yapping("clamp at hi  %.2f", clampf(10.0, 0.0, 10.0));
+    yapping("max %.2f %.2f", maxf(3.0, 7.0), maxf(7.0, 3.0));
+    yapping("min %.2f %.2f", minf(3.0, 7.0), minf(7.0, 3.0));
+    yapping("abs %.2f %.2f %.2f", absf(-4.25), absf(4.25), absf(0.0));
+    yapping("lerp %.2f %.2f %.2f", lerpf(0.0, 10.0, 0.0),
+                                   lerpf(0.0, 10.0, 0.5),
+                                   lerpf(0.0, 10.0, 1.0));
+
+    🚽 --- truncf ------------------------------------------------------
+    🚽 This is the workaround for DESIGN.md C2: assigning a bare chad
+    🚽 variable to a rizz reinterprets the float's bit pattern instead of
+    🚽 converting. `rizz k = someChad;` here would print 1099694080.
+    🚽 When C2 is fixed upstream, these values must not move.
+    yapping("-- truncf --");
+    chad g = 17.5;
+    yapping("%d %d %d %d", truncf(g), truncf(-17.5), truncf(0.9), truncf(-0.9));
+
+    bussin 0;
+}

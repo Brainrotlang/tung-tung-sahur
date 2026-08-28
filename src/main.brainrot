@@ -1,0 +1,393 @@
+🚽 TUNG TUNG TUNG SAHUR: RUN
+🚽 M0 -- "Rectangles at 03:30 AM"
+🚽
+🚽 An endless runner in Brainrot, rendered through brainray. Tung Tung Tung
+🚽 Sahur runs east to wake the village for the pre-dawn meal; Brr Brr
+🚽 Patapim keeps getting in the way.
+🚽
+🚽     jump what you can't hit, hit what you can't jump
+🚽
+🚽 Build and run:
+🚽     make play
+🚽
+🚽 The whole frame loop lives in `skibidi main`. That is not laziness -- it
+🚽 is forced by three interacting limitations (DESIGN.md section 14.1):
+🚽 Brainrot has no globals, no pointer arithmetic on struct pointers, and a
+🚽 semantic analyser that reverses the parameter list for any function with
+🚽 struct-pointer parameters. Together those mean a helper cannot walk an
+🚽 entity pool, and cannot take both `gang Ent *e` and a world scalar.
+🚽 Everything that *can* be extracted has been, into the cooked modules
+🚽 below; what is left is the part the language cannot express yet.
+
+#cooked <raylib>
+#cooked "tune.brainrot"
+#cooked "math.brainrot"
+#cooked "collide.brainrot"
+#cooked "curve.brainrot"
+#cooked "platform.brainrot"
+#cooked "draw.brainrot"
+
+gang Ent {
+    chad x;
+    chad y;
+    chad w;
+    chad h;
+    rizz kind;
+    cap alive;
+};
+
+skibidi main {
+    plat_open();
+
+    🚽 --- tuning, cached once so the per-frame cost is zero ---
+    chad GROUND     = t_ground_y();
+    chad PLAYER_X   = t_player_x();
+    chad PLAYER_W   = t_player_w();
+    chad PLAYER_H   = t_player_h();
+    chad GRAVITY    = t_gravity();
+    chad JUMP_V     = t_jump_v();
+    chad IFRAME     = t_iframe_time();
+    chad HIT_SLOW   = t_hit_slowdown();
+    chad ATK_TOTAL  = t_attack_total();
+    chad ATK_ACTIVE = t_attack_active();
+    chad HB_DX      = t_hitbox_dx();
+    chad HB_DY      = t_hitbox_dy();
+    chad HB_W       = t_hitbox_w();
+    chad HB_H       = t_hitbox_h();
+    chad SPEED_MIN  = t_speed_start();
+    chad ACCEL      = t_speed_accel();
+    chad SPEED_MAX  = t_speed_max();
+    chad ENEMY_CLOSE = t_enemy_close();
+    chad DT_MAX     = t_dt_max();
+    chad SPAWN_X    = t_spawn_x();
+    chad JITTER     = t_gap_jitter();
+    rizz HEARTS_MAX = t_hearts_max();
+
+    🚽 Array sizes must be literals, so this is the one place the pool
+    🚽 bounds are written twice. Fail loudly rather than quietly walking
+    🚽 off the end of a pool if someone edits tune.brainrot alone.
+    rizz MAX_OBS = 16;
+    rizz MAX_EN  = 16;
+    bet(MAX_OBS == t_max_obstacles(), "MAX_OBS must match t_max_obstacles()");
+    bet(MAX_EN  == t_max_enemies(),   "MAX_EN must match t_max_enemies()");
+
+    🚽 --- run state ---
+    rizz state    = t_state_title();
+    chad title_t  = 0.0;
+    rizz frame    = 0;
+    rizz run_seed = 20260827;
+    rizz seed     = run_seed;
+
+    🚽 --- player ---
+    chad py       = 0.0;
+    chad pvy      = 0.0;
+    cap  grounded = W;
+    chad atk_t    = 0.0;
+    chad iframe_t = 0.0;
+    rizz hearts   = 0;
+
+    🚽 --- world ---
+    chad speed     = 0.0;
+    chad dist      = 0.0;
+    rizz bonus     = 0;
+    rizz combo     = 0;
+    chad spawn_t   = 0.0;
+    rizz prev_kind = 0;
+    rizz next_kind = 0;
+
+    gang Ent obstacles[16];
+    gang Ent enemies[16];
+
+    🚽 One reset path, used by both the first run and every restart.
+    cap do_reset = W;
+    cap running  = W;
+
+    goon (running) {
+        edgy (do_reset) {
+            py       = GROUND - PLAYER_H;
+            pvy      = 0.0;
+            grounded = W;
+            atk_t    = 0.0;
+            iframe_t = 0.0;
+            hearts   = HEARTS_MAX;
+
+            speed = SPEED_MIN;
+            dist  = 0.0;
+            bonus = 0;
+            combo = 0;
+
+            🚽 Each run advances the seed, so runs differ -- but the whole
+            🚽 sequence is reproducible from the initial constant, and the
+            🚽 seed that produced a run is printed when it ends.
+            run_seed = rng_next(run_seed);
+            seed     = run_seed;
+
+            seed      = rng_next(seed);
+            next_kind = pick_kind(seed, 1);
+            prev_kind = t_kind_patapim();
+            spawn_t   = 1.2;
+
+            flex (rizz i = 0; i < MAX_OBS; i = i + 1) { obstacles[i].alive = L; }
+            flex (rizz i = 0; i < MAX_EN;  i = i + 1) { enemies[i].alive = L; }
+
+            do_reset = L;
+        }
+
+        🚽 --- 1. frame time -------------------------------------------
+        🚽 The clamp is not optional. rl_get_frame_time after a window
+        🚽 drag can return a large dt, and at 900 px/s an unclamped spike
+        🚽 tunnels every entity straight through the player.
+        chad dt = plat_dt(frame);
+        edgy (dt > DT_MAX) { dt = DT_MAX; }
+
+        cap in_run = L;
+        edgy (state == t_state_run()) { in_run = W; }
+
+        🚽 --- 2. speed curve ------------------------------------------
+        edgy (in_run) {
+            speed = speed + ACCEL * dt;
+            edgy (speed > SPEED_MAX) { speed = SPEED_MAX; }
+            dist = dist + speed * dt;
+        }
+        rizz lvl   = speed_to_lvl(speed);
+        rizz score = truncf(dist * 0.1) + bonus;
+
+        🚽 --- 3. input ------------------------------------------------
+        edgy (in_run) {
+            cap jump = plat_jump_down(frame);
+            edgy (jump) {
+                edgy (grounded) {
+                    pvy      = JUMP_V;
+                    grounded = L;
+                }
+            }
+            cap bat = plat_bat_pressed(frame);
+            edgy (bat) {
+                edgy (atk_t <= 0.0) { atk_t = ATK_TOTAL; }
+            }
+        }
+
+        🚽 --- 4. player physics ---------------------------------------
+        edgy (in_run) {
+            pvy = pvy + GRAVITY * dt;
+            py  = py + pvy * dt;
+            edgy (py > GROUND - PLAYER_H) {
+                py       = GROUND - PLAYER_H;
+                pvy      = 0.0;
+                grounded = W;
+            }
+        }
+
+        🚽 --- 5. timers -----------------------------------------------
+        edgy (in_run) {
+            edgy (atk_t > 0.0) {
+                atk_t = atk_t - dt;
+                edgy (atk_t < 0.0) { atk_t = 0.0; }
+            }
+            edgy (iframe_t > 0.0) {
+                iframe_t = iframe_t - dt;
+                edgy (iframe_t < 0.0) { iframe_t = 0.0; }
+            }
+        }
+        cap swinging = L;
+        edgy (atk_t > ATK_ACTIVE) { swinging = W; }
+
+        🚽 --- 6. spawning ---------------------------------------------
+        edgy (in_run) {
+            spawn_t = spawn_t - dt;
+            edgy (spawn_t <= 0.0) {
+                cap is_enemy = L;
+                edgy (next_kind == t_kind_patapim()) { is_enemy = W; }
+
+                rizz slot = -1;
+                edgy (is_enemy) {
+                    flex (rizz i = 0; i < MAX_EN; i = i + 1) {
+                        edgy (enemies[i].alive == L) {
+                            edgy (slot < 0) { slot = i; }
+                        }
+                    }
+                    edgy (slot >= 0) {
+                        enemies[slot].kind  = next_kind;
+                        enemies[slot].w     = kind_w(next_kind);
+                        enemies[slot].h     = kind_h(next_kind);
+                        enemies[slot].x     = SPAWN_X;
+                        enemies[slot].y     = GROUND - kind_h(next_kind);
+                        enemies[slot].alive = W;
+                    }
+                }
+                amogus {
+                    flex (rizz i = 0; i < MAX_OBS; i = i + 1) {
+                        edgy (obstacles[i].alive == L) {
+                            edgy (slot < 0) { slot = i; }
+                        }
+                    }
+                    edgy (slot >= 0) {
+                        obstacles[slot].kind  = next_kind;
+                        obstacles[slot].w     = kind_w(next_kind);
+                        obstacles[slot].h     = kind_h(next_kind);
+                        obstacles[slot].x     = SPAWN_X;
+                        obstacles[slot].y     = GROUND - kind_h(next_kind);
+                        obstacles[slot].alive = W;
+                    }
+                }
+
+                🚽 A full pool silently skips the spawn. That is correct
+                🚽 behaviour, not an error -- the gap still advances.
+
+                🚽 Decide the next kind now, so the fairness clamp knows
+                🚽 both ends of the gap it is about to size.
+                prev_kind = next_kind;
+                seed      = rng_next(seed);
+                next_kind = pick_kind(seed, lvl);
+
+                seed      = rng_next(seed);
+                chad gap  = spawn_gap(speed) + rng_signed(seed) * JITTER;
+                spawn_t   = fair_clamp(gap, prev_kind, next_kind);
+            }
+        }
+
+        🚽 --- 7. obstacles: scroll, then body collision ----------------
+        edgy (in_run) {
+            flex (rizz i = 0; i < MAX_OBS; i = i + 1) {
+                edgy (obstacles[i].alive) {
+                    obstacles[i].x = obstacles[i].x - speed * dt;
+                    edgy (obstacles[i].x < 0.0 - obstacles[i].w) {
+                        obstacles[i].alive = L;
+                    }
+                }
+                edgy (obstacles[i].alive) {
+                    edgy (iframe_t <= 0.0) {
+                        cap crash = aabb(PLAYER_X, py, PLAYER_W, PLAYER_H,
+                                         obstacles[i].x, obstacles[i].y,
+                                         obstacles[i].w, obstacles[i].h);
+                        edgy (crash) {
+                            obstacles[i].alive = L;
+                            hearts   = hearts - 1;
+                            iframe_t = IFRAME;
+                            combo    = 0;
+                            speed    = maxf(speed * HIT_SLOW, SPEED_MIN);
+                        }
+                    }
+                }
+            }
+        }
+
+        🚽 --- 8. enemies: scroll, bat pass, then body pass -------------
+        🚽 Bat before body, so a frame-perfect swing always beats the
+        🚽 collision.
+        edgy (in_run) {
+            flex (rizz i = 0; i < MAX_EN; i = i + 1) {
+                edgy (enemies[i].alive) {
+                    enemies[i].x = enemies[i].x - (speed + ENEMY_CLOSE) * dt;
+                    edgy (enemies[i].x < 0.0 - enemies[i].w) {
+                        🚽 Missing a bonk does not break the combo. Only
+                        🚽 getting hit does.
+                        enemies[i].alive = L;
+                    }
+                }
+                edgy (enemies[i].alive) {
+                    edgy (swinging) {
+                        cap bonk = aabb(PLAYER_X + HB_DX, py + HB_DY, HB_W, HB_H,
+                                        enemies[i].x, enemies[i].y,
+                                        enemies[i].w, enemies[i].h);
+                        edgy (bonk) {
+                            enemies[i].alive = L;
+                            combo = combo + 1;
+                            edgy (combo > 8) { combo = 8; }
+                            bonus = bonus + 100 * combo;
+                        }
+                    }
+                }
+                edgy (enemies[i].alive) {
+                    edgy (iframe_t <= 0.0) {
+                        cap crash = aabb(PLAYER_X, py, PLAYER_W, PLAYER_H,
+                                         enemies[i].x, enemies[i].y,
+                                         enemies[i].w, enemies[i].h);
+                        edgy (crash) {
+                            enemies[i].alive = L;
+                            hearts   = hearts - 1;
+                            iframe_t = IFRAME;
+                            combo    = 0;
+                            speed    = maxf(speed * HIT_SLOW, SPEED_MIN);
+                        }
+                    }
+                }
+            }
+        }
+
+        🚽 --- 9. state transitions -------------------------------------
+        edgy (state == t_state_title()) {
+            title_t = title_t + dt;
+            edgy (title_t > 2.2) {
+                cap go = plat_start_pressed(frame);
+                edgy (go) {
+                    state    = t_state_run();
+                    do_reset = W;
+                }
+            }
+        }
+
+        edgy (in_run) {
+            edgy (hearts <= 0) {
+                state = t_state_over();
+                yapping("run over -- score %d, seed %d, frames %d",
+                        score, run_seed, frame);
+            }
+        }
+
+        edgy (state == t_state_over()) {
+            cap again = plat_restart_pressed(frame);
+            edgy (again) {
+                state    = t_state_run();
+                do_reset = W;
+            }
+        }
+
+        plat_trace(frame, score, lvl, hearts, combo, speed, py, dist);
+
+        🚽 --- 10. draw --------------------------------------------------
+        draw_begin();
+        draw_sky(lvl);
+        draw_ground();
+
+        flex (rizz i = 0; i < MAX_OBS; i = i + 1) {
+            edgy (obstacles[i].alive) {
+                draw_ent(obstacles[i].x, obstacles[i].y,
+                         obstacles[i].w, obstacles[i].h, obstacles[i].kind);
+            }
+        }
+        flex (rizz i = 0; i < MAX_EN; i = i + 1) {
+            edgy (enemies[i].alive) {
+                draw_ent(enemies[i].x, enemies[i].y,
+                         enemies[i].w, enemies[i].h, enemies[i].kind);
+            }
+        }
+
+        🚽 Flash on alternate 0.1s ticks while invulnerable.
+        cap show = W;
+        edgy (iframe_t > 0.0) {
+            rizz tick = truncf(iframe_t * 10.0);
+            edgy (tick % 2 == 0) { show = L; }
+        }
+        edgy (show) { draw_player(PLAYER_X, py); }
+        edgy (swinging) { draw_bat(PLAYER_X, py); }
+
+        draw_hearts(hearts);
+        draw_speedbar(lvl);
+        draw_hud_labels();
+
+        edgy (state == t_state_title()) { draw_title(title_t); }
+        edgy (state == t_state_over())  { draw_gameover(); }
+
+        draw_end();
+
+        🚽 --- 11. quit --------------------------------------------------
+        cap wants_close = plat_should_close(frame);
+        edgy (wants_close) { running = L; }
+
+        frame = frame + 1;
+    }
+
+    plat_close();
+    bussin 0;
+}

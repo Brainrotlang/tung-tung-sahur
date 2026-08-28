@@ -1,0 +1,18 @@
+-- aabb --
+overlap      W
+identical    W
+contained    W
+clear right  L
+clear left   L
+clear below  L
+clear above  L
+edge touch x W
+edge touch y W
+one px apart L
+-- bat geometry --
+bat box  x 240..296  y 480..536
+patapim  y 496..560
+grounded swing connects over 121 px of approach
+bat reaches before body: W (bat 104, body 152)
+apex swing hits grounded patapim: L
+apex still collides with post: L

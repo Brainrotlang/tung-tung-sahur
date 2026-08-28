@@ -1,0 +1,60 @@
+🚽 platform.brainrot — the input/time/window seam, raylib backing.
+🚽
+🚽 Every `plat_*` function takes the frame number even when it doesn't need
+🚽 it, so that test/platform_fake.brainrot can implement the identical
+🚽 signatures with a scripted input tape. That parity is what lets the
+🚽 headless harness run the real simulation loop unchanged.
+🚽
+🚽 Requires `#cooked <raylib>` earlier in the including file.
+
+skibidi plat_open() {
+    rl_init_window(t_screen_w(), t_screen_h(), "TUNG TUNG TUNG SAHUR: RUN");
+    rl_set_target_fps(60);
+}
+
+skibidi plat_close() {
+    rl_close_window();
+}
+
+chad plat_dt(rizz frame) {
+    bussin rl_get_frame_time();
+}
+
+cap plat_jump_down(rizz frame) {
+    cap a = rl_is_key_down(t_key_space());
+    edgy (a) { bussin W; }
+    cap b = rl_is_key_down(t_key_up());
+    bussin b;
+}
+
+cap plat_bat_pressed(rizz frame) {
+    cap a = rl_is_key_pressed(t_key_x());
+    edgy (a) { bussin W; }
+    cap b = rl_is_key_pressed(t_key_z());
+    bussin b;
+}
+
+cap plat_start_pressed(rizz frame) {
+    bussin rl_is_key_pressed(t_key_space());
+}
+
+cap plat_restart_pressed(rizz frame) {
+    cap a = rl_is_key_pressed(t_key_r());
+    edgy (a) { bussin W; }
+    cap b = rl_is_key_pressed(t_key_space());
+    bussin b;
+}
+
+cap plat_should_close(rizz frame) {
+    bussin rl_window_should_close();
+}
+
+🚽 A state sample, called once per frame. Nothing in the real game wants
+🚽 it, so here it does nothing; the headless harness prints it on a fixed
+🚽 cadence to give the golden file something to catch drift with. Keeping
+🚽 the seam in the shipping path is what stops the harness from needing
+🚽 its own copy of the frame loop.
+skibidi plat_trace(rizz frame, rizz score, rizz lvl, rizz hearts,
+                   rizz combo, chad speed, chad py, chad dist) {
+    rizz noop = 0;
+}
