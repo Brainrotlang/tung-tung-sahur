@@ -6,7 +6,7 @@ rendered through [`brainray`](https://github.com/Brainrotlang/brainrot/blob/main
 It is 03:30 AM. Tung Tung Tung Sahur runs east to wake the village for the
 pre-dawn meal. Brr Brr Patapim keeps getting in the way.
 
-> **jump what you can't hit, hit what you can't jump**
+> **jump to survive, bonk to score**
 
 ```
                           increasing speed →

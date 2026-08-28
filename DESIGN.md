@@ -17,9 +17,16 @@ pre-dawn meal. Brr Brr Patapim keeps getting in the way.
 
 One rule, learned in ten seconds:
 
-> **Jump what you can't hit. Hit what you can't jump.**
+> **Jump to survive. Bonk to score.**
 
-Then, from LVL 4 onward, the game starts breaking that rule on purpose.
+A crate has to be jumped. Brr Brr Patapim *can* be jumped — the arc clears him
+comfortably — but jumping him pays nothing, and the bat pays up to ×8. So the
+safe line through the level is always available and always worth less than the
+greedy one, which is the whole tension: every Patapim is a small bet on your own
+timing.
+
+Then, from LVL 4 onward, armored Patapim arrives and takes the bat away, so the
+one answer you'd been rewarded for stops working.
 
 The goal is not "an infinite score counter". The goal is **SURVIVE UNTIL SAHUR** —
 a fixed distance, roughly five minutes, after which the sky turns orange and you
@@ -31,7 +38,8 @@ unlock **ENDLESS SCHIZO MODE**, where the acceleration never stops.
    picks the sky colour, and sets the LVL. There are no difficulty *levels*, only
    a difficulty *curve* that the HUD quantises for readability.
 2. **Small mechanical core, deep tail.** Jump, bonk, and a rising number. Every
-   later mechanic is a variation on those three.
+   later mechanic is a variation on those three. Jumping always survives;
+   bonking is what scores. The safe line is never removed, only made poorer.
 3. **Hard, never unfair.** Spacing is measured in *seconds of reaction time*, not
    pixels, so the game stays reactable as it accelerates. Unavoidable spawns are
    a bug, not a difficulty setting.
@@ -419,22 +427,37 @@ clamped to 8: ×1, ×2, ×3 … ×8. It resets to zero on any heart lost. Missin
 bonk does not reset it — only getting hit does, which keeps the incentive
 aggressive rather than cautious.
 
-### 9.3 Breaking the rule
+### 9.3 Jumping an enemy is allowed, and that's the point
 
-"Jump what you can't hit, hit what you can't jump" is taught for three levels,
-then violated. Variants unlock at `lvl >= 4` (M1):
+The jump apex is 192 px and Patapim is 64 px tall, so hopping an enemy clears
+him cleanly. This is deliberate, not an oversight — `unit_collide.brainrot`
+asserts the geometry both ways, that a grounded swing connects over 121 px of
+approach and that an apex swing misses.
+
+The alternative — a hidden damage box taller than the sprite, or a 192 px enemy
+— would make the safe line unavailable and turn every Patapim into a pure
+execution check. Instead the safe line stays open and costs you the combo. A
+player who only jumps finishes a run; a player who bonks finishes it with four
+times the score. That is a better arcade shape than "do the one correct thing",
+and it means the difficulty curve, not the enemy design, is what eventually
+kills you.
+
+### 9.4 Breaking the rule
+
+The bargain above is taught for three levels, then withdrawn. Variants unlock at
+`lvl >= 4` (M1):
 
 | Variant | Twist |
 | --- | --- |
 | Small Patapim | Faster closing speed; the bonk window is genuinely tight |
 | Big Patapim | Two bonks; the first staggers, the second kills |
 | Jumping Patapim | Leaps on approach — bonk on the ground or duck the leap |
-| Armored Patapim | **Cannot be bonked.** Must be jumped. This is the rule breaking |
+| Armored Patapim | **Cannot be bonked.** Jumping is the only answer, so the greedy line is the one that kills you |
 
 Armored Patapim is deliberately introduced *alone*, on a wide gap, the first
 time it appears. The lesson has to be survivable.
 
-### 9.4 Enemy motion
+### 9.5 Enemy motion
 
 Enemies scroll with the world *plus* a small closing speed, so they arrive
 sooner than the geometry suggests and can't be pattern-memorised purely by
