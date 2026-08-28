@@ -51,6 +51,11 @@ raylib setup for your OS is documented once, upstream, in
 [`docs/brainray.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md).
 This repo will not duplicate it.
 
+The HUD needs `rl_draw_text_int`, so brainrot must be at or after
+[#292](https://github.com/Brainrotlang/brainrot/pull/292). `make play` checks
+the built module for it and tells you to update rather than failing later with
+a bare "Undefined function".
+
 Then:
 
 ```bash
@@ -123,6 +128,8 @@ fixes that would let this be structured properly.
 ## Status
 
 **M0 — "Rectangles at 03:30 AM".** Playable core in primitives, no upstream
-dependencies. Sprites, parallax and numeric HUD are M1 and need
-`rl_draw_texture_rec` and formatted text upstream; bosses and audio are M2.
-Milestones are in DESIGN.md §18.
+dependencies. The numeric HUD has since landed on top of it, once
+`rl_draw_text_int` went in upstream (DESIGN.md B1,
+[brainrot#292](https://github.com/Brainrotlang/brainrot/pull/292)). Sprites and
+parallax are the rest of M1 and still need `rl_draw_texture_rec` (B2); bosses
+and audio are M2. Milestones are in DESIGN.md §18.

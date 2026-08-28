@@ -90,7 +90,7 @@ uses until it lands.
 
 ### 3.3 The `brainray` surface
 
-Twenty-one functions total:
+Twenty-three functions total:
 
 ```
 rl_init_window          rl_window_should_close  rl_close_window
@@ -100,19 +100,19 @@ rl_get_frame_time       rl_draw_fps             rl_measure_text
 rl_draw_circle          rl_draw_rectangle       rl_draw_line
 rl_draw_text            rl_is_key_down          rl_is_key_pressed
 rl_load_texture         rl_draw_texture         rl_unload_texture
+rl_draw_text_int        rl_measure_text_int
 ```
 
-Three gaps matter:
+The last two landed as **B1**
+([brainrot#292](https://github.com/Brainrotlang/brainrot/pull/292)). Two gaps
+remain:
 
-- **No numeric text.** `rl_draw_text` takes a string literal and Brainrot has no
-  `sprintf`. *Literal* HUD labels — `SCORE`, `SPEED`, `LVL`, `GAME OVER`, the
-  title card — all work today. **Digits do not.** → upstream **B1**.
 - **No `DrawTextureRec`.** `rl_draw_texture` blits a whole texture at integer
   `x, y` with a tint: no source rectangle, no scaling, no flip, no rotation.
   That rules out sprite atlases, animation frames, and tiled parallax. → **B2**.
 - **No audio at all.** → **B3**.
 
-M0 is designed to need none of them.
+M0 was designed to need none of them.
 
 ---
 
@@ -510,13 +510,22 @@ player *notice* they survived another tier.
 
 ### 10.3 HUD
 
-Literal text works today; only digits are blocked. M0 ships everything except
-the numbers, and **B1** fills them in without touching game code.
+Numbers arrived with **B1**, so the HUD is complete:
 
 ```
 ♥♥♥                                    SPEED ▓▓▓▓▓░░░
-SCORE  [digits: B1]                    LVL   [digits: B1]
+SCORE 000450                           LVL 3
 ```
+
+Score is zero-padded to six columns via `rl_draw_text_int`'s `pad` argument,
+which is a *field width* rather than a digit count — the point being that the
+HUD does not reflow every time the score crosses a power of ten. `LVL` is
+unpadded because it is a single digit by construction (§7.1).
+
+The game-over card centres the final score and the run's seed with
+`rl_measure_text_int`. The seed is on screen rather than in the terminal
+because a run is reproducible from it (§8.3): a bug report is a seed and a
+frame number, and nobody ever went to read their console for it.
 
 - Hearts: `hearts` red rectangles at `(20 + i*28, 20)`.
 - Speed bar: 8 segments at `(1130 + i*14, 30)`; filled while `i < lvl`.
@@ -733,12 +742,16 @@ depends on none of them.**
 
 | ID | Ask | Unblocks | Milestone |
 | --- | --- | --- | --- |
-| **B1** | `rl_draw_text_int(text, value, x, y, size, r,g,b,a)` — or a general formatted-text wrapper | SCORE / LVL / high-score digits, i.e. all numeric HUD | M1 |
+| ~~**B1**~~ | ~~`rl_draw_text_int` / `rl_measure_text_int`~~ — **landed**, [brainrot#292](https://github.com/Brainrotlang/brainrot/pull/292) | SCORE / LVL / final-score digits, i.e. all numeric HUD | ✅ |
 | **B2** | `rl_draw_texture_rec(handle, sx, sy, sw, sh, x, y, r,g,b,a)` | Sprite atlases, animation frames, tiled parallax | M1 |
 | **B3** | `rl_init_audio_device`, `rl_load_sound`, `rl_play_sound`, `rl_unload_sound`, `rl_close_audio_device` | The `TUNG` on every bat hit. The entire joke | M2 |
 | **B4** | `rl_draw_texture_pro` (scale / flip / rotate), `rl_draw_rectangle_lines`, `rl_get_time` | Facing flips, debug hitbox overlays | M3 |
 
-B1 is the smallest possible change with the largest payoff and should be first.
+B1 was the smallest change with the largest payoff and went first. Formatting
+is fixed at one literal prefix plus one integer rather than a general format
+string: a Brainrot-supplied `"%s"` would make the host read an argument that
+isn't there, and nothing can check a user-supplied format against the single
+`rizz` actually passed. **B2** is next.
 
 ### 15.2 `brainrot` core bugs
 
@@ -887,9 +900,9 @@ Playable core, primitives only. Title card, run, game over, restart.
 - [x] Title screen with the `TUNG... TUNG... TUNG... SAHUR` beat
 - [x] Headless test harness + golden files
 
-### M1 — "Sprites and sky" *(needs B1, B2)*
+### M1 — "Sprites and sky" *(needs B2)*
 
-- [ ] Numeric HUD (B1)
+- [x] Numeric HUD (B1)
 - [ ] Sprite sheets and the run cycle (B2)
 - [ ] Parallax: mountains, palms, houses, foreground foliage
 - [ ] Duck

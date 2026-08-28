@@ -374,10 +374,10 @@ skibidi main {
 
         draw_hearts(hearts);
         draw_speedbar(lvl);
-        draw_hud_labels();
+        draw_hud(score, lvl);
 
         edgy (state == t_state_title()) { draw_title(title_t); }
-        edgy (state == t_state_over())  { draw_gameover(); }
+        edgy (state == t_state_over())  { draw_gameover(score, run_seed); }
 
         draw_end();
 

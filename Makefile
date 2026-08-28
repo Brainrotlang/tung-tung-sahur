@@ -97,3 +97,11 @@ check-brainray: check-brainrot
 	    echo "install raylib, then run 'make brainray' in $(BRAINROT_DIR)"; \
 	    echo "setup instructions: $(BRAINROT_DIR)/docs/brainray.md"; \
 	    exit 1; }
+# The HUD needs rl_draw_text_int, which landed in Brainrotlang/brainrot#292.
+# Without this check a stale brainray fails at parse time with a bare
+# "Undefined function" and a line number, which says nothing about why.
+	@grep -q rl_draw_text_int $(BRAINRAY)/raylib.so || { \
+	    echo "$(BRAINRAY)/raylib.so predates rl_draw_text_int (brainrot#292)"; \
+	    echo "the HUD needs it. Update $(BRAINROT_DIR) and rebuild:"; \
+	    echo "    git -C $(BRAINROT_DIR) pull && make -C $(BRAINROT_DIR) brainray"; \
+	    exit 1; }

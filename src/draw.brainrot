@@ -5,9 +5,10 @@
 🚽 texture handles for a run cycle alone. Rectangles ship a playable game
 🚽 with no upstream blockers, which is the whole point of M0.
 🚽
-🚽 Numeric HUD text needs rl_draw_text_int upstream (B1). Literal labels
-🚽 work today, so the labels are here and the numbers go to the console on
-🚽 game over. See DESIGN.md section 10.3.
+🚽 Numeric HUD text arrived upstream as rl_draw_text_int /
+🚽 rl_measure_text_int (DESIGN.md B1, Brainrotlang/brainrot#292), so the
+🚽 score, level and final score are drawn rather than printed to the
+🚽 console. See DESIGN.md section 10.3.
 🚽
 🚽 Requires `#cooked <raylib>` earlier in the including file.
 
@@ -82,11 +83,12 @@ skibidi draw_speedbar(rizz lvl) {
     }
 }
 
-🚽 Labels only. The digits need B1; until then the run's numbers are
-🚽 printed to the console on game over.
-skibidi draw_hud_labels() {
-    rl_draw_text("SCORE", 20, 52, 20, 220, 200, 120, 255);
-    rl_draw_text("LVL", 1064, 46, 20, 220, 220, 220, 255);
+🚽 Score is zero-padded to six columns so the number keeps a fixed width
+🚽 as it grows -- a HUD that reflows every time you cross a power of ten is
+🚽 the thing `pad` exists to prevent.
+skibidi draw_hud(rizz score, rizz lvl) {
+    rl_draw_text_int("SCORE ", score, 6, 20, 52, 20, 220, 200, 120, 255);
+    rl_draw_text_int("LVL ", lvl, 0, 1064, 46, 20, 220, 220, 220, 255);
 }
 
 🚽 The title beat: TUNG... TUNG... TUNG... SAHUR, one word at a time.
@@ -116,17 +118,25 @@ skibidi draw_title(chad t) {
     }
 }
 
-skibidi draw_gameover() {
+🚽 The seed is on screen because a run is reproducible from it: a bug
+🚽 report is a seed and a frame number, and asking someone to go read their
+🚽 terminal for it never worked.
+skibidi draw_gameover(rizz score, rizz seed) {
     rizz cx = t_screen_w() / 2;
-    rl_draw_rectangle(0, 240, t_screen_w(), 200, 0, 0, 0, 190);
+    rl_draw_rectangle(0, 232, t_screen_w(), 216, 0, 0, 0, 190);
 
     rizz w1 = rl_measure_text("GAME OVER", 80);
-    rl_draw_text("GAME OVER", cx - w1 / 2, 270, 80, 230, 70, 60, 255);
+    rl_draw_text("GAME OVER", cx - w1 / 2, 258, 80, 230, 70, 60, 255);
 
-    rizz w2 = rl_measure_text("score and seed printed to the console", 22);
-    rl_draw_text("score and seed printed to the console",
-                 cx - w2 / 2, 366, 22, 170, 170, 170, 255);
+    rizz w2 = rl_measure_text_int("SCORE ", score, 0, 36);
+    rl_draw_text_int("SCORE ", score, 0, cx - w2 / 2, 350, 36,
+                     245, 200, 90, 255);
 
-    rizz w3 = rl_measure_text("R or SPACE to run again", 24);
-    rl_draw_text("R or SPACE to run again", cx - w3 / 2, 398, 24, 210, 210, 210, 255);
+    rizz w3 = rl_measure_text_int("seed ", seed, 0, 18);
+    rl_draw_text_int("seed ", seed, 0, cx - w3 / 2, 396, 18,
+                     140, 140, 140, 255);
+
+    rizz w4 = rl_measure_text("R or SPACE to run again", 24);
+    rl_draw_text("R or SPACE to run again", cx - w4 / 2, 420, 24,
+                 210, 210, 210, 255);
 }

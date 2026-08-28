@@ -21,6 +21,6 @@ skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind) { rizz noop = 0; }
 
 skibidi draw_hearts(rizz hearts)   { rizz noop = 0; }
 skibidi draw_speedbar(rizz lvl)    { rizz noop = 0; }
-skibidi draw_hud_labels()          { rizz noop = 0; }
+skibidi draw_hud(rizz score, rizz lvl) { rizz noop = 0; }
 skibidi draw_title(chad t)         { rizz noop = 0; }
-skibidi draw_gameover()            { rizz noop = 0; }
+skibidi draw_gameover(rizz score, rizz seed) { rizz noop = 0; }
