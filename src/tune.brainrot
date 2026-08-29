@@ -51,6 +51,12 @@ chad t_fair_any()        { bussin 0.60; }
 rizz t_max_obstacles()   { bussin 16; }
 rizz t_max_enemies()     { bussin 16; }
 
+🚽 --- audio ---
+🚽 Effects sit above the music so a bat connecting still reads over the
+🚽 track rather than under it.
+chad t_music_volume()    { bussin 0.6; }
+chad t_sfx_volume()      { bussin 0.9; }
+
 🚽 --- sprites ---
 🚽 One frame of the Tung atlases, and the column its torso sits on. The art
 🚽 is wider than the 48px collision box on purpose -- the trailing leg and

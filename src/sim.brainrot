@@ -88,11 +88,18 @@ skibidi player_reset(gang Player *p) {
 }
 
 🚽 Refused in mid-air, so holding the key cannot autohop.
-skibidi player_jump(gang Player *p) {
+🚽
+🚽 Reports whether it actually launched. The caller needs that to fire the
+🚽 jump sound only on a real jump -- keeping the decision here rather than
+🚽 having main re-test `grounded` itself, which would be the same rule
+🚽 written twice and free to drift.
+cap player_jump(gang Player *p) {
     edgy (p.grounded) {
         p.vy       = t_jump_v();
         p.grounded = L;
+        bussin W;
     }
+    bussin L;
 }
 
 🚽 Refused during the 0.45s attack timer, which is what makes the last
