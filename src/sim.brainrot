@@ -184,6 +184,16 @@ rizz swing_frame(gang Player *p) {
     bussin i;
 }
 
+🚽 Patapim's charge, on the same distance-driven principle as Tung's run --
+🚽 but off the entity's OWN travel, not the world's, since it closes faster
+🚽 than the ground scrolls (t_enemy_close()). Using world distance would
+🚽 make its legs lag behind the body it is attached to.
+rizz patapim_frame(gang Ent *e) {
+    rizz i = (t_spawn_x() - e.x) / t_patapim_stride();
+    edgy (i < 0) { i = 0 - i; }
+    bussin i % t_patapim_frames();
+}
+
 🚽 --- entities ------------------------------------------------------------
 
 skibidi ent_spawn(gang Ent *e, rizz kind) {

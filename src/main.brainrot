@@ -37,6 +37,13 @@ skibidi main {
     rizz tex_run   = draw_load_run();
     rizz tex_jump  = draw_load_jump();
     rizz tex_swing = draw_load_swing();
+    rizz tex_pat   = draw_load_patapim();
+    rizz tex_crate = draw_load_crate();
+    rizz tex_post  = draw_load_post();
+    rizz bg_far    = draw_load_bg_far();
+    rizz bg_mid    = draw_load_bg_mid();
+    rizz bg_near   = draw_load_bg_near();
+    rizz bg_fore   = draw_load_bg_fore();
     rizz music     = plat_music_open();
 
     🚽 Array sizes must be literals, so this is the one place the pool
@@ -232,18 +239,22 @@ skibidi main {
         🚽 --- 10. draw --------------------------------------------------
         draw_begin();
         draw_sky(lvl);
+        draw_background(bg_far, bg_mid, bg_near, bg_fore, wd.dist);
         draw_ground();
 
         flex (rizz i = 0; i < MAX_OBS; i = i + 1) {
             edgy (obstacles[i].alive) {
                 draw_ent(obstacles[i].x, obstacles[i].y,
-                         obstacles[i].w, obstacles[i].h, obstacles[i].kind);
+                         obstacles[i].w, obstacles[i].h, obstacles[i].kind,
+                         tex_pat, tex_crate, tex_post, 0);
             }
         }
         flex (rizz i = 0; i < MAX_EN; i = i + 1) {
             edgy (enemies[i].alive) {
                 draw_ent(enemies[i].x, enemies[i].y,
-                         enemies[i].w, enemies[i].h, enemies[i].kind);
+                         enemies[i].w, enemies[i].h, enemies[i].kind,
+                         tex_pat, tex_crate, tex_post,
+                         patapim_frame(&enemies[i]));
             }
         }
 
@@ -286,6 +297,13 @@ skibidi main {
     draw_unload(tex_run);
     draw_unload(tex_jump);
     draw_unload(tex_swing);
+    draw_unload(tex_pat);
+    draw_unload(tex_crate);
+    draw_unload(tex_post);
+    draw_unload(bg_far);
+    draw_unload(bg_mid);
+    draw_unload(bg_near);
+    draw_unload(bg_fore);
     plat_music_close(music);
     plat_close();
     bussin 0;

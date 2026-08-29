@@ -37,6 +37,13 @@ skibidi draw_ground() {
 rizz draw_load_run()   { bussin rl_load_texture("assets/tung_run.png"); }
 rizz draw_load_jump()  { bussin rl_load_texture("assets/tung_jump.png"); }
 rizz draw_load_swing() { bussin rl_load_texture("assets/tung_swing.png"); }
+rizz draw_load_patapim() { bussin rl_load_texture("assets/patapim_run.png"); }
+rizz draw_load_crate() { bussin rl_load_texture("assets/crate.png"); }
+rizz draw_load_post()  { bussin rl_load_texture("assets/post.png"); }
+rizz draw_load_bg_far()  { bussin rl_load_texture("assets/bg_far.png"); }
+rizz draw_load_bg_mid()  { bussin rl_load_texture("assets/bg_mid.png"); }
+rizz draw_load_bg_near() { bussin rl_load_texture("assets/bg_near.png"); }
+rizz draw_load_bg_fore() { bussin rl_load_texture("assets/bg_fore.png"); }
 
 skibidi draw_unload(rizz tex) {
     edgy (tex >= 0) { rl_unload_texture(tex); }
@@ -80,23 +87,84 @@ skibidi draw_bat(chad x, chad y, rizz tex) {
     }
 }
 
-skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind) {
+🚽 An obstacle or an enemy. Each kind has its own atlas handle and its own
+🚽 frame width and anchor, printed by tools/process_sprites.py -- the art is
+🚽 not the same width as the collision box, so the draw offsets by the
+🚽 anchor rather than using the entity's x.
+🚽
+🚽 A negative handle falls back to the M0 rectangle, per kind, so a partial
+🚽 set of assets degrades one entity at a time instead of all at once.
+skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind,
+                 rizz tex_pat, rizz tex_crate, rizz tex_post, rizz frame) {
     edgy (kind == t_kind_patapim()) {
-        rl_draw_rectangle(x, y, w, h, 150, 80, 44, 255);
-        rl_draw_rectangle(x + 10.0, y + 16.0, 12.0, 12.0, 240, 240, 240, 255);
-        rl_draw_rectangle(x + 40.0, y + 16.0, 12.0, 12.0, 240, 240, 240, 255);
-        rl_draw_rectangle(x + 14.0, y + 42.0, 36.0, 8.0, 40, 20, 12, 255);
+        edgy (tex_pat >= 0) {
+            rl_draw_texture_rec(tex_pat, frame * 101.0, 0.0, 101.0, 64.0,
+                                x + w / 2.0 - 51.0, y, 255, 255, 255, 255);
+        }
+        amogus {
+            rl_draw_rectangle(x, y, w, h, 150, 80, 44, 255);
+            rl_draw_rectangle(x + 10.0, y + 16.0, 12.0, 12.0, 240, 240, 240, 255);
+            rl_draw_rectangle(x + 40.0, y + 16.0, 12.0, 12.0, 240, 240, 240, 255);
+            rl_draw_rectangle(x + 14.0, y + 42.0, 36.0, 8.0, 40, 20, 12, 255);
+        }
     }
     amogus {
         edgy (kind == t_kind_post()) {
-            rl_draw_rectangle(x, y, w, h, 120, 110, 96, 255);
-            rl_draw_rectangle(x, y, w, 8.0, 150, 138, 120, 255);
+            edgy (tex_post >= 0) {
+                rl_draw_texture_rec(tex_post, 0.0, 0.0, 21.0, 96.0,
+                                    x + w / 2.0 - 10.0, y, 255, 255, 255, 255);
+            }
+            amogus {
+                rl_draw_rectangle(x, y, w, h, 120, 110, 96, 255);
+                rl_draw_rectangle(x, y, w, 8.0, 150, 138, 120, 255);
+            }
         }
         amogus {
-            rl_draw_rectangle(x, y, w, h, 96, 92, 100, 255);
-            rl_draw_rectangle(x + 4.0, y + 4.0, w - 8.0, h - 8.0, 76, 72, 80, 255);
+            edgy (tex_crate >= 0) {
+                rl_draw_texture_rec(tex_crate, 0.0, 0.0, 46.0, 48.0,
+                                    x + w / 2.0 - 22.0, y, 255, 255, 255, 255);
+            }
+            amogus {
+                rl_draw_rectangle(x, y, w, h, 96, 92, 100, 255);
+                rl_draw_rectangle(x + 4.0, y + 4.0, w - 8.0, h - 8.0, 76, 72, 80, 255);
+            }
         }
     }
+}
+
+🚽 One parallax layer, tiled across the screen and scrolled at a fraction
+🚽 of the world's speed.
+🚽
+🚽 Each layer is authored at its own width and repeated, rather than being
+🚽 one screen-wide image: the apparent HEIGHT of a layer is a composition
+🚽 decision, and how many times it repeats to fill 1280px is not. Scaling
+🚽 them to the screen width instead produced a foliage band 472px tall
+🚽 against a 96px character, which buried the entire scene.
+🚽
+🚽 `rate` below 1.0 makes the layer lag the ground, which is the parallax.
+skibidi draw_layer(rizz tex, chad dist, chad rate, chad lw, chad lh,
+                   chad bottom) {
+    edgy (tex >= 0) {
+        chad shift = dist * rate;
+        rizz whole = shift / lw;
+        chad off = shift - whole * lw;
+        chad y = bottom - lh;
+        chad x = 0.0 - off;
+        goon (x < t_screen_w()) {
+            rl_draw_texture_rec(tex, 0.0, 0.0, lw, lh, x, y, 255, 255, 255, 255);
+            x = x + lw;
+        }
+    }
+}
+
+🚽 The four layers, back to front. Rates are the design's: distant hills
+🚽 barely move, foliage at the player's feet moves with the ground.
+skibidi draw_background(rizz far, rizz mid, rizz near, rizz fore, chad dist) {
+    chad g = t_ground_y();
+    draw_layer(far,  dist, 0.10, 2353.0, 200.0, g);
+    draw_layer(mid,  dist, 0.25,  803.0, 220.0, g);
+    draw_layer(near, dist, 0.50,  503.0, 190.0, g);
+    draw_layer(fore, dist, 1.00,  299.0, 110.0, g + 34.0);
 }
 
 skibidi draw_hearts(rizz hearts) {
