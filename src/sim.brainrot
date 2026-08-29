@@ -1,0 +1,190 @@
+🚽 sim.brainrot — the simulation, one step at a time.
+🚽
+🚽 This file could not exist until recently. A helper needs to see both an
+🚽 entity and the shared world state, and the semantic analyser checked
+🚽 struct-pointer parameters against a REVERSED parameter list: it rejected
+🚽 `step(gang Ent *e, gang World *w)` called correctly, and accepted the
+🚽 swapped call, which then wrote one struct's field offsets through the
+🚽 other's pointer. DESIGN.md section 14.1 explains why the whole frame
+🚽 loop lived in `skibidi main` because of it.
+🚽
+🚽 Fixed upstream in Brainrotlang/brainrot#294, so the extraction the design
+🚽 doc promised would be mechanical is exactly that.
+🚽
+🚽 What is still in `main`, and why: the pool LOOPS. A struct field cannot
+🚽 be an array of structs, so there is no God-struct to hand over, and
+🚽 there is no pointer arithmetic on struct pointers, so a helper cannot
+🚽 walk a pool itself. It can only be handed one already-resolved
+🚽 `&pool[i]`. See DESIGN.md 15.2, C4 and C5.
+
+gang World {
+    chad dt;
+    chad speed;
+    chad dist;
+    rizz bonus;
+    rizz combo;
+    chad spawn_t;
+    rizz prev_kind;
+    rizz next_kind;
+    rizz seed;
+};
+
+gang Player {
+    chad y;
+    chad vy;
+    cap  grounded;
+    chad atk_t;
+    chad iframe_t;
+    rizz hearts;
+};
+
+gang Ent {
+    chad x;
+    chad y;
+    chad w;
+    chad h;
+    rizz kind;
+    cap  alive;
+};
+
+🚽 --- world ---------------------------------------------------------------
+
+skibidi world_reset(gang World *w) {
+    w.speed     = t_speed_start();
+    w.dist      = 0.0;
+    w.bonus     = 0;
+    w.combo     = 0;
+    w.spawn_t   = 1.2;
+    w.prev_kind = t_kind_patapim();
+}
+
+🚽 One variable drives the whole game (DESIGN.md section 7). The cap is
+🚽 story mode's; endless mode removes it.
+skibidi world_advance(gang World *w) {
+    w.speed = w.speed + t_speed_accel() * w.dt;
+    edgy (w.speed > t_speed_max()) { w.speed = t_speed_max(); }
+    w.dist = w.dist + w.speed * w.dt;
+}
+
+🚽 Distance is worth a tenth of a point; bonks are worth the rest.
+🚽
+🚽 This used to route through a truncf() helper, because assigning a bare
+🚽 chad variable to a rizz reinterpreted the float's bit pattern instead of
+🚽 converting it -- 17.5 became 1099694080. Fixed upstream in
+🚽 Brainrotlang/brainrot#299, so the conversion is now just a conversion.
+rizz world_score(gang World *w) {
+    bussin w.dist * 0.1 + w.bonus;
+}
+
+🚽 --- player --------------------------------------------------------------
+
+skibidi player_reset(gang Player *p) {
+    p.y        = t_ground_y() - t_player_h();
+    p.vy       = 0.0;
+    p.grounded = W;
+    p.atk_t    = 0.0;
+    p.iframe_t = 0.0;
+    p.hearts   = t_hearts_max();
+}
+
+🚽 Refused in mid-air, so holding the key cannot autohop.
+skibidi player_jump(gang Player *p) {
+    edgy (p.grounded) {
+        p.vy       = t_jump_v();
+        p.grounded = L;
+    }
+}
+
+🚽 Refused during the 0.45s attack timer, which is what makes the last
+🚽 0.30s of it a cooldown rather than a second swing.
+skibidi player_swing(gang Player *p) {
+    edgy (p.atk_t <= 0.0) { p.atk_t = t_attack_total(); }
+}
+
+skibidi player_physics(gang Player *p, gang World *w) {
+    p.vy = p.vy + t_gravity() * w.dt;
+    p.y  = p.y + p.vy * w.dt;
+    chad floor_y = t_ground_y() - t_player_h();
+    edgy (p.y > floor_y) {
+        p.y        = floor_y;
+        p.vy       = 0.0;
+        p.grounded = W;
+    }
+}
+
+skibidi player_tick_timers(gang Player *p, gang World *w) {
+    edgy (p.atk_t > 0.0) {
+        p.atk_t = p.atk_t - w.dt;
+        edgy (p.atk_t < 0.0) { p.atk_t = 0.0; }
+    }
+    edgy (p.iframe_t > 0.0) {
+        p.iframe_t = p.iframe_t - w.dt;
+        edgy (p.iframe_t < 0.0) { p.iframe_t = 0.0; }
+    }
+}
+
+🚽 The bat is live for the first 0.15s of the 0.45s timer.
+cap player_swinging(gang Player *p) {
+    bussin p.atk_t > t_attack_active();
+}
+
+cap player_vulnerable(gang Player *p) {
+    bussin p.iframe_t <= 0.0;
+}
+
+🚽 A heart, the combo, and some speed. The slowdown is a mercy and a
+🚽 punishment at once: it buys reaction time and costs score rate.
+skibidi player_take_hit(gang Player *p, gang World *w) {
+    p.hearts   = p.hearts - 1;
+    p.iframe_t = t_iframe_time();
+    w.combo    = 0;
+    w.speed    = maxf(w.speed * t_hit_slowdown(), t_speed_start());
+}
+
+🚽 Flash on alternate 0.1s ticks while invulnerable.
+cap player_visible(gang Player *p) {
+    edgy (p.iframe_t <= 0.0) { bussin W; }
+    rizz tick = p.iframe_t * 10.0;
+    edgy (tick % 2 == 0) { bussin L; }
+    bussin W;
+}
+
+🚽 --- entities ------------------------------------------------------------
+
+skibidi ent_spawn(gang Ent *e, rizz kind) {
+    e.kind  = kind;
+    e.w     = kind_w(kind);
+    e.h     = kind_h(kind);
+    e.x     = t_spawn_x();
+    e.y     = t_ground_y() - kind_h(kind);
+    e.alive = W;
+}
+
+🚽 `extra` is the closing speed on top of the world's: zero for obstacles,
+🚽 ENEMY_CLOSE for enemies, so a Patapim arrives sooner than the spacing
+🚽 suggests and cannot be pattern-memorised by gap alone.
+🚽
+🚽 Despawning off the left edge does NOT break the combo. Only getting hit
+🚽 does, which keeps the incentive aggressive rather than cautious.
+skibidi ent_scroll(gang Ent *e, gang World *w, chad extra) {
+    e.x = e.x - (w.speed + extra) * w.dt;
+    edgy (e.x < 0.0 - e.w) { e.alive = L; }
+}
+
+cap ent_hits_body(gang Ent *e, gang Player *p) {
+    bussin aabb(t_player_x(), p.y, t_player_w(), t_player_h(),
+                e.x, e.y, e.w, e.h);
+}
+
+cap ent_in_bat(gang Ent *e, gang Player *p) {
+    bussin aabb(t_player_x() + t_hitbox_dx(), p.y + t_hitbox_dy(),
+                t_hitbox_w(), t_hitbox_h(),
+                e.x, e.y, e.w, e.h);
+}
+
+🚽 Consecutive bonks without taking damage, capped at x8.
+skibidi award_bonk(gang World *w) {
+    w.combo = w.combo + 1;
+    edgy (w.combo > 8) { w.combo = 8; }
+    w.bonus = w.bonus + 100 * w.combo;
+}

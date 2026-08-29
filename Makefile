@@ -10,6 +10,7 @@ BRAINRAY     := $(BRAINROT_DIR)/brainray
 GEN      := src/.headless.gen.brainrot
 UNITS    := $(wildcard test/unit_*.brainrot)
 EXPECTED := test/expected
+PROBE    := /tmp/tts-version-probe.brainrot
 
 .PHONY: all play test units headless bless clean check-brainrot check-brainray
 
@@ -80,7 +81,7 @@ bless: check-brainrot $(GEN)
 	@echo "blessed headless"
 
 clean:
-	rm -f $(GEN) /tmp/tts-*.diff
+	rm -f $(GEN) $(PROBE) /tmp/tts-*.diff
 
 # ------------------------------------------------------------- checks
 
@@ -90,6 +91,19 @@ check-brainrot:
 	    echo "clone https://github.com/Brainrotlang/brainrot next to this repo and run 'make' in it,"; \
 	    echo "or point this one at it:  make BRAINROT_DIR=/path/to/brainrot"; \
 	    exit 1; }
+# The game needs logical NOT (brainrot#296) and float-to-int conversion
+# (#299). Neither is visible in the binary, so probe for them. An older
+# interpreter does not fail -- it discards every `!` and reinterprets every
+# float assignment, so the guards run backwards and the HUD reads plausible
+# nonsense. That is worth one probe to turn into a sentence.
+	@printf 'skibidi main{ cap off = L; chad g = 17.5; rizz k = g; yapping("%%b %%d", !off, k); bussin 0;}' > $(PROBE)
+	@got=$$($(BRAINROT) $(PROBE) 2>/dev/null); rm -f $(PROBE); \
+	    test "$$got" = "W 17" || { \
+	        echo "$(BRAINROT) is too old: probe printed '$$got', expected 'W 17'"; \
+	        echo "the game needs logical NOT (brainrot#296) and float-to-int"; \
+	        echo "conversion (#299). Update and rebuild:"; \
+	        echo "    git -C $(BRAINROT_DIR) pull && make -C $(BRAINROT_DIR)"; \
+	        exit 1; }
 
 check-brainray: check-brainrot
 	@test -f $(BRAINRAY)/raylib.so || { \

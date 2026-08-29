@@ -18,5 +18,7 @@ max 7.00 7.00
 min 3.00 3.00
 abs 4.25 4.25 0.00
 lerp 0.00 5.00 10.00
--- truncf --
-17 -17 0 0
+-- interpreter: float to int converts --
+17 -17 17
+-- interpreter: logical not --
+W L L

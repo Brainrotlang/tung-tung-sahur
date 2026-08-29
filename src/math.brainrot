@@ -55,15 +55,3 @@ chad absf(chad v) {
 chad lerpf(chad a, chad b, chad t) {
     bussin a + (b - a) * t;
 }
-
-🚽 Truncate a chad to a rizz.
-🚽
-🚽 `rizz k = someChadVariable;` reinterprets the float's bit pattern rather
-🚽 than converting (17.5 becomes 1099694080) -- but any arithmetic
-🚽 *expression* or function call on the right-hand side converts correctly.
-🚽 Routing every conversion through this function means the bug is worked
-🚽 around in exactly one place, and deleting it once the fix lands upstream
-🚽 is a single commit. See DESIGN.md C2.
-rizz truncf(chad v) {
-    bussin v * 1.0;
-}
