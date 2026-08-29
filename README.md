@@ -138,10 +138,12 @@ couldn't take both an entity and the world at all, so *everything* lived in
 ## Status
 
 **M0 — "Rectangles at 03:30 AM"** shipped: the playable core in primitives, with
-no upstream dependencies at all. **M1** is under way — the numeric HUD landed
-with B1, and B2 (`rl_draw_texture_rec`) has since landed too, so sprites,
-animation and parallax are unblocked and waiting on art rather than on the
-engine. Duck and the Patapim variants need neither.
+no upstream dependencies at all. **M1** shipped too — the numeric HUD landed
+with B1, B2 (`rl_draw_texture_rec`) unblocked sprites, animation and parallax,
+and all of it is drawn from real art now.
 
-**M2** — bosses and audio — still needs B3, which does not exist yet: brainray
-has no audio functions. Milestones are in DESIGN.md §18.
+**B3 has landed** ([brainrot#302](https://github.com/Brainrotlang/brainrot/pull/302)),
+so brainray has audio: a streamed music track and one-shot sounds. The game
+plays a title sting, a `TUNG` on every bat hit, a jump, a damage grunt, and a
+`bruh` on the run that ends. What's left of **M2** is the bosses. Duck and the
+Patapim variants need no engine work at all. Milestones are in DESIGN.md §18.

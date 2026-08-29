@@ -24,6 +24,13 @@ skibidi plat_close() {
 🚽 seam reports when there is no audio device, so the game takes the same
 🚽 path here as it does over SSH.
 rizz plat_music_open()             { bussin 0 - 1; }
+rizz plat_sfx_opening()            { bussin 0 - 1; }
+rizz plat_sfx_tung()               { bussin 0 - 1; }
+rizz plat_sfx_jump()               { bussin 0 - 1; }
+rizz plat_sfx_damage()             { bussin 0 - 1; }
+rizz plat_sfx_bruh()               { bussin 0 - 1; }
+skibidi plat_sfx_play(rizz snd)    { rizz noop = 0; }
+skibidi plat_sfx_close(rizz snd)   { rizz noop = 0; }
 skibidi plat_music_tick(rizz music) { rizz noop = 0; }
 skibidi plat_music_close(rizz music) { rizz noop = 0; }
 

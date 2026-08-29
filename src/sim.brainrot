@@ -88,11 +88,18 @@ skibidi player_reset(gang Player *p) {
 }
 
 🚽 Refused in mid-air, so holding the key cannot autohop.
-skibidi player_jump(gang Player *p) {
+🚽
+🚽 Reports whether it actually launched. The caller needs that to fire the
+🚽 jump sound only on a real jump -- keeping the decision here rather than
+🚽 having main re-test `grounded` itself, which would be the same rule
+🚽 written twice and free to drift.
+cap player_jump(gang Player *p) {
     edgy (p.grounded) {
         p.vy       = t_jump_v();
         p.grounded = L;
+        bussin W;
     }
+    bussin L;
 }
 
 🚽 Refused during the 0.45s attack timer, which is what makes the last
@@ -132,13 +139,27 @@ cap player_vulnerable(gang Player *p) {
     bussin p.iframe_t <= 0.0;
 }
 
-🚽 A heart, the combo, and some speed. The slowdown is a mercy and a
-🚽 punishment at once: it buys reaction time and costs score rate.
+🚽 A heart and the combo. Notably NOT the speed.
+🚽
+🚽 Damage used to knock the world speed back by a quarter, described as a
+🚽 mercy and a punishment at once. It was neither. At 900 px/s it handed
+🚽 back 225 px/s, which takes 75 seconds to climb again -- a quarter of a
+🚽 whole run spent easier, bought for one of three hearts. That makes
+🚽 deliberately eating a hit the CORRECT play at the top of the curve,
+🚽 which is a strategy the game should not reward.
+🚽
+🚽 The mercy was redundant too: 1.2s of invulnerability is 1080px of
+🚽 clearance at that speed, most of a screen, which is what actually saves
+🚽 you from a second hit.
+🚽
+🚽 And it fought the first design pillar. The whole game is one number
+🚽 rising; a hit that pushes it back down makes the curve non-monotonic and
+🚽 turns failure into relief. Losing a third of your health and up to an
+🚽 x8 combo is punishment enough.
 skibidi player_take_hit(gang Player *p, gang World *w) {
     p.hearts   = p.hearts - 1;
     p.iframe_t = t_iframe_time();
     w.combo    = 0;
-    w.speed    = maxf(w.speed * t_hit_slowdown(), t_speed_start());
 }
 
 🚽 Flash on alternate 0.1s ticks while invulnerable.

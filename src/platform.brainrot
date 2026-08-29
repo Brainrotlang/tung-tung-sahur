@@ -51,7 +51,7 @@ rizz plat_music_open() {
     rizz m = rl_load_music("assets/music/tung-tung.ogg");
     edgy (m < 0) { bussin 0 - 1; }
     rl_set_music_looping(m, W);
-    rl_set_music_volume(m, 0.6);
+    rl_set_music_volume(m, t_music_volume());
     rl_play_music(m);
     bussin m;
 }
@@ -61,6 +61,75 @@ rizz plat_music_open() {
 🚽 stops, and it looks exactly like a broken file.
 skibidi plat_music_tick(rizz music) {
     edgy (music >= 0) { rl_update_music(music); }
+}
+
+🚽 --- sound effects -------------------------------------------------------
+🚽
+🚽 One-shots, so rl_load_sound rather than rl_load_music: decoded whole at
+🚽 load and played without a per-frame pump. The distinction matters --
+🚽 loading these as streams would mean remembering to update four of them
+🚽 every frame, and loading the 82-second track this way would be tens of
+🚽 megabytes of PCM.
+🚽
+🚽 Every one returns -1 when there is no audio device or the file is
+🚽 missing, and plat_sfx_play() ignores that, so a missing effect is silent
+🚽 rather than fatal.
+🚽
+🚽 One loader per file rather than one taking a path, because Brainrot does
+🚽 not support `rant` parameters on user-defined functions -- "String
+🚽 parameters are not supported". Same reason the texture loaders in
+🚽 draw.brainrot hardcode their paths.
+rizz plat_sfx_ready() {
+    cap ready = rl_is_audio_device_ready();
+    edgy (ready) { bussin 1; }
+    bussin 0;
+}
+
+rizz plat_sfx_opening() {
+    edgy (plat_sfx_ready() == 0) { bussin 0 - 1; }
+    rizz s = rl_load_sound("assets/sfx/opening.ogg");
+    edgy (s >= 0) { rl_set_sound_volume(s, t_sfx_volume()); }
+    bussin s;
+}
+
+rizz plat_sfx_tung() {
+    edgy (plat_sfx_ready() == 0) { bussin 0 - 1; }
+    rizz s = rl_load_sound("assets/sfx/tung.ogg");
+    edgy (s >= 0) { rl_set_sound_volume(s, t_sfx_volume()); }
+    bussin s;
+}
+
+rizz plat_sfx_jump() {
+    edgy (plat_sfx_ready() == 0) { bussin 0 - 1; }
+    rizz s = rl_load_sound("assets/sfx/jump.ogg");
+    edgy (s >= 0) { rl_set_sound_volume(s, t_sfx_volume()); }
+    bussin s;
+}
+
+rizz plat_sfx_damage() {
+    edgy (plat_sfx_ready() == 0) { bussin 0 - 1; }
+    rizz s = rl_load_sound("assets/sfx/damage.ogg");
+    edgy (s >= 0) { rl_set_sound_volume(s, t_sfx_volume()); }
+    bussin s;
+}
+
+🚽 The death sting. Played on the hit that empties the last heart, in
+🚽 place of the damage grunt rather than on top of it -- both start on the
+🚽 same frame, and two voices landing together read as one muddy noise
+🚽 instead of a punchline.
+rizz plat_sfx_bruh() {
+    edgy (plat_sfx_ready() == 0) { bussin 0 - 1; }
+    rizz s = rl_load_sound("assets/sfx/bruh.ogg");
+    edgy (s >= 0) { rl_set_sound_volume(s, t_sfx_volume()); }
+    bussin s;
+}
+
+skibidi plat_sfx_play(rizz snd) {
+    edgy (snd >= 0) { rl_play_sound(snd); }
+}
+
+skibidi plat_sfx_close(rizz snd) {
+    edgy (snd >= 0) { rl_unload_sound(snd); }
 }
 
 skibidi plat_music_close(rizz music) {

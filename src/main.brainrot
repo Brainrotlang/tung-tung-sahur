@@ -45,6 +45,16 @@ skibidi main {
     rizz bg_near   = draw_load_bg_near();
     rizz bg_fore   = draw_load_bg_fore();
     rizz music     = plat_music_open();
+    rizz sfx_tung   = plat_sfx_tung();
+    rizz sfx_jump   = plat_sfx_jump();
+    rizz sfx_damage = plat_sfx_damage();
+    rizz sfx_bruh   = plat_sfx_bruh();
+
+    🚽 The opening sting, played once here and never again. It belongs to
+    🚽 the title card, and the title is only ever seen at startup -- a
+    🚽 restart goes straight back to the run.
+    rizz sfx_open = plat_sfx_opening();
+    plat_sfx_play(sfx_open);
 
     🚽 Array sizes must be literals, so this is the one place the pool
     🚽 bounds are written twice. Fail loudly rather than quietly walking
@@ -106,7 +116,10 @@ skibidi main {
         🚽 --- 3. input ------------------------------------------------
         edgy (in_run) {
             cap jump = plat_jump_down(frame);
-            edgy (jump) { player_jump(&pl); }
+            edgy (jump) {
+                cap launched = player_jump(&pl);
+                edgy (launched) { plat_sfx_play(sfx_jump); }
+            }
             cap bat = plat_bat_pressed(frame);
             edgy (bat) { player_swing(&pl); }
         }
@@ -169,6 +182,11 @@ skibidi main {
                         edgy (crash) {
                             obstacles[i].alive = L;
                             player_take_hit(&pl, &wd);
+                            🚽 The killing blow gets the death sting instead
+                            🚽 of the grunt -- see plat_sfx_bruh().
+                            edgy (pl.hearts > 0) {
+                                plat_sfx_play(sfx_damage);
+                            }
                         }
                     }
                 }
@@ -189,6 +207,7 @@ skibidi main {
                         edgy (bonk) {
                             enemies[i].alive = L;
                             award_bonk(&wd);
+                            plat_sfx_play(sfx_tung);
                         }
                     }
                 }
@@ -199,6 +218,9 @@ skibidi main {
                         edgy (crash) {
                             enemies[i].alive = L;
                             player_take_hit(&pl, &wd);
+                            edgy (pl.hearts > 0) {
+                                plat_sfx_play(sfx_damage);
+                            }
                         }
                     }
                 }
@@ -217,9 +239,14 @@ skibidi main {
             }
         }
 
+        🚽 `in_run` was sampled at the top of this frame, so this block sees
+        🚽 the death on the frame it happens and never again -- the next
+        🚽 frame reads t_state_over(). That is what makes one `bruh` per
+        🚽 run rather than one per frame spent on the game-over screen.
         edgy (in_run) {
             edgy (pl.hearts <= 0) {
                 state = t_state_over();
+                plat_sfx_play(sfx_bruh);
                 yapping("run over -- score %d, seed %d, frames %d",
                         score, run_seed, frame);
             }
@@ -304,6 +331,11 @@ skibidi main {
     draw_unload(bg_mid);
     draw_unload(bg_near);
     draw_unload(bg_fore);
+    plat_sfx_close(sfx_open);
+    plat_sfx_close(sfx_tung);
+    plat_sfx_close(sfx_jump);
+    plat_sfx_close(sfx_damage);
+    plat_sfx_close(sfx_bruh);
     plat_music_close(music);
     plat_close();
     bussin 0;

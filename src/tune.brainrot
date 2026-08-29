@@ -21,7 +21,6 @@ chad t_gravity()         { bussin 2600.0; }
 chad t_jump_v()          { bussin -1000.0; }
 rizz t_hearts_max()      { bussin 3; }
 chad t_iframe_time()     { bussin 1.2; }
-chad t_hit_slowdown()    { bussin 0.75; }
 
 🚽 --- bat ---
 chad t_attack_total()    { bussin 0.45; }
@@ -51,6 +50,12 @@ chad t_fair_any()        { bussin 0.60; }
 🚽 --- pools ---
 rizz t_max_obstacles()   { bussin 16; }
 rizz t_max_enemies()     { bussin 16; }
+
+🚽 --- audio ---
+🚽 Effects sit above the music so a bat connecting still reads over the
+🚽 track rather than under it.
+chad t_music_volume()    { bussin 0.6; }
+chad t_sfx_volume()      { bussin 0.9; }
 
 🚽 --- sprites ---
 🚽 One frame of the Tung atlases, and the column its torso sits on. The art
