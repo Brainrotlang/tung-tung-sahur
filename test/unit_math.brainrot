@@ -63,14 +63,31 @@ skibidi main {
                                    lerpf(0.0, 10.0, 0.5),
                                    lerpf(0.0, 10.0, 1.0));
 
-    🚽 --- truncf ------------------------------------------------------
-    🚽 This is the workaround for DESIGN.md C2: assigning a bare chad
-    🚽 variable to a rizz reinterprets the float's bit pattern instead of
-    🚽 converting. `rizz k = someChad;` here would print 1099694080.
-    🚽 When C2 is fixed upstream, these values must not move.
-    yapping("-- truncf --");
+    🚽 --- what the interpreter must do for us -------------------------
+    🚽 These are not tests of this repo's code. They pin the two upstream
+    🚽 fixes the game now depends on, because nothing else here would tell
+    🚽 you that your brainrot checkout is too old -- you would just get
+    🚽 wrong numbers and a HUD that reads plausibly.
+    🚽
+    🚽 Assigning a bare chad to a rizz used to reinterpret the float's bit
+    🚽 pattern: 17.5 became 1099694080. That is why this repo carried a
+    🚽 truncf() helper until Brainrotlang/brainrot#299 landed.
+    yapping("-- interpreter: float to int converts --");
     chad g = 17.5;
-    yapping("%d %d %d %d", truncf(g), truncf(-17.5), truncf(0.9), truncf(-0.9));
+    rizz direct = g;
+    chad arr[1];
+    arr[0] = -17.9;
+    rizz from_array = arr[0];
+    chad *gp = &g;
+    rizz from_deref = *gp;
+    yapping("%d %d %d", direct, from_array, from_deref);
+
+    🚽 `!` had no token at all -- the lexer discarded it, so `!L` evaluated
+    🚽 to L and every guard in this game ran backwards. Fixed in
+    🚽 Brainrotlang/brainrot#296.
+    yapping("-- interpreter: logical not --");
+    cap off = L;
+    yapping("%b %b %b", !off, !W, !!off);
 
     bussin 0;
 }

@@ -65,21 +65,28 @@ architecture, and every claim below was verified by running the interpreter on
 | `pool[i].field = v;` read and write by index | ✅ | Entity update loops |
 | `cap` struct fields in conditions (`edgy (pool[i].alive)`) | ✅ | Liveness checks |
 | Scalar-only functions with many params, returning `cap` / `chad` / `rizz` | ✅ | `aabb`, `clampf`, `rng_next` |
-| **One** `gang X *` parameter, called as `helper(&pool[i])` with a variable index | ✅ | Per-entity helpers |
+| `gang X *` parameters, several of **different** types, called as `helper(&pool[i], &world)` | ✅ ([#294](https://github.com/Brainrotlang/brainrot/pull/294)) | Every step function in `src/sim.brainrot` |
+| `!` on a `cap`, and float→integer assignment | ✅ ([#296](https://github.com/Brainrotlang/brainrot/pull/296), [#299](https://github.com/Brainrotlang/brainrot/pull/299)) | Guards read forwards; no `truncf()` |
 | `chad` → `int` coercion at the **native call boundary** | ✅ | `rl_draw_rectangle(px, py, ...)` with `chad` args |
 | `#cooked "file.brainrot"` splicing | ✅ | Splitting the source |
 | Seeded PRNG (Park–Miller / Schrage) | ✅ | Spawn tables |
 
 ### 3.2 What does not work
 
-Each of these is an upstream issue (§11), and each has a workaround the game
+Each of these is an upstream issue (§15.2), and each has a workaround the game
 uses until it lands.
+
+Three that used to be here have since been fixed upstream, all of them found by
+writing this game: the struct-pointer parameter reversal
+([#294](https://github.com/Brainrotlang/brainrot/pull/294)), `!` being discarded
+by the lexer ([#296](https://github.com/Brainrotlang/brainrot/pull/296)), and
+float-to-integer assignment reinterpreting bits
+([#299](https://github.com/Brainrotlang/brainrot/pull/299)). The workarounds
+they forced — `== L` everywhere, a `truncf()` helper, and the whole frame loop
+in one function — are gone with them.
 
 | Limitation | Verified behaviour | Workaround in this design |
 | --- | --- | --- |
-| **`!` on `cap` is a no-op** | `!L` evaluates to `L`; `edgy (!a)` takes the wrong branch | Always write `edgy (a == L)` |
-| **A bare `chad` variable assigned to a `rizz` reinterprets bits** | `chad g = 17.5; rizz k = g;` → `k == 1099694080`. The trigger is specifically a *bare variable or struct field* on the right-hand side — any arithmetic expression or function call converts correctly (`g * 1.0` → `17`). Also `yapping("%d", g)` prints nothing | Every conversion routes through `truncf()` in `src/math.brainrot`, so the workaround lives in one place and removing it is a one-line commit |
-| **Struct-pointer params are checked in reverse order** | `f(gang A *x, gang B *y)` *rejects* the correct call and *accepts* the swapped one; runtime binding is positionally correct, so "fixing" the call silently corrupts memory | **A function may reference at most one struct type across its parameters.** Multiple params of the *same* type are safe (the reversal is invisible) |
 | **A struct field cannot be an array of structs** | `gang Game { gang Enemy es[4]; };` → parse error | No "God struct". Pools are `skibidi main` locals |
 | **No pointer arithmetic on struct pointers** | `gang E *p = &es[0]; p = p + 1;` → *"type-erased pointer — pointee size is unknown"* | Iterate with an index in `main`; helpers take one already-resolved `&pool[i]` |
 | **No top-level globals** | `rizz g_score = 0;` at file scope → parse error | All state is local to `skibidi main` |
@@ -90,7 +97,7 @@ uses until it lands.
 
 ### 3.3 The `brainray` surface
 
-Twenty-three functions total:
+Twenty-five functions total:
 
 ```
 rl_init_window          rl_window_should_close  rl_close_window
@@ -100,16 +107,19 @@ rl_get_frame_time       rl_draw_fps             rl_measure_text
 rl_draw_circle          rl_draw_rectangle       rl_draw_line
 rl_draw_text            rl_is_key_down          rl_is_key_pressed
 rl_load_texture         rl_draw_texture         rl_unload_texture
-rl_draw_text_int        rl_measure_text_int
+rl_draw_text_int        rl_measure_text_int     rl_draw_texture_rec
 ```
 
-The last two landed as **B1**
-([brainrot#292](https://github.com/Brainrotlang/brainrot/pull/292)). Two gaps
-remain:
+**B1** ([#292](https://github.com/Brainrotlang/brainrot/pull/292)) added the two
+text-with-a-number wrappers; **B2**
+([#293](https://github.com/Brainrotlang/brainrot/pull/293)) added
+`rl_draw_texture_rec`, so sprite atlases, animation strips and tiled parallax
+are all reachable — and a negative source width mirrors a sprite, which is the
+only way to face Tung the other direction until `DrawTexturePro`'s rotation is
+exposed.
 
-- **No `DrawTextureRec`.** `rl_draw_texture` blits a whole texture at integer
-  `x, y` with a tint: no source rectangle, no scaling, no flip, no rotation.
-  That rules out sprite atlases, animation frames, and tiled parallax. → **B2**.
+One gap remains:
+
 - **No audio at all.** → **B3**.
 
 M0 was designed to need none of them.
@@ -615,26 +625,40 @@ TITLE ──SPACE──► RUN ──dist >= SAHUR_DISTANCE──► SAHUR (win)
 
 ## 14. Architecture
 
-### 14.1 One fat `skibidi main`
+### 14.1 `main` holds the shape; `sim.brainrot` holds the work
 
-M0 keeps the entire frame loop in `skibidi main`, exactly like
-`examples/raylib/ohio_engine.brainrot`. This is not laziness — it is forced by
-three constraints acting together (§3.2):
+M0 shipped with the entire frame loop in `skibidi main`, because three
+constraints acted together to make anything else impossible:
 
 - No globals, so all state is a `main` local.
 - No struct pointer arithmetic, so a helper cannot walk a pool.
-- **At most one struct type per function signature**, so a helper cannot take
+- **At most one struct type per function signature**, so a helper could not take
   both `gang Ent *e` and a `gang World *w`.
 
-That last one is decisive. The clean architecture — a `gang World` of shared
-scalars passed alongside each entity — is *specifically* what the parameter
-reversal bug breaks, and the failure mode is silent memory corruption rather
-than an error. Until **C3** lands, the loop stays in `main` and the helpers stay
-scalar-only.
+That last one was decisive, and it was a bug rather than a design: the semantic
+analyser checked struct-pointer parameters against a *reversed* parameter list,
+so it rejected the correct call and accepted the swapped one — which the runtime
+then bound positionally, writing one struct's field offsets through the other's
+pointer. Silent cross-type corruption, reached by trusting the error message.
+Fixed in [#294](https://github.com/Brainrotlang/brainrot/pull/294).
 
-Once C3 and C4 are fixed, the refactor is mechanical: extract
-`skibidi ent_step(gang Ent *e, gang World *w)` and the body moves out unchanged.
-The design is written to make that a one-commit change, not a rewrite.
+So the extraction this section promised would be mechanical has happened.
+`src/sim.brainrot` holds the per-entity and per-player steps —
+`world_advance`, `player_physics`, `ent_scroll`, `ent_hits_body`,
+`player_take_hit`, `award_bonk` — each taking what it acts on plus the world.
+`main` holds the loop's *shape*: the state machine, the pools, and the order the
+eleven steps run in.
+
+**The pool loops stay in `main`, and that is still forced.** C4 (a struct field
+cannot be an array of structs) means there is no God-struct to hand over, and C5
+(no pointer arithmetic on struct pointers) means a helper cannot walk a pool
+itself — it can only be handed one already-resolved `&pool[i]`. Both are still
+open.
+
+The evidence that the extraction was behaviour-preserving is that
+`test/expected/headless.txt` did not move by a single byte: 3000 frames of
+spawns, collisions, combos, deaths and restarts produce identical output before
+and after. That is what the golden files are for.
 
 ### 14.2 What *can* be extracted today
 
@@ -743,7 +767,7 @@ depends on none of them.**
 | ID | Ask | Unblocks | Milestone |
 | --- | --- | --- | --- |
 | ~~**B1**~~ | ~~`rl_draw_text_int` / `rl_measure_text_int`~~ — **landed**, [brainrot#292](https://github.com/Brainrotlang/brainrot/pull/292) | SCORE / LVL / final-score digits, i.e. all numeric HUD | ✅ |
-| **B2** | `rl_draw_texture_rec(handle, sx, sy, sw, sh, x, y, r,g,b,a)` | Sprite atlases, animation frames, tiled parallax | M1 |
+| ~~**B2**~~ | ~~`rl_draw_texture_rec`~~ — **landed**, [brainrot#293](https://github.com/Brainrotlang/brainrot/pull/293). Negative source width/height mirrors a sprite | Sprite atlases, animation frames, tiled parallax | ✅ |
 | **B3** | `rl_init_audio_device`, `rl_load_sound`, `rl_play_sound`, `rl_unload_sound`, `rl_close_audio_device` | The `TUNG` on every bat hit. The entire joke | M2 |
 | **B4** | `rl_draw_texture_pro` (scale / flip / rotate), `rl_draw_rectangle_lines`, `rl_get_time` | Facing flips, debug hitbox overlays | M3 |
 
@@ -760,9 +784,9 @@ document's architecture.
 
 | ID | Bug | Severity |
 | --- | --- | --- |
-| **C1** | `!` on `cap` returns the operand unchanged; `edgy (!a)` branches wrongly | High — silent wrong behaviour |
-| **C2** | `rizz k = someChad;` reinterprets the float's bit pattern; `yapping("%d", chadValue)` prints nothing | High — silent wrong values |
-| **C3** | Semantic checker reverses the parameter list for functions with struct-pointer params: correct calls are rejected, swapped calls are accepted and corrupt memory | **Critical** — unblocks the whole entity-helper architecture |
+| ~~**C1**~~ | ~~`!` on `cap` returns the operand unchanged~~ — **fixed**, [#296](https://github.com/Brainrotlang/brainrot/pull/296). It had no lexer token at all; the catch-all discarded it | ✅ |
+| ~~**C2**~~ | ~~`rizz k = someChad;` reinterprets the float's bits~~ — **fixed**, [#299](https://github.com/Brainrotlang/brainrot/pull/299). Array elements and pointer targets were broken too, in both directions | ✅ |
+| ~~**C3**~~ | ~~Parameter list reversed for struct-pointer params~~ — **fixed**, [#294](https://github.com/Brainrotlang/brainrot/pull/294). The parser stores parameters backwards and the runtime compensated; the analyser did not | ✅ |
 | **C4** | A struct field cannot be an array of structs (`gang Game { gang Ent es[4]; };`) | Medium |
 | **C5** | No pointer arithmetic on struct pointers | Medium |
 | **C6** | No top-level globals | Medium |

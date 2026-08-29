@@ -51,10 +51,16 @@ raylib setup for your OS is documented once, upstream, in
 [`docs/brainray.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md).
 This repo will not duplicate it.
 
-The HUD needs `rl_draw_text_int`, so brainrot must be at or after
-[#292](https://github.com/Brainrotlang/brainrot/pull/292). `make play` checks
-the built module for it and tells you to update rather than failing later with
-a bare "Undefined function".
+**Your brainrot checkout needs to be recent.** The game depends on three fixes
+it turned up itself — `rl_draw_text_int`
+([#292](https://github.com/Brainrotlang/brainrot/pull/292)), working `!`
+([#296](https://github.com/Brainrotlang/brainrot/pull/296)), and float-to-integer
+assignment ([#299](https://github.com/Brainrotlang/brainrot/pull/299)).
+
+`make` probes for all three and tells you to update, because an older
+interpreter does not fail — it silently discards every `!` and reinterprets every
+float assignment, so the guards run backwards and the HUD reads plausible
+nonsense.
 
 Then:
 
@@ -103,7 +109,8 @@ make bless      # then read the diff before you commit it
 
 ```
 src/
-  main.brainrot      skibidi main: state, the frame loop, the entity pools
+  main.brainrot      skibidi main: the state machine, the pools, step order
+  sim.brainrot       the simulation: one function per step, over structs
   tune.brainrot      every tuning constant, as accessor functions
   math.brainrot      PRNG, clamp, lerp, abs -- stdrot has no math library
   collide.brainrot   aabb
@@ -117,19 +124,24 @@ test/
   expected/          golden files
 ```
 
-The whole frame loop is in one `skibidi main`, which looks wrong and isn't:
-Brainrot has no globals, no pointer arithmetic on struct pointers, and a
-semantic analyser that reverses the parameter list for functions with
-struct-pointer parameters. Together those mean a helper cannot walk an entity
-pool *and* cannot take both an entity and a world scalar. Everything that can be
-extracted has been. See DESIGN.md §14.1 — and §15.2, which lists the upstream
-fixes that would let this be structured properly.
+`main` holds the frame loop's *shape* — the state machine, the pools, the order
+the eleven steps run in — and `sim.brainrot` holds each step's actual work.
+
+The pool loops stay in `main`, and that part is still forced: a struct field
+can't be an array of structs, and there's no pointer arithmetic on struct
+pointers, so a helper can't walk a pool — only act on one already-resolved
+`&pool[i]`. It used to be worse. Until
+[brainrot#294](https://github.com/Brainrotlang/brainrot/pull/294) a helper
+couldn't take both an entity and the world at all, so *everything* lived in
+`main`. See DESIGN.md §14.1.
 
 ## Status
 
-**M0 — "Rectangles at 03:30 AM".** Playable core in primitives, no upstream
-dependencies. The numeric HUD has since landed on top of it, once
-`rl_draw_text_int` went in upstream (DESIGN.md B1,
-[brainrot#292](https://github.com/Brainrotlang/brainrot/pull/292)). Sprites and
-parallax are the rest of M1 and still need `rl_draw_texture_rec` (B2); bosses
-and audio are M2. Milestones are in DESIGN.md §18.
+**M0 — "Rectangles at 03:30 AM"** shipped: the playable core in primitives, with
+no upstream dependencies at all. **M1** is under way — the numeric HUD landed
+with B1, and B2 (`rl_draw_texture_rec`) has since landed too, so sprites,
+animation and parallax are unblocked and waiting on art rather than on the
+engine. Duck and the Patapim variants need neither.
+
+**M2** — bosses and audio — still needs B3, which does not exist yet: brainray
+has no audio functions. Milestones are in DESIGN.md §18.
