@@ -1,19 +1,19 @@
 headless: 3000 frames at 60hz
 f0     score 0      lvl 1 hearts 3 combo 0 speed  260.000 py  464.000 dist      0.000
 f250   score 51     lvl 1 hearts 3 combo 0 speed  265.899 py  464.000 dist    517.162
-f500   score 163    lvl 1 hearts 2 combo 0 speed  263.499 py  464.000 dist   1633.789
-f750   score 374    lvl 1 hearts 1 combo 0 speed  262.449 py  464.000 dist   2746.734
-run over -- score 386, seed 793562515, frames 778
-f1000  score 98     lvl 1 hearts 3 combo 0 speed  271.097 py  464.000 dist    982.583
-f1250  score 309    lvl 1 hearts 2 combo 1 speed  267.848 py  464.000 dist   2097.048
-run over -- score 707, seed 1531741735, frames 1471
-f1500  score 12     lvl 1 hearts 3 combo 0 speed  261.450 py  464.000 dist    126.024
-f1750  score 224    lvl 1 hearts 3 combo 1 speed  273.947 py  464.000 dist   1241.493
-f2000  score 338    lvl 1 hearts 2 combo 0 speed  262.699 py  464.000 dist   2387.660
-run over -- score 421, seed 2096863556, frames 2187
-f2250  score 27     lvl 1 hearts 3 combo 0 speed  263.149 py  402.478 dist    274.669
-f2500  score 239    lvl 1 hearts 3 combo 1 speed  275.646 py  305.548 dist   1397.218
-f2750  score 451    lvl 1 hearts 2 combo 1 speed  269.048 py  280.834 dist   2514.235
-run over -- score 524, seed 1779138422, frames 2915
-f3000  score 37     lvl 1 hearts 3 combo 0 speed  264.249 py  328.337 dist    371.364
+f500   score 165    lvl 1 hearts 2 combo 0 speed  278.396 py  464.000 dist   1651.167
+f750   score 383    lvl 1 hearts 1 combo 0 speed  290.892 py  464.000 dist   2837.240
+run over -- score 390, seed 793562515, frames 764
+f1000  score 104    lvl 1 hearts 3 combo 0 speed  271.797 py  464.000 dist   1045.924
+f1250  score 220    lvl 1 hearts 1 combo 0 speed  284.294 py  464.000 dist   2204.505
+run over -- score 264, seed 1531741735, frames 1342
+f1500  score 69     lvl 1 hearts 3 combo 0 speed  267.898 py  464.000 dist    695.104
+f1750  score 283    lvl 1 hearts 3 combo 1 speed  280.395 py  464.000 dist   1837.440
+f2000  score 403    lvl 1 hearts 1 combo 0 speed  292.892 py  464.000 dist   3031.844
+run over -- score 420, seed 2096863556, frames 2036
+f2250  score 94     lvl 1 hearts 3 combo 0 speed  270.697 py  402.478 dist    946.462
+f2500  score 410    lvl 1 hearts 2 combo 1 speed  283.194 py  305.548 dist   2100.461
+run over -- score 712, seed 1779138422, frames 2714
+f2750  score 15     lvl 1 hearts 3 combo 0 speed  261.800 py  280.834 dist    156.549
+f3000  score 127    lvl 1 hearts 3 combo 0 speed  274.297 py  328.337 dist   1273.475
 headless: done

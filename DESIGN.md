@@ -173,7 +173,6 @@ GRAVITY           2600.0     🚽 px/s^2
 JUMP_V           -1000.0     🚽 px/s  -> apex 192px, air time 0.77s
 HEARTS_MAX        3
 IFRAME_TIME       1.2        🚽 s
-HIT_SLOWDOWN      0.75       🚽 speed multiplier on damage, floored at SPEED_START
 
 🚽 --- bat ---
 ATTACK_TOTAL      0.45       🚽 s; timer counts down
@@ -259,12 +258,30 @@ Colliding with a live entity while `iframe_t <= 0.0`:
 
 1. `hearts = hearts - 1`
 2. `iframe_t = IFRAME_TIME` (1.2 s; player flashes, drawn on alternate 0.1 s ticks)
-3. `speed = speed * HIT_SLOWDOWN`, floored at `SPEED_START`
-4. combo resets to zero
-5. the entity that hit you is despawned, so one obstacle cannot drain three hearts
+3. combo resets to zero
+4. the entity that hit you is despawned, so one obstacle cannot drain three hearts
 
-The slowdown is a mercy *and* a punishment: it buys reaction time but costs
-score rate. Three hearts total; at zero, game over.
+**Damage does not touch `speed`.**
+
+An earlier version knocked the world speed back by a quarter on every hit,
+described as a mercy and a punishment at once. It was neither, and it is worth
+recording why it went.
+
+At 900 px/s it handed back 225 px/s, which takes **75 seconds** to climb again
+— a quarter of a whole run spent easier, bought for one of three hearts. That
+makes deliberately eating a hit the *correct* play at the top of the curve,
+which is not a strategy this game should reward.
+
+The mercy was redundant as well. 1.2 s of invulnerability is 1080 px of
+clearance at that speed, most of a screen width, and that is what actually
+saves you from a second hit — not the speed change.
+
+Mostly, though, it fought §2's first pillar. The whole game is one number
+rising; a hit that pushes it back down makes the curve non-monotonic and turns
+failure into relief. Losing a third of your health and up to an ×8 combo is
+punishment enough.
+
+Three hearts total; at zero, game over.
 
 ---
 
@@ -916,7 +933,7 @@ Playable core, primitives only. Title card, run, game over, restart.
 - [x] AABB collision, bat pass before body pass
 - [x] Continuous speed curve; LVL derived for display
 - [x] Time-based spawn gaps with the fairness clamp
-- [x] 3 hearts, i-frames, hit slowdown
+- [x] 3 hearts, i-frames
 - [x] Score + combo multiplier
 - [x] Seeded PRNG; seed shown on game over
 - [x] HUD: hearts, 8-segment speed bar, literal labels

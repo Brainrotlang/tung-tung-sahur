@@ -21,7 +21,6 @@ chad t_gravity()         { bussin 2600.0; }
 chad t_jump_v()          { bussin -1000.0; }
 rizz t_hearts_max()      { bussin 3; }
 chad t_iframe_time()     { bussin 1.2; }
-chad t_hit_slowdown()    { bussin 0.75; }
 
 🚽 --- bat ---
 chad t_attack_total()    { bussin 0.45; }
