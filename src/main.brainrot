@@ -30,6 +30,22 @@
 skibidi main {
     plat_open();
 
+    🚽 Art and audio are both optional. A -1 handle means "not available",
+    🚽 and every consumer of one already handles that: the player falls back
+    🚽 to the M0 rectangle, and the music seam simply runs silent. Cloning
+    🚽 this repo without assets, or running it over SSH, still gives a game.
+    rizz tex_run   = draw_load_run();
+    rizz tex_jump  = draw_load_jump();
+    rizz tex_swing = draw_load_swing();
+    rizz tex_pat   = draw_load_patapim();
+    rizz tex_crate = draw_load_crate();
+    rizz tex_post  = draw_load_post();
+    rizz bg_far    = draw_load_bg_far();
+    rizz bg_mid    = draw_load_bg_mid();
+    rizz bg_near   = draw_load_bg_near();
+    rizz bg_fore   = draw_load_bg_fore();
+    rizz music     = plat_music_open();
+
     🚽 Array sizes must be literals, so this is the one place the pool
     🚽 bounds are written twice. Fail loudly rather than quietly walking
     🚽 off the end of a pool if someone edits tune.brainrot alone.
@@ -69,6 +85,8 @@ skibidi main {
 
             do_reset = L;
         }
+
+        plat_music_tick(music);
 
         🚽 --- 1. frame time -------------------------------------------
         🚽 The clamp is not optional. rl_get_frame_time after a window
@@ -221,24 +239,44 @@ skibidi main {
         🚽 --- 10. draw --------------------------------------------------
         draw_begin();
         draw_sky(lvl);
+        draw_background(bg_far, bg_mid, bg_near, bg_fore, wd.dist);
         draw_ground();
 
         flex (rizz i = 0; i < MAX_OBS; i = i + 1) {
             edgy (obstacles[i].alive) {
                 draw_ent(obstacles[i].x, obstacles[i].y,
-                         obstacles[i].w, obstacles[i].h, obstacles[i].kind);
+                         obstacles[i].w, obstacles[i].h, obstacles[i].kind,
+                         tex_pat, tex_crate, tex_post, 0);
             }
         }
         flex (rizz i = 0; i < MAX_EN; i = i + 1) {
             edgy (enemies[i].alive) {
                 draw_ent(enemies[i].x, enemies[i].y,
-                         enemies[i].w, enemies[i].h, enemies[i].kind);
+                         enemies[i].w, enemies[i].h, enemies[i].kind,
+                         tex_pat, tex_crate, tex_post,
+                         patapim_frame(&enemies[i]));
+            }
+        }
+
+        🚽 Swing wins over jump wins over run: while the bat is out that is
+        🚽 what the player needs to see, airborne or not, because that is
+        🚽 when the hitbox is live.
+        rizz tex   = tex_run;
+        rizz frame_i = run_frame(&wd);
+        edgy (pl.atk_t > 0.0) {
+            tex     = tex_swing;
+            frame_i = swing_frame(&pl);
+        }
+        amogus {
+            edgy (!pl.grounded) {
+                tex     = tex_jump;
+                frame_i = jump_frame(&pl);
             }
         }
 
         cap show = player_visible(&pl);
-        edgy (show) { draw_player(t_player_x(), pl.y); }
-        edgy (swinging) { draw_bat(t_player_x(), pl.y); }
+        edgy (show) { draw_player(t_player_x(), pl.y, tex, frame_i); }
+        edgy (swinging) { draw_bat(t_player_x(), pl.y, tex_swing); }
 
         draw_hearts(pl.hearts);
         draw_speedbar(lvl);
@@ -256,6 +294,17 @@ skibidi main {
         frame = frame + 1;
     }
 
+    draw_unload(tex_run);
+    draw_unload(tex_jump);
+    draw_unload(tex_swing);
+    draw_unload(tex_pat);
+    draw_unload(tex_crate);
+    draw_unload(tex_post);
+    draw_unload(bg_far);
+    draw_unload(bg_mid);
+    draw_unload(bg_near);
+    draw_unload(bg_fore);
+    plat_music_close(music);
     plat_close();
     bussin 0;
 }

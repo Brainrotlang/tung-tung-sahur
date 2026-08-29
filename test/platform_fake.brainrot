@@ -20,6 +20,13 @@ skibidi plat_close() {
     yapping("headless: done");
 }
 
+🚽 No device, no track, no sound. -1 is the same "running silent" the real
+🚽 seam reports when there is no audio device, so the game takes the same
+🚽 path here as it does over SSH.
+rizz plat_music_open()             { bussin 0 - 1; }
+skibidi plat_music_tick(rizz music) { rizz noop = 0; }
+skibidi plat_music_close(rizz music) { rizz noop = 0; }
+
 🚽 Fixed timestep. Real time is the one thing a golden file cannot have.
 chad plat_dt(rizz frame) {
     bussin 0.016666;

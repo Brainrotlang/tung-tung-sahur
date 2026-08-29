@@ -149,6 +149,51 @@ cap player_visible(gang Player *p) {
     bussin W;
 }
 
+🚽 --- animation -----------------------------------------------------------
+🚽
+🚽 Which frame to show is derived entirely from state the simulation already
+🚽 keeps, so there is no animation clock to drift out of step with the game.
+
+🚽 The run cycle advances with DISTANCE, not time. Tie it to a fixed frame
+🚽 rate and the feet skate as soon as the world outruns it; tie it to ground
+🚽 covered and they stay planted at every speed, which is the whole illusion
+🚽 in a runner. It also means the cycle naturally quickens with the
+🚽 difficulty curve without a second variable to tune.
+rizz run_frame(gang World *w) {
+    rizz i = w.dist / t_run_stride();
+    bussin i % t_run_frames();
+}
+
+🚽 Rising or falling, off the sign of vertical velocity.
+rizz jump_frame(gang Player *p) {
+    edgy (p.vy < 0.0) { bussin 0; }
+    bussin 1;
+}
+
+🚽 Strike, recoil, return -- evenly across the 0.45s attack timer.
+🚽
+🚽 Frame 0 is the strike and it lands on the FIRST third, because that is
+🚽 when the hitbox is live (atk_t above t_attack_active()). An animation
+🚽 that wound up first would be showing a wind-up while the bat was already
+🚽 hitting things.
+rizz swing_frame(gang Player *p) {
+    chad elapsed = t_attack_total() - p.atk_t;
+    rizz i = elapsed / (t_attack_total() / t_swing_frames());
+    edgy (i < 0) { bussin 0; }
+    edgy (i >= t_swing_frames()) { bussin t_swing_frames() - 1; }
+    bussin i;
+}
+
+🚽 Patapim's charge, on the same distance-driven principle as Tung's run --
+🚽 but off the entity's OWN travel, not the world's, since it closes faster
+🚽 than the ground scrolls (t_enemy_close()). Using world distance would
+🚽 make its legs lag behind the body it is attached to.
+rizz patapim_frame(gang Ent *e) {
+    rizz i = (t_spawn_x() - e.x) / t_patapim_stride();
+    edgy (i < 0) { i = 0 - i; }
+    bussin i % t_patapim_frames();
+}
+
 🚽 --- entities ------------------------------------------------------------
 
 skibidi ent_spawn(gang Ent *e, rizz kind) {
