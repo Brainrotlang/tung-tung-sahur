@@ -7,13 +7,65 @@
 🚽
 🚽 Requires `#cooked <raylib>` earlier in the including file.
 
+🚽 Audio device BEFORE the window, and the order is not arbitrary.
+🚽
+🚽 With rl_init_audio_device() after rl_init_window(), this game aborts inside
+🚽 PulseAudio -- `pa_mainloop_prepare: Assertion 'm->state == STATE_PASSIVE'`
+🚽 -- reproducibly, 3 runs out of 3, on WSLg. Initialising audio first is
+🚽 clean 5 runs out of 5 at 700 frames.
+🚽
+🚽 Worth recording what it is NOT, because all of these were checked: not the
+🚽 rendering (it still aborted with drawing removed entirely), not the update
+🚽 frequency (35,000 pumps in a standalone program are fine), not
+🚽 rl_set_music_volume, not rl_is_audio_device_ready, and not the game's frame
+🚽 rate, which is a steady 60. A standalone program making the identical audio
+🚽 calls never reproduced it. The variable that mattered was starting
+🚽 PulseAudio's client threads before GLFW's rather than after.
+🚽
+🚽 The ALSA backend does not care either way -- forcing it with
+🚽 PULSE_SERVER=/nonexistent was clean before this change -- so this is a
+🚽 PulseAudio-side race, not raylib misuse. Ordering it this way costs
+🚽 nothing and avoids it.
 skibidi plat_open() {
+    rl_init_audio_device();
     rl_init_window(t_screen_w(), t_screen_h(), "TUNG TUNG TUNG SAHUR: RUN");
     rl_set_target_fps(60);
 }
 
 skibidi plat_close() {
     rl_close_window();
+}
+
+🚽 --- music ---------------------------------------------------------------
+🚽
+🚽 Behind the platform seam like everything else with a device behind it, so
+🚽 the headless harness can no-op the whole thing.
+🚽
+🚽 Returns a handle, or -1 if there is no audio device or the file is
+🚽 missing. -1 is not an error: the game runs silent. Someone cloning this
+🚽 without the track, or running it over SSH, should still get a game.
+rizz plat_music_open() {
+    🚽 The device is already up -- see plat_open() for why it has to be.
+    cap ready = rl_is_audio_device_ready();
+    edgy (!ready) { bussin 0 - 1; }
+    rizz m = rl_load_music("assets/music/tung-tung.ogg");
+    edgy (m < 0) { bussin 0 - 1; }
+    rl_set_music_looping(m, W);
+    rl_set_music_volume(m, 0.6);
+    rl_play_music(m);
+    bussin m;
+}
+
+🚽 Refills the decode buffer. This MUST be called every frame: raylib says
+🚽 nothing if it is not, the track plays for a fraction of a second and
+🚽 stops, and it looks exactly like a broken file.
+skibidi plat_music_tick(rizz music) {
+    edgy (music >= 0) { rl_update_music(music); }
+}
+
+skibidi plat_music_close(rizz music) {
+    edgy (music >= 0) { rl_unload_music(music); }
+    rl_close_audio_device();
 }
 
 chad plat_dt(rizz frame) {

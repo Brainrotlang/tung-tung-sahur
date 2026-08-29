@@ -14,8 +14,13 @@ skibidi draw_end()   { rizz noop = 0; }
 skibidi draw_sky(rizz lvl)    { rizz noop = 0; }
 skibidi draw_ground()         { rizz noop = 0; }
 
-skibidi draw_player(chad x, chad y) { rizz noop = 0; }
-skibidi draw_bat(chad x, chad y)    { rizz noop = 0; }
+rizz draw_load_run()   { bussin 0 - 1; }
+rizz draw_load_jump()  { bussin 0 - 1; }
+rizz draw_load_swing() { bussin 0 - 1; }
+skibidi draw_unload(rizz tex) { rizz noop = 0; }
+
+skibidi draw_player(chad x, chad y, rizz tex, rizz frame) { rizz noop = 0; }
+skibidi draw_bat(chad x, chad y, rizz tex) { rizz noop = 0; }
 
 skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind) { rizz noop = 0; }
 

@@ -30,19 +30,54 @@ skibidi draw_ground() {
     rl_draw_rectangle(0, g, t_screen_w(), 6, 58, 48, 38, 255);
 }
 
-🚽 Tung himself: body, then the bat he is always carrying.
-skibidi draw_player(chad x, chad y) {
-    rl_draw_rectangle(x, y, t_player_w(), t_player_h(), 196, 148, 92, 255);
-    rl_draw_rectangle(x + 8.0, y + 18.0, 10.0, 10.0, 30, 22, 16, 255);
-    rl_draw_rectangle(x + 30.0, y + 18.0, 10.0, 10.0, 30, 22, 16, 255);
-    rl_draw_rectangle(x + 12.0, y + 46.0, 24.0, 6.0, 30, 22, 16, 255);
+🚽 --- sprite loading ---
+🚽 One loader per atlas, each returning a handle or -1. Hardcoding the paths
+🚽 here rather than passing them in keeps every rl_* call inside this file,
+🚽 which is the rule that lets the headless harness swap the whole layer out.
+rizz draw_load_run()   { bussin rl_load_texture("assets/tung_run.png"); }
+rizz draw_load_jump()  { bussin rl_load_texture("assets/tung_jump.png"); }
+rizz draw_load_swing() { bussin rl_load_texture("assets/tung_swing.png"); }
+
+skibidi draw_unload(rizz tex) {
+    edgy (tex >= 0) { rl_unload_texture(tex); }
 }
 
-🚽 The bat hitbox, drawn only while it is actually live. What you see is
-🚽 exactly what collides -- no generous invisible margin.
-skibidi draw_bat(chad x, chad y) {
-    rl_draw_rectangle(x + t_hitbox_dx(), y + t_hitbox_dy(),
-                      t_hitbox_w(), t_hitbox_h(), 240, 220, 120, 255);
+🚽 Tung himself.
+🚽
+🚽 `tex` is an atlas handle and `frame` an index into it. A negative handle
+🚽 means the art is missing, and the game falls back to the M0 rectangle
+🚽 rather than drawing nothing -- someone who clones this without the assets
+🚽 should get a playable game, not an invisible player.
+🚽
+🚽 The sprite is wider than the collision box, so it is drawn offset by the
+🚽 torso anchor. Its bottom row is the contact row, so y needs no offset at
+🚽 all: the feet land exactly where the physics puts them.
+skibidi draw_player(chad x, chad y, rizz tex, rizz frame) {
+    edgy (tex < 0) {
+        rl_draw_rectangle(x, y, t_player_w(), t_player_h(), 196, 148, 92, 255);
+        rl_draw_rectangle(x + 8.0, y + 18.0, 10.0, 10.0, 30, 22, 16, 255);
+        rl_draw_rectangle(x + 30.0, y + 18.0, 10.0, 10.0, 30, 22, 16, 255);
+        rl_draw_rectangle(x + 12.0, y + 46.0, 24.0, 6.0, 30, 22, 16, 255);
+    }
+    amogus {
+        chad sw = t_sprite_w();
+        rl_draw_texture_rec(tex, frame * sw, 0.0, sw, t_sprite_h(),
+                            x + t_player_w() / 2.0 - t_sprite_anchor(), y,
+                            255, 255, 255, 255);
+    }
+}
+
+🚽 The bat hitbox, as a rectangle.
+🚽
+🚽 Only drawn when the sprite atlas is missing. With the art loaded the bat
+🚽 is part of the swing frames, and the drawn bat is about 18px shorter than
+🚽 this box -- so the reach is slightly more generous than it looks. See
+🚽 DESIGN.md 10.1.
+skibidi draw_bat(chad x, chad y, rizz tex) {
+    edgy (tex < 0) {
+        rl_draw_rectangle(x + t_hitbox_dx(), y + t_hitbox_dy(),
+                          t_hitbox_w(), t_hitbox_h(), 240, 220, 120, 255);
+    }
 }
 
 skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind) {

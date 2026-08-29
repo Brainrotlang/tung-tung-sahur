@@ -52,6 +52,23 @@ chad t_fair_any()        { bussin 0.60; }
 rizz t_max_obstacles()   { bussin 16; }
 rizz t_max_enemies()     { bussin 16; }
 
+🚽 --- sprites ---
+🚽 One frame of the Tung atlases, and the column its torso sits on. The art
+🚽 is wider than the 48px collision box on purpose -- the trailing leg and
+🚽 the bat reach past it -- so the draw call offsets by the anchor rather
+🚽 than using the player's x directly. tools/process_sprites.py prints these
+🚽 when it builds the atlases; they are not free parameters.
+rizz t_sprite_w()        { bussin 99; }
+rizz t_sprite_h()        { bussin 96; }
+rizz t_sprite_anchor()   { bussin 44; }
+rizz t_run_frames()      { bussin 6; }
+rizz t_swing_frames()    { bussin 3; }
+
+🚽 Pixels of ground covered per run frame. Distance-driven rather than
+🚽 timed, so the feet stay in step with the scroll at every speed instead
+🚽 of skating once the world outruns a fixed frame rate.
+chad t_run_stride()      { bussin 22.0; }
+
 🚽 --- entity kinds ---
 🚽 0 crate  48x48 grounded  -> jump
 🚽 1 post   40x96 grounded  -> jump
