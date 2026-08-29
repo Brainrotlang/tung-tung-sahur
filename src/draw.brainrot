@@ -98,7 +98,15 @@ skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind,
                  rizz tex_pat, rizz tex_crate, rizz tex_post, rizz frame) {
     edgy (kind == t_kind_patapim()) {
         edgy (tex_pat >= 0) {
-            rl_draw_texture_rec(tex_pat, frame * 101.0, 0.0, 101.0, 64.0,
+            🚽 NEGATIVE source width, which mirrors the frame.
+            🚽
+            🚽 Every sprite is authored facing right, because that is the
+            🚽 cheaper half: rl_draw_texture_rec flips on the sign of the
+            🚽 source rectangle, so one direction is free. Tung runs right
+            🚽 and needs no flip. Patapim charges LEFT at the player, so
+            🚽 without this it runs backwards -- tail first, at the thing
+            🚽 it is supposed to be attacking.
+            rl_draw_texture_rec(tex_pat, frame * 101.0, 0.0, 0.0 - 101.0, 64.0,
                                 x + w / 2.0 - 51.0, y, 255, 255, 255, 255);
         }
         amogus {

@@ -55,7 +55,28 @@ SCREEN_W = 1280          # must equal t_screen_w() in src/tune.brainrot
 # rest. Width falls out of the art's own proportions, which is why the tool
 # prints the anchor column -- the draw call needs it.
 CHARACTERS = {
-    "tung_run":    ("tung", [f"tung{i}.jpg" for i in range(1, 7)], 96),
+    # NOT tung1..tung6. Filename order is not cycle order, and the frames
+    # were measured rather than guessed: across the set the body bob
+    # (head-top row) and the front foot's distance ahead of the torso both
+    # order the same way, which is a real stride --
+    #
+    #   tung5  front foot +25, head 5   contact, foot planted well ahead
+    #   tung6  front foot +23, head 5
+    #   tung1  front foot +20, head 6   down, body at its lowest
+    #   tung2  front foot +17, head 3   rising
+    #   tung4  front foot +17, head 1
+    #   tung3  front foot +10, head 0   pass, legs together, body highest
+    #
+    # then back to tung5 as the body falls into the next contact.
+    #
+    # Be aware this is ONE step, not two. A run cycle needs two passing
+    # poses, one per leg, and this set has exactly one (tung3, the only
+    # frame whose feet are together -- spread 10px against 47-61px for
+    # every other frame). Ordering makes it a coherent stride instead of a
+    # shuffle; it cannot make it a run. That needs the six distinct poses
+    # the prompt in assets/PROMPTS.md asks for.
+    "tung_run":    ("tung", ["tung5.jpg", "tung6.jpg", "tung1.jpg",
+                             "tung2.jpg", "tung4.jpg", "tung3.jpg"], 96),
     "tung_jump":   ("tung", ["jump1.jpg", "jump2.jpg"], 96),
     "tung_swing":  ("tung", ["bat2.jpg", "bat3.jpg", "bat1.jpg"], 96),
     "patapim_run": ("brr-brr-patapim",
