@@ -42,11 +42,19 @@ FRAME_H = 96          # must equal t_player_h() in src/tune.brainrot
 TORSO_FRACTION = 0.60  # a column is "torso" if opaque for this much of the height
 BLEED_PASSES = 12
 
-# Which files make which atlas. Order is animation order.
+# Which files make which atlas. Order is ANIMATION order, not filename order.
+#
+# The swing is deliberately not bat1, bat2, bat3. Tung's attack has no windup
+# time: t_attack_total() starts at 0.45s and the hitbox is live while it is
+# above t_attack_active() (0.30s), so the first 0.15s -- frame 0 -- is when the
+# bat actually hits. Leading with the windup pose would show a wind-up while
+# the hitbox was already live, which is the animation lying about the
+# gameplay. So the strike goes first, then the recoil, then the bat returning
+# to the carry position the run cycle holds it in.
 ATLASES = {
     "tung_run":   [f"tung{i}.jpg" for i in range(1, 7)],
     "tung_jump":  ["jump1.jpg", "jump2.jpg"],
-    "tung_swing": ["bat1.jpg", "bat2.jpg"],
+    "tung_swing": ["bat2.jpg", "bat3.jpg", "bat1.jpg"],
 }
 
 
