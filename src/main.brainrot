@@ -262,12 +262,10 @@ skibidi main {
         🚽 Bat before body, same as enemies, so a frame-perfect swing at an
         🚽 opening always beats the collision.
         edgy (in_run) {
-            cap boss_here = boss_active(&bo);
-            edgy (boss_here) {
+            edgy (boss_active(&bo)) {
                 cap can_bonk = boss_vulnerable(&bo);
                 edgy (swinging && can_bonk) {
-                    cap boss_bonk = boss_in_bat(&bo, &pl);
-                    edgy (boss_bonk) {
+                    edgy (boss_in_bat(&bo, &pl)) {
                         boss_take_bonk(&bo, &wd);
                         plat_sfx_play(sfx_tung);
                     }
@@ -286,8 +284,7 @@ skibidi main {
         edgy (state == t_state_title()) {
             title_t = title_t + wd.dt;
             edgy (title_t > 2.2) {
-                cap go = plat_start_pressed(frame);
-                edgy (go) {
+                edgy (plat_start_pressed(frame)) {
                     state    = t_state_run();
                     do_reset = W;
                 }
@@ -356,8 +353,9 @@ skibidi main {
             }
         }
 
-        cap show = player_visible(&pl);
-        edgy (show) { draw_player(t_player_x(), pl.y, tex, frame_i); }
+        edgy (player_visible(&pl)) {
+            draw_player(t_player_x(), pl.y, tex, frame_i);
+        }
         edgy (swinging) { draw_bat(t_player_x(), pl.y, tex_swing); }
 
         🚽 Markers first, so a bomb never hides its own warning.
@@ -400,8 +398,7 @@ skibidi main {
         draw_end();
 
         🚽 --- 11. quit --------------------------------------------------
-        cap wants_close = plat_should_close(frame);
-        edgy (wants_close) { running = L; }
+        edgy (plat_should_close(frame)) { running = L; }
 
         frame = frame + 1;
     }

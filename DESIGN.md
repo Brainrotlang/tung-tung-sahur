@@ -1028,12 +1028,24 @@ C14 replaced them as the limitation that shapes code here. It is why
 `pool_free_slot()` scans the whole pool and keeps the first index instead of
 returning the moment it finds one.
 
-**C10 and C11 both shape code that looks like style.** Every `cap`-returning
-call in this game lands in a local before it is tested — `cap show =
-player_visible(&pl); edgy (show)` — because the direct form silently takes the
-wrong branch. And `sim.brainrot` names its parameters `w`, `p`, `b`, `e`, `bm`
-while `main` names its locals `wd`, `pl`, `bo`: that non-collision is
-load-bearing and nothing enforces it. Both were found writing the bosses.
+**Every open C entry above was closed by v0.3.0.** C10, C11, C12 and C14 were
+all found writing this game, all filed, and all fixed upstream — so the
+workarounds they forced are gone from the source:
+
+- `pool_free_slot()` returns the moment it finds a slot instead of scanning the
+  whole pool (C14).
+- `boss_tick()` returns early instead of nesting three levels of `amogus` (C12).
+- Pure predicates are conditions again — `edgy (player_visible(&pl))` rather
+  than a `cap` local existing only to be tested on the next line (C10).
+- And `sim.brainrot` naming its parameters `w`/`p`/`b`/`e` while `main` names
+  its locals `wd`/`pl`/`bo` is no longer load-bearing (C11). It stays, because
+  it reads well, but nothing depends on it now.
+
+One thing deliberately did **not** change: a call with side effects still lands
+in a named local before being tested. `pool_body_pass()` kills entities and
+damages the player; hiding that inside an `edgy (...)` would mean nothing warns
+the reader that evaluating the condition changed the world. C10 made that a
+choice rather than a requirement, and the choice is to keep it.
 
 | ID | Bug | Severity |
 | --- | --- | --- |
@@ -1041,13 +1053,14 @@ load-bearing and nothing enforces it. Both were found writing the bosses.
 | ~~**C2**~~ | ~~`rizz k = someChad;` reinterprets the float's bits~~ — **fixed**, [#299](https://github.com/Brainrotlang/brainrot/pull/299). Array elements and pointer targets were broken too, in both directions | ✅ |
 | ~~**C3**~~ | ~~Parameter list reversed for struct-pointer params~~ — **fixed**, [#294](https://github.com/Brainrotlang/brainrot/pull/294). The parser stores parameters backwards and the runtime compensated; the analyser did not | ✅ |
 | ~~**C9**~~ | ~~A user-defined call in a value position runs twice and keeps the SECOND result~~ — **fixed**, [#303](https://github.com/Brainrotlang/brainrot/pull/303). `ast_accept()`'s pre-visit executed the call, then the statement's own visitor executed it again | ✅ |
-| **C10** | A `cap`-returning call cannot be used directly as a condition — `edgy (f())` errors and takes the FALSE branch ([#313](https://github.com/Brainrotlang/brainrot/issues/313)) | **High** |
-| **C11** | A caller's local shadows a callee's *parameter name* during analysis, so a correct call is rejected ([#312](https://github.com/Brainrotlang/brainrot/issues/312)) | **High** |
-| **C12** | A bare `bussin;` is a parse error, so a `skibidi` cannot return early ([#283](https://github.com/Brainrotlang/brainrot/issues/283)) | Medium |
+| ~~**C10**~~ | ~~A `cap`-returning call cannot be used as a condition~~ — **fixed**, [#324](https://github.com/Brainrotlang/brainrot/pull/324) | ✅ |
+| ~~**C11**~~ | ~~A caller's local shadows a callee's parameter name~~ — **fixed**, [#326](https://github.com/Brainrotlang/brainrot/pull/326) | ✅ |
+| ~~**C12**~~ | ~~A bare `bussin;` is a parse error~~ — **fixed**, [#320](https://github.com/Brainrotlang/brainrot/pull/320) | ✅ |
+| ~~**C14**~~ | ~~`bussin` inside a loop runs as `break` and kills the process~~ — **fixed**, [#325](https://github.com/Brainrotlang/brainrot/pull/325) | ✅ |
 | ~~**C4**~~ | ~~A struct field cannot be an array of structs~~ — **fixed**, [#315](https://github.com/Brainrotlang/brainrot/pull/315) | ✅ |
 | ~~**C5**~~ | ~~No pointer arithmetic on struct pointers~~ — **fixed**, [#316](https://github.com/Brainrotlang/brainrot/pull/316). This is the one that let the pool loops leave `main` | ✅ |
 | ~~**C13**~~ | ~~`rant` parameters on user-defined functions~~ — **fixed**, [#314](https://github.com/Brainrotlang/brainrot/pull/314). Twenty one-per-file loaders became two | ✅ |
-| **C14** | A `bussin` inside a loop is caught by the loop's own jump buffer, so it runs as `break` and then kills the process with "No scope to exit" and no output ([#319](https://github.com/Brainrotlang/brainrot/issues/319)) | **High** |
+
 | **C6** | No top-level globals | Medium |
 | **C7** | No `*(p + i) = v` / `p[i] = v` through a pointer parameter | Low — workaround is fine |
 | **C8** | No math builtins (`sqrt`, `floor`, `abs`, `min`, `max`, `rand`) | Low — hand-rolled |
