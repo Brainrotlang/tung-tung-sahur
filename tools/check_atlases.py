@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Assert the generated atlases still match the constants the game draws with.
+"""Assert every generated image still matches the constants the game draws with.
 
-process_sprites.py decides the frame size and anchor from the art's own
-proportions, and tune.brainrot has to be told. Nothing connected the two, so
-regenerating art at a different size silently desynced the draw call from the
-atlas -- the sprite reads shifted or clipped, and no test noticed because the
-headless harness swaps drawing for a no-op fake.
+process_sprites.py decides each atlas's frame size and anchor, and each
+parallax layer's tile width, from the art's own proportions. tune.brainrot has
+to be *told*. Nothing connected the two, so regenerating art at a different
+size silently desynced the draw call from the image -- and no test noticed,
+because the headless harness swaps drawing for a no-op fake.
+
+That is not hypothetical twice over. Patapim's frame width was a literal in
+draw.brainrot. And regenerating bg_near.png from an updated source took it from
+503px to 698px wide while draw_background() kept asking for 503, so 195px of
+every house strip was sliced off and the cut edge butted against the next tile.
+The layer check below exists because of that.
 
     python3 tools/check_atlases.py        # or: make check-atlases
 """
@@ -64,10 +70,33 @@ def main():
                   f"width {int(fw)}")
             bad += 1
 
+    # Parallax layers. draw_layer() passes the width to rl_draw_texture_rec()
+    # as BOTH the source rectangle and the tile stride, so it has to be the
+    # PNG's exact width -- an approximation crops or pads every single tile.
+    for layer in ("far", "mid", "near", "fore"):
+        path = f"assets/bg_{layer}.png"
+        lw = const(t, f"t_bg_{layer}_w")
+        lh = const(t, f"t_bg_{layer}_h")
+        try:
+            w, h = Image.open(path).size
+        except FileNotFoundError:
+            print(f"  MISSING  {path}")
+            bad += 1
+            continue
+        if (w, h) != (int(lw), int(lh)):
+            lost = w - int(lw)
+            how = (f"cropping {lost}px off every tile" if lost > 0
+                   else f"padding {-lost}px past the texture on every tile")
+            print(f"  MISMATCH bg_{layer}: png {w}x{h}, tune.brainrot says "
+                  f"{int(lw)}x{int(lh)} -- {how}")
+            bad += 1
+        else:
+            print(f"  ok       bg_{layer} {w}x{h}")
+
     if bad:
         sys.exit(f"\n{bad} problem(s). Re-run tools/process_sprites.py and "
-                 f"copy the frame size and anchor it prints into {TUNE}.")
-    print("atlases agree with tune.brainrot")
+                 f"copy the sizes it prints into {TUNE}.")
+    print("atlases and parallax layers agree with tune.brainrot")
 
 
 if __name__ == "__main__":

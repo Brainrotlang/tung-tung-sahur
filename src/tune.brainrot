@@ -149,6 +149,45 @@ chad t_patapim_w()       { bussin 74.0; }
 chad t_patapim_h()       { bussin 64.0; }
 chad t_patapim_anchor()  { bussin 37.0; }
 
+🚽 --- parallax layers ---
+🚽
+🚽 Tile width, on-screen height, and parallax rate per layer, back to front.
+🚽
+🚽 The WIDTH is not a composition choice -- it must equal the generated
+🚽 PNG's width exactly, because draw_layer() passes it to
+🚽 rl_draw_texture_rec() as the source rectangle AND as the tile stride. Too
+🚽 small and every tile is cut off on its right edge; too large and each
+🚽 tile is padded with whatever the sampler returns past the texture.
+🚽
+🚽 These lived in draw_background() as literals, and regenerating bg_near
+🚽 from an updated source took it from 503px to 698px while the draw call
+🚽 kept asking for 503 -- so 195px of every house strip was sliced off and
+🚽 the seam butted against the next tile. tools/check_atlases.py asserts all
+🚽 four against the PNGs now.
+🚽
+🚽 The HEIGHT is a composition decision, and is what these are scaled to:
+🚽 see the note in draw.brainrot about scaling to width instead, which
+🚽 produced a 472px foliage band against a 96px character.
+chad t_bg_far_w()        { bussin 2353.0; }
+chad t_bg_far_h()        { bussin 200.0; }
+chad t_bg_far_rate()     { bussin 0.10; }
+
+chad t_bg_mid_w()        { bussin 803.0; }
+chad t_bg_mid_h()        { bussin 220.0; }
+chad t_bg_mid_rate()     { bussin 0.25; }
+
+chad t_bg_near_w()       { bussin 698.0; }
+chad t_bg_near_h()       { bussin 190.0; }
+chad t_bg_near_rate()    { bussin 0.50; }
+
+chad t_bg_fore_w()       { bussin 299.0; }
+chad t_bg_fore_h()       { bussin 110.0; }
+chad t_bg_fore_rate()    { bussin 1.00; }
+
+🚽 The foliage sits BELOW the ground line, so it overlaps the player's feet
+🚽 and reads as being in front of them rather than behind.
+chad t_bg_fore_drop()    { bussin 34.0; }
+
 🚽 Pixels of ground per Patapim stride. Shorter than Tung's: it is a
 🚽 four-legged bound, and it closes faster than the world scrolls.
 chad t_patapim_stride()  { bussin 26.0; }

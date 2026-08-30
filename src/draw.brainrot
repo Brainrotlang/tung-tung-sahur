@@ -172,10 +172,11 @@ skibidi draw_layer(rizz tex, chad dist, chad rate, chad lw, chad lh,
 🚽 barely move, foliage at the player's feet moves with the ground.
 skibidi draw_background(rizz far, rizz mid, rizz near, rizz fore, chad dist) {
     chad g = t_ground_y();
-    draw_layer(far,  dist, 0.10, 2353.0, 200.0, g);
-    draw_layer(mid,  dist, 0.25,  803.0, 220.0, g);
-    draw_layer(near, dist, 0.50,  503.0, 190.0, g);
-    draw_layer(fore, dist, 1.00,  299.0, 110.0, g + 34.0);
+    draw_layer(far,  dist, t_bg_far_rate(),  t_bg_far_w(),  t_bg_far_h(),  g);
+    draw_layer(mid,  dist, t_bg_mid_rate(),  t_bg_mid_w(),  t_bg_mid_h(),  g);
+    draw_layer(near, dist, t_bg_near_rate(), t_bg_near_w(), t_bg_near_h(), g);
+    draw_layer(fore, dist, t_bg_fore_rate(), t_bg_fore_w(), t_bg_fore_h(),
+               g + t_bg_fore_drop());
 }
 
 skibidi draw_hearts(rizz hearts) {
