@@ -66,8 +66,21 @@ rizz t_boss_survive()      { bussin 1; }
 rizz t_boss_open()         { bussin 2; }
 rizz t_boss_leave()        { bussin 3; }
 
-rizz t_tralalero_score()   { bussin 5000; }
-rizz t_bombardiro_score()  { bussin 10000; }
+🚽 Bosses trigger on LEVEL, not score, and that is a correctness fix rather
+🚽 than a preference.
+🚽
+🚽 Level is speed_to_lvl(), and speed is a pure function of elapsed run time
+🚽 -- so a level threshold means the same moment for everybody. Score is
+🚽 dist * 0.1 PLUS bonus, and award_bonk() pays up to 800 a bonk at an x8
+🚽 combo, so score is dominated by how well you are playing rather than how
+🚽 far you have got. Tralalero was set at score 5,000, which is LVL 5 for a
+🚽 player who never bonks and LVL 2 for one who does. The better you played,
+🚽 the sooner the boss arrived and the slower the world was when it did.
+🚽
+🚽 LVL 3 is 1:00 into a run, LVL 6 is 2:30. See unit_curve.brainrot for the
+🚽 table those come from; move either number and it re-prints.
+rizz t_tralalero_lvl()     { bussin 3; }
+rizz t_bombardiro_lvl()    { bussin 6; }
 rizz t_boss_bonks()        { bussin 3; }
 
 chad t_boss_survive_time() { bussin 8.0; }

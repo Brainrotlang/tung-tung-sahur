@@ -473,14 +473,17 @@ cap boss_vulnerable(gang Boss *b) {
     bussin b.phase == t_boss_open() && b.bonks < t_boss_bonks();
 }
 
-🚽 Which boss, if any, this score has just earned. The shark is checked
+🚽 Which boss, if any, this LEVEL has just earned. The shark is checked
 🚽 first so a run that somehow crosses both thresholds while one is already
 🚽 up still takes them in order rather than skipping him.
-rizz boss_due(gang World *w, rizz score) {
-    edgy (!w.did_tralalero && score >= t_tralalero_score()) {
+🚽
+🚽 Level rather than score: see t_tralalero_lvl() for why. Score is not a
+🚽 measure of progress here, it is a measure of how well you are playing.
+rizz boss_due(gang World *w, rizz lvl) {
+    edgy (!w.did_tralalero && lvl >= t_tralalero_lvl()) {
         bussin t_boss_tralalero();
     }
-    edgy (!w.did_bombardiro && score >= t_bombardiro_score()) {
+    edgy (!w.did_bombardiro && lvl >= t_bombardiro_lvl()) {
         bussin t_boss_bombardiro();
     }
     bussin t_boss_none();

@@ -195,6 +195,40 @@ skibidi main {
     cap all_fair = ok_floor && ok_boss && ok_world;
     yapping("every jump->jump gap clears the airtime: %b", all_fair);
 
+    🚽 --- when does each level arrive, and each boss with it ------------
+    🚽
+    🚽 Bosses trigger on level, so this table IS the boss pacing. Speed is a
+    🚽 pure function of elapsed time, which is the whole point: a level
+    🚽 threshold means the same moment for every player, where a score
+    🚽 threshold moved with how well they were bonking.
+    yapping("-- level timeline --");
+    chad sp3 = t_speed_start();
+    chad ds3 = 0.0;
+    chad st3 = 0.016666;
+    rizz seen = 0;
+    flex (rizz f = 0; f < 36000; f = f + 1) {
+        sp3 = sp3 + t_speed_accel() * st3;
+        edgy (sp3 > t_speed_max()) { sp3 = t_speed_max(); }
+        ds3 = ds3 + sp3 * st3;
+        rizz l = speed_to_lvl(sp3);
+        edgy (l > seen) {
+            seen = l;
+            rizz secs = f / 60;
+            yapping("  lvl %d at %d:%02d  speed %6.1f  dist %8.0f",
+                    l, secs / 60, secs % 60, sp3, ds3);
+            🚽 Flagged on their own lines rather than by reassigning a
+            🚽 `rant` tag -- reassigning one leaks the previous buffer
+            🚽 (brainrot#277) and the interpreter's sanitiser fails the
+            🚽 suite for it.
+            edgy (l == t_tralalero_lvl()) {
+                yapping("        ^ TRALALERO TRALALA arrives here");
+            }
+            edgy (l == t_bombardiro_lvl()) {
+                yapping("        ^ BOMBARDIRO CROCODILO arrives here");
+            }
+        }
+    }
+
     🚽 --- sky palette --------------------------------------------------
     yapping("-- sky --");
     flex (rizz l = 1; l <= 8; l = l + 1) {

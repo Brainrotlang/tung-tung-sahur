@@ -177,10 +177,12 @@ and all of it is drawn from real art now.
 **M2 has shipped.** rayrot got audio in
 [brainrot#302](https://github.com/Brainrotlang/brainrot/pull/302), so the game
 plays a title sting, a `TUNG` on every bat hit, a jump, a damage grunt, and a
-`bruh` on the run that ends. Both bosses are in: **Tralalero Tralala** at 5,000
-and **Bombardiro Crocodilo** at 10,000, sharing one three-cycle phase machine
+`bruh` on the run that ends. Both bosses are in: **Tralalero Tralala** at LVL 3
+and **Bombardiro Crocodilo** at LVL 6, sharing one three-cycle phase machine
 and pausing the normal spawner while they own the screen. Both are drawn from
-art, as are Bombardiro's bombs and their blasts.
+art, as are Bombardiro's bombs and their blasts. They arrive at **LVL 3** and
+**LVL 6** — on level rather than score, because score includes bonk bonus and so
+brought the boss *sooner* to the player who was playing better.
 
 **M3** is next: the `SAHUR_DISTANCE` win state, the ending card, and Endless
 Schizo Mode. Milestones are in DESIGN.md §18.
