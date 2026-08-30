@@ -28,16 +28,18 @@ skibidi main {
     wd.dt = 0.016666;
 
     🚽 --- triggering ---------------------------------------------------
-    🚽 Once per run each, and not before the score earns it.
-    yapping("-- boss_due --");
-    yapping("score 0      %d", boss_due(&wd, 0));
-    yapping("score 4999   %d", boss_due(&wd, 4999));
-    yapping("score 5000   %d", boss_due(&wd, 5000));
-    yapping("score 10000  %d", boss_due(&wd, 10000));
+    🚽 Once per run each, and on LEVEL rather than score -- score is
+    🚽 dist * 0.1 plus bonk bonus, so it says how well you are playing
+    🚽 rather than how far you have got, and the boss used to arrive
+    🚽 EARLIER for a better player. See t_tralalero_lvl().
+    yapping("-- boss_due, by level --");
+    flex (rizz l = 1; l <= 8; l = l + 1) {
+        yapping("  lvl %d -> boss %d", l, boss_due(&wd, l));
+    }
 
     boss_start(&bo, &wd, t_boss_tralalero());
-    yapping("after start, shark due again %d", boss_due(&wd, 9999));
-    yapping("croc still due               %d", boss_due(&wd, 10000));
+    yapping("after start, shark due again %d", boss_due(&wd, 8));
+    yapping("croc still due               %d", boss_due(&wd, 8));
 
     🚽 --- the shared phase machine --------------------------------------
     yapping("-- phases --");

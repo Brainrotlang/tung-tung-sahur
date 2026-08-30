@@ -1,9 +1,13 @@
--- boss_due --
-score 0      0
-score 4999   0
-score 5000   1
-score 10000  1
-after start, shark due again 0
+-- boss_due, by level --
+  lvl 1 -> boss 0
+  lvl 2 -> boss 0
+  lvl 3 -> boss 1
+  lvl 4 -> boss 1
+  lvl 5 -> boss 1
+  lvl 6 -> boss 1
+  lvl 7 -> boss 1
+  lvl 8 -> boss 1
+after start, shark due again 2
 croc still due               2
 -- phases --
 start phase 1 bonks 0 owns_spawner W vulnerable L

@@ -149,11 +149,12 @@ skibidi main {
         edgy (in_run) {
             cap fighting = boss_active(&bo);
             edgy (!fighting) {
-                rizz due = boss_due(&wd, score);
+                rizz due = boss_due(&wd, lvl);
                 edgy (due != t_boss_none()) {
                     boss_start(&bo, &wd, due);
                     plat_sfx_play(sfx_bruh);
-                    yapping("boss %d incoming at score %d", due, score);
+                    yapping("boss %d incoming at lvl %d (score %d)",
+                            due, lvl, score);
                 }
             }
             boss_tick(&bo, &wd);

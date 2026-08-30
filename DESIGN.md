@@ -584,10 +584,22 @@ pieces. When a boss is active **the normal spawner pauses** — the boss owns th
 pattern — and **you can still die**, hearts and all.
 
 Both use the same three-cycle shape: *survive a phase → an opening appears →
-one bonk → repeat ×3*. Score thresholds line up with the distance curve
-(§7.2) at roughly 1:55 and 3:06.
+one bonk → repeat ×3*.
 
-### 12.1 TRALALERO TRALALA — score 5,000
+**They trigger on LEVEL, not score**, and that is a correctness fix rather than
+a preference. Level is `speed_to_lvl()`, and speed is a pure function of elapsed
+run time — so a level threshold means the same moment for every player. Score is
+`dist × 0.1` *plus bonus*, and `award_bonk()` pays up to 800 a bonk at an ×8
+combo, so score measures how well you are playing rather than how far you have
+got. Tralalero was set at score 5,000: LVL 5 for a player who never bonks, LVL 2
+for one who does. The better you played, the sooner the boss arrived and the
+slower the world was when it did.
+
+Tralalero at **LVL 3** (1:00) and Bombardiro at **LVL 6** (2:30).
+`unit_curve.brainrot` prints the level timeline with both marked, so the pacing
+is a table rather than a claim.
+
+### 12.1 TRALALERO TRALALA — LVL 3
 
 The three-legged shark, characterised by speed, chases from the left. The game
 becomes pure obstacle survival: an unbroken sequence of jump obstacles with no
@@ -622,7 +634,7 @@ _/ \____________________________
 After each survival phase he over-commits and drifts into bat range for a
 1.0 s window. Three of those and he's out. Then the run resumes, faster.
 
-### 12.2 BOMBARDIRO CROCODILO — score 10,000
+### 12.2 BOMBARDIRO CROCODILO — LVL 6
 
 He does not chase. He flies overhead and bombs, so the whole vertical axis
 becomes hostile while you're still running:
@@ -749,8 +761,8 @@ still takes a heart. The blast is deliberately the reverse — 77px of art over 
 64px box, so its outer flames are decoration you can stand in. Wide sprite,
 narrow box, is the forgiving direction.
 
-**Coverage.** The headless input tape dies around score 400–700, so it never
-reaches 5,000 — the golden file proves the boss code does not disturb an
+**Coverage.** The headless input tape dies within about ten seconds, so it never
+reaches LVL 3 — the golden file proves the boss code does not disturb an
 ordinary run (it is byte-identical), and `test/unit_boss.brainrot` drives the
 fights directly, including a scripted frame loop that calls what `main` calls in
 the order `main` calls it. Both bosses were additionally verified in the real
@@ -1150,8 +1162,8 @@ Playable core, primitives only. Title card, run, game over, restart.
 
 ### M2 — "Bosses and noise"
 
-- [x] Tralalero Tralala at 5,000
-- [x] Bombardiro Crocodilo at 10,000, projectile pool
+- [x] Tralalero Tralala at LVL 3
+- [x] Bombardiro Crocodilo at LVL 6, projectile pool
 - [x] Audio: the `TUNG`, the jump, damage, the opening sting, and a `bruh`
 - [ ] Boss art — both fights ship in primitives, like M0 did
 

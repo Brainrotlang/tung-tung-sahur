@@ -37,6 +37,17 @@ world jump->jump floor 0.950  slack +0.181
 boss gap 0.950 -> clamped 0.950  slack +0.181
 world worst jump->jump gap 0.950  slack +0.181
 every jump->jump gap clears the airtime: W
+-- level timeline --
+  lvl 1 at 0:00  speed  260.0  dist        4
+  lvl 2 at 0:30  speed  350.0  dist     9156
+  lvl 3 at 1:00  speed  440.0  dist    21007
+        ^ TRALALERO TRALALA arrives here
+  lvl 4 at 1:30  speed  530.0  dist    35566
+  lvl 5 at 2:00  speed  620.0  dist    52816
+  lvl 6 at 2:30  speed  710.0  dist    72778
+        ^ BOMBARDIRO CROCODILO arrives here
+  lvl 7 at 3:00  speed  800.0  dist    95429
+  lvl 8 at 3:30  speed  890.0  dist   120794
 -- sky --
 lvl 1: 12 14 34
 lvl 2: 12 14 34
