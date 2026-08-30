@@ -318,21 +318,11 @@ skibidi pool_clear(gang Ent *pool, rizz n) {
 
 🚽 The first free slot, or -1. A full pool silently skips the spawn, and that
 🚽 is correct behaviour rather than an error -- the gap still advances.
-🚽
-🚽 It scans the WHOLE pool and keeps the first index rather than returning
-🚽 the moment it finds one, and that is not a style choice. A `bussin` from
-🚽 inside a loop is caught by the loop's own jump buffer instead of the
-🚽 function's, so it runs as a `break` and then takes the process down with
-🚽 "No scope to exit" and no output at all -- brainrot#319. Same reason
-🚽 bombs_free_slot() below is written this way.
 rizz pool_free_slot(gang Ent *pool, rizz n) {
-    rizz slot = 0 - 1;
     flex (rizz i = 0; i < n; i = i + 1) {
-        edgy (!pool[i].alive) {
-            edgy (slot < 0) { slot = i; }
-        }
+        edgy (!pool[i].alive) { bussin i; }
     }
-    bussin slot;
+    bussin 0 - 1;
 }
 
 skibidi pool_scroll(gang Ent *pool, rizz n, gang World *w, chad extra) {
@@ -358,6 +348,13 @@ rizz pool_bat_pass(gang Ent *pool, rizz n, gang Player *p, gang World *w) {
     bussin bonks;
 }
 
+🚽 A `cap`-returning call can be a condition directly since brainrot#324,
+🚽 and the pure predicates in this file now are. The ones still landing in a
+🚽 named local first -- this one, pool_bat_pass(), player_jump() -- do it on
+🚽 purpose: they have side effects. A call that kills entities and damages
+🚽 the player does not belong hidden inside an `edgy (...)`, where nothing
+🚽 warns the reader that evaluating the condition changed the world.
+🚽
 🚽 Did the player take a hit? At most one per frame in practice --
 🚽 player_take_hit() starts the iframes that make every later check fail --
 🚽 but the vulnerability is re-read per entity rather than assumed, because
@@ -368,8 +365,7 @@ cap pool_body_pass(gang Ent *pool, rizz n, gang Player *p, gang World *w) {
         edgy (pool[i].alive) {
             cap open = player_vulnerable(p);
             edgy (open) {
-                cap crash = ent_hits_body(&pool[i], p);
-                edgy (crash) {
+                edgy (ent_hits_body(&pool[i], p)) {
                     pool[i].alive = L;
                     player_take_hit(p, w);
                     hurt = W;
@@ -392,13 +388,10 @@ skibidi bombs_clear(gang Bomb *pool, rizz n) {
 }
 
 rizz bombs_free_slot(gang Bomb *pool, rizz n) {
-    rizz slot = 0 - 1;
     flex (rizz i = 0; i < n; i = i + 1) {
-        edgy (!pool[i].alive) {
-            edgy (slot < 0) { slot = i; }
-        }
+        edgy (!pool[i].alive) { bussin i; }
     }
-    bussin slot;
+    bussin 0 - 1;
 }
 
 skibidi bombs_step(gang Bomb *pool, rizz n, gang World *w) {
@@ -438,9 +431,6 @@ cap bombs_body_pass(gang Bomb *pool, rizz n, gang Player *p, gang World *w) {
 🚽 pattern. You can still die the ordinary way, hearts and all -- a boss
 🚽 fight is a harder stretch of the same game, not a separate mode.
 🚽
-🚽 Note the shape of every function below: no early `bussin;`. A bare void
-🚽 return is still a parse error upstream (brainrot#283), so a void helper
-🚽 that wants to bail early has to nest instead. Value returns are fine.
 
 chad boss_w(rizz kind) {
     edgy (kind == t_boss_tralalero()) { bussin t_shark_w(); }
@@ -647,30 +637,30 @@ cap boss_in_position(gang Boss *b, gang World *w) {
 🚽 then ate the only part that counted. Starting the clock on arrival gives
 🚽 the whole t_boss_open_time() with him actually there.
 skibidi boss_tick(gang Boss *b, gang World *w) {
-    edgy (b.kind != t_boss_none()) {
-        cap ticking = W;
-        edgy (b.phase == t_boss_open()) { ticking = boss_in_position(b, w); }
-        edgy (ticking) { b.phase_t = b.phase_t + w.dt; }
+    edgy (b.kind == t_boss_none()) { bussin; }
 
-        boss_move(b, w);
+    cap ticking = W;
+    edgy (b.phase == t_boss_open()) { ticking = boss_in_position(b, w); }
+    edgy (ticking) { b.phase_t = b.phase_t + w.dt; }
 
-        edgy (b.phase == t_boss_leave()) {
-            edgy (b.phase_t >= t_boss_leave_time()) { boss_clear(b); }
+    boss_move(b, w);
+
+    edgy (b.phase == t_boss_leave()) {
+        edgy (b.phase_t >= t_boss_leave_time()) { boss_clear(b); }
+        bussin;
+    }
+
+    edgy (b.phase == t_boss_survive()) {
+        edgy (b.phase_t >= t_boss_survive_time()) {
+            b.phase   = t_boss_open();
+            b.phase_t = 0.0;
         }
-        amogus {
-            edgy (b.phase == t_boss_survive()) {
-                edgy (b.phase_t >= t_boss_survive_time()) {
-                    b.phase   = t_boss_open();
-                    b.phase_t = 0.0;
-                }
-            }
-            amogus {
-                edgy (b.phase_t >= t_boss_open_time()) {
-                    b.phase   = t_boss_survive();
-                    b.phase_t = 0.0;
-                }
-            }
-        }
+        bussin;
+    }
+
+    edgy (b.phase_t >= t_boss_open_time()) {
+        b.phase   = t_boss_survive();
+        b.phase_t = 0.0;
     }
 }
 

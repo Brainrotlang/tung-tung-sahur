@@ -149,18 +149,23 @@ check-brainrot:
 #   9   struct ptr indexing -- `e[1].v`, which is what lets a helper walk
 #                              an entity pool instead of every loop living
 #                              in `skibidi main` (#311).
+#   5   return from a loop  -- `bussin` inside `flex` used to be caught by
+#                              the LOOP's jump buffer, run as a `break`,
+#                              and then kill the process with "No scope to
+#                              exit" and no output (#319).
+#   1   cap as a condition  -- `edgy (f())` on a cap-returning call used to
+#                              error and take the FALSE branch (#313).
 #
-# The last two DO fail loudly rather than silently, but they fail inside
-# whichever cooked file used them, which is a worse place to read the news
-# than here. v0.1.8 answers 'L 1099694080 2'; v0.2.0 errors out.
-	@printf 'gang E { rizz v; }; rizz plen(rant s){ bussin 7; } rizz pidx(gang E *e){ bussin e[1].v; } rizz p(rizz *n){ *n = *n + 1; bussin *n; } skibidi main{ cap off = L; chad g = 17.5; rizz k = g; rizz c = 0; rizz h = p(&c); gang E pool[2]; pool[0].v = 3; pool[1].v = 9; yapping("%%b %%d %%d %%d %%d", !off, k, c, plen("x"), pidx(&pool[0])); bussin 0;}' > $(PROBE)
+# The middle ones fail loudly, but they fail inside whichever cooked file
+# used them, which is a worse place to read the news than here. The first
+# and last fail SILENTLY, which is the whole reason this probe exists.
+# v0.1.8 answers 'L 1099694080 2'; v0.2.0 errors out.
+	@printf 'gang E { rizz v; }; rizz plen(rant s){ bussin 7; } rizz pidx(gang E *e){ bussin e[1].v; } rizz p(rizz *n){ *n = *n + 1; bussin *n; } rizz early(rizz n){ flex (rizz i = 0; i < n; i = i + 1){ edgy (i == 2){ bussin 5; } } bussin 0; } cap yes(){ bussin W; } skibidi main{ cap off = L; chad g = 17.5; rizz k = g; rizz c = 0; rizz h = p(&c); gang E pool[2]; pool[0].v = 3; pool[1].v = 9; rizz d = 0; edgy (yes()){ d = 1; } yapping("%%b %%d %%d %%d %%d %%d %%d", !off, k, c, plen("x"), pidx(&pool[0]), early(5), d); bussin 0;}' > $(PROBE)
 	@got=$$($(BRAINROT) $(PROBE) 2>/dev/null); rm -f $(PROBE); \
-	    test "$$got" = "W 17 1 7 9" || { \
-	        echo "$(BRAINROT) is too old: probe printed '$$got', expected 'W 17 1 7 9'"; \
-	        echo "the game needs a brainrot NEWER than v0.2.0 -- logical NOT"; \
-	        echo "(brainrot#296), float-to-int conversion (#299), a call running"; \
-	        echo "exactly once (#303), rant parameters and struct pointer"; \
-	        echo "indexing (both #311). Update and rebuild:"; \
+	    test "$$got" = "W 17 1 7 9 5 1" || { \
+	        echo "$(BRAINROT) is too old: probe printed '$$got'"; \
+	        echo "                       expected 'W 17 1 7 9 5 1'"; \
+	        echo "the game needs brainrot v0.3.0 or newer. Update and rebuild:"; \
 	        echo "    git -C $(BRAINROT_DIR) pull && make -C $(BRAINROT_DIR)"; \
 	        exit 1; }
 

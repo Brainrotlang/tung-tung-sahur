@@ -51,18 +51,24 @@ raylib setup for your OS is documented once, upstream, in
 [`docs/rayrot.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/rayrot.md).
 This repo will not duplicate it.
 
-**You need brainrot v0.2.0 or newer.** The game depends on four fixes it turned
-up itself — `rl_draw_text_int`
-([#292](https://github.com/Brainrotlang/brainrot/pull/292)), working `!`
-([#296](https://github.com/Brainrotlang/brainrot/pull/296)), float-to-integer
-assignment ([#299](https://github.com/Brainrotlang/brainrot/pull/299)), and a
-call running exactly once ([#303](https://github.com/Brainrotlang/brainrot/pull/303)).
+**You need brainrot v0.3.0 or newer.** Writing this game has turned up nine
+upstream fixes and features so far, and it depends on all of them:
+`rl_draw_text_int` ([#292](https://github.com/Brainrotlang/brainrot/pull/292)),
+working `!` ([#296](https://github.com/Brainrotlang/brainrot/pull/296)),
+float-to-integer assignment ([#299](https://github.com/Brainrotlang/brainrot/pull/299)),
+a call running exactly once ([#303](https://github.com/Brainrotlang/brainrot/pull/303)),
+`rant` parameters ([#314](https://github.com/Brainrotlang/brainrot/pull/314)) and
+struct pointer indexing ([#316](https://github.com/Brainrotlang/brainrot/pull/316)),
+a bare `bussin;` ([#320](https://github.com/Brainrotlang/brainrot/pull/320)),
+a `cap`-returning call as a condition ([#324](https://github.com/Brainrotlang/brainrot/pull/324)),
+and `bussin` from inside a loop ([#325](https://github.com/Brainrotlang/brainrot/pull/325)).
 
-`make` probes for them and tells you to update, because an older interpreter
-does not *fail* — it silently discards every `!`, reinterprets every float
-assignment, and runs every `rizz x = f();` twice while keeping the second
-result. The guards run backwards, the HUD reads plausible nonsense, and every
-texture and sound loads twice with one of each leaked.
+`make` probes for them and tells you to update, because the dangerous ones do
+not *fail*. An older interpreter silently discards every `!`, reinterprets every
+float assignment, runs every `rizz x = f();` twice while keeping the second
+result, and takes the false branch of `edgy (f())` on a `cap`-returning call.
+The guards run backwards, the HUD reads plausible nonsense, and every texture
+and sound loads twice with one of each leaked — with no error anywhere.
 
 Then:
 
