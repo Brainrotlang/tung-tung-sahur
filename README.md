@@ -155,10 +155,14 @@ test/
 `main` holds the frame loop's *shape* — the state machine, the pools, the order
 the eleven steps run in — and `sim.brainrot` holds each step's actual work.
 
-The pool loops stay in `main`, and that part is still forced: a struct field
-can't be an array of structs, and there's no pointer arithmetic on struct
-pointers, so a helper can't walk a pool — only act on one already-resolved
-`&pool[i]`. It used to be worse. Until
+The pool loops have left `main` too, now that
+[brainrot#316](https://github.com/Brainrotlang/brainrot/pull/316) added indexing
+on struct pointers — `sim.brainrot` owns the passes, and each one hands back a
+count or a flag so `main` keeps the response (the sound, the scoring, the state
+change). Simulation never draws and never plays; that split is what the headless
+harness relies on. The only pool loops left in `main` are the three *draw* ones.
+
+It used to be much worse. Until
 [brainrot#294](https://github.com/Brainrotlang/brainrot/pull/294) a helper
 couldn't take both an entity and the world at all, so *everything* lived in
 `main`. See DESIGN.md §14.1.

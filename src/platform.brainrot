@@ -44,11 +44,11 @@ skibidi plat_close() {
 🚽 Returns a handle, or -1 if there is no audio device or the file is
 🚽 missing. -1 is not an error: the game runs silent. Someone cloning this
 🚽 without the track, or running it over SSH, should still get a game.
-rizz plat_music_open() {
+rizz plat_music_open(rant path) {
     🚽 The device is already up -- see plat_open() for why it has to be.
     cap ready = rl_is_audio_device_ready();
     edgy (!ready) { bussin 0 - 1; }
-    rizz m = rl_load_music("assets/music/tung-tung.ogg");
+    rizz m = rl_load_music(path);
     edgy (m < 0) { bussin 0 - 1; }
     rl_set_music_looping(m, W);
     rl_set_music_volume(m, t_music_volume());
@@ -75,51 +75,19 @@ skibidi plat_music_tick(rizz music) {
 🚽 missing, and plat_sfx_play() ignores that, so a missing effect is silent
 🚽 rather than fatal.
 🚽
-🚽 One loader per file rather than one taking a path, because Brainrot does
-🚽 not support `rant` parameters on user-defined functions -- "String
-🚽 parameters are not supported". Same reason the texture loaders in
-🚽 draw.brainrot hardcode their paths.
 rizz plat_sfx_ready() {
     cap ready = rl_is_audio_device_ready();
     edgy (ready) { bussin 1; }
     bussin 0;
 }
 
-rizz plat_sfx_opening() {
+🚽 ONE loader, taking the path. There were five of these, identical but for
+🚽 a string literal, because a user-defined function could not take a
+🚽 `rant`. Landed upstream with brainrot#311 -- see draw_load() for the
+🚽 same story on the texture side.
+rizz plat_sfx_load(rant path) {
     edgy (plat_sfx_ready() == 0) { bussin 0 - 1; }
-    rizz s = rl_load_sound("assets/sfx/opening.ogg");
-    edgy (s >= 0) { rl_set_sound_volume(s, t_sfx_volume()); }
-    bussin s;
-}
-
-rizz plat_sfx_tung() {
-    edgy (plat_sfx_ready() == 0) { bussin 0 - 1; }
-    rizz s = rl_load_sound("assets/sfx/tung.ogg");
-    edgy (s >= 0) { rl_set_sound_volume(s, t_sfx_volume()); }
-    bussin s;
-}
-
-rizz plat_sfx_jump() {
-    edgy (plat_sfx_ready() == 0) { bussin 0 - 1; }
-    rizz s = rl_load_sound("assets/sfx/jump.ogg");
-    edgy (s >= 0) { rl_set_sound_volume(s, t_sfx_volume()); }
-    bussin s;
-}
-
-rizz plat_sfx_damage() {
-    edgy (plat_sfx_ready() == 0) { bussin 0 - 1; }
-    rizz s = rl_load_sound("assets/sfx/damage.ogg");
-    edgy (s >= 0) { rl_set_sound_volume(s, t_sfx_volume()); }
-    bussin s;
-}
-
-🚽 The death sting. Played on the hit that empties the last heart, in
-🚽 place of the damage grunt rather than on top of it -- both start on the
-🚽 same frame, and two voices landing together read as one muddy noise
-🚽 instead of a punchline.
-rizz plat_sfx_bruh() {
-    edgy (plat_sfx_ready() == 0) { bussin 0 - 1; }
-    rizz s = rl_load_sound("assets/sfx/bruh.ogg");
+    rizz s = rl_load_sound(path);
     edgy (s >= 0) { rl_set_sound_volume(s, t_sfx_volume()); }
     bussin s;
 }

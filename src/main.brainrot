@@ -34,30 +34,30 @@ skibidi main {
     🚽 and every consumer of one already handles that: the player falls back
     🚽 to the M0 rectangle, and the music seam simply runs silent. Cloning
     🚽 this repo without assets, or running it over SSH, still gives a game.
-    rizz tex_run   = draw_load_run();
-    rizz tex_jump  = draw_load_jump();
-    rizz tex_swing = draw_load_swing();
-    rizz tex_pat   = draw_load_patapim();
-    rizz tex_crate = draw_load_crate();
-    rizz tex_post  = draw_load_post();
-    rizz bg_far    = draw_load_bg_far();
-    rizz bg_mid    = draw_load_bg_mid();
-    rizz bg_near   = draw_load_bg_near();
-    rizz bg_fore   = draw_load_bg_fore();
-    rizz tex_shark = draw_load_shark();
-    rizz tex_croc  = draw_load_croc();
-    rizz tex_bomb  = draw_load_bomb();
-    rizz tex_blast = draw_load_blast();
-    rizz music     = plat_music_open();
-    rizz sfx_tung   = plat_sfx_tung();
-    rizz sfx_jump   = plat_sfx_jump();
-    rizz sfx_damage = plat_sfx_damage();
-    rizz sfx_bruh   = plat_sfx_bruh();
+    rizz tex_run   = draw_load("assets/tung_run.png");
+    rizz tex_jump  = draw_load("assets/tung_jump.png");
+    rizz tex_swing = draw_load("assets/tung_swing.png");
+    rizz tex_pat   = draw_load("assets/patapim_run.png");
+    rizz tex_crate = draw_load("assets/crate.png");
+    rizz tex_post  = draw_load("assets/post.png");
+    rizz bg_far    = draw_load("assets/bg_far.png");
+    rizz bg_mid    = draw_load("assets/bg_mid.png");
+    rizz bg_near   = draw_load("assets/bg_near.png");
+    rizz bg_fore   = draw_load("assets/bg_fore.png");
+    rizz tex_shark = draw_load("assets/tralalero.png");
+    rizz tex_croc  = draw_load("assets/bombardiro.png");
+    rizz tex_bomb  = draw_load("assets/bomb.png");
+    rizz tex_blast = draw_load("assets/blast.png");
+    rizz music     = plat_music_open("assets/music/tung-tung.ogg");
+    rizz sfx_tung   = plat_sfx_load("assets/sfx/tung.ogg");
+    rizz sfx_jump   = plat_sfx_load("assets/sfx/jump.ogg");
+    rizz sfx_damage = plat_sfx_load("assets/sfx/damage.ogg");
+    rizz sfx_bruh   = plat_sfx_load("assets/sfx/bruh.ogg");
 
     🚽 The opening sting, played once here and never again. It belongs to
     🚽 the title card, and the title is only ever seen at startup -- a
     🚽 restart goes straight back to the run.
-    rizz sfx_open = plat_sfx_opening();
+    rizz sfx_open = plat_sfx_load("assets/sfx/opening.ogg");
     plat_sfx_play(sfx_open);
 
     🚽 Array sizes must be literals, so this is the one place the pool
@@ -98,9 +98,9 @@ skibidi main {
             wd.seed  = rng_next(run_seed);
             wd.next_kind = pick_kind(wd.seed, 1);
 
-            flex (rizz i = 0; i < MAX_OBS; i = i + 1) { obstacles[i].alive = L; }
-            flex (rizz i = 0; i < MAX_EN;  i = i + 1) { enemies[i].alive = L; }
-            flex (rizz i = 0; i < MAX_BMB; i = i + 1) { bombs[i].alive = L; }
+            pool_clear(&obstacles[0], MAX_OBS);
+            pool_clear(&enemies[0], MAX_EN);
+            bombs_clear(&bombs[0], MAX_BMB);
             boss_clear(&bo);
 
             do_reset = L;
@@ -174,21 +174,11 @@ skibidi main {
                     wd.seed = rng_next(wd.seed);
                     rizz k = t_kind_crate();
                     edgy (wd.seed % 2 == 0) { k = t_kind_post(); }
-                    rizz slot = -1;
-                    flex (rizz i = 0; i < MAX_OBS; i = i + 1) {
-                        edgy (!obstacles[i].alive) {
-                            edgy (slot < 0) { slot = i; }
-                        }
-                    }
+                    rizz slot = pool_free_slot(&obstacles[0], MAX_OBS);
                     edgy (slot >= 0) { ent_spawn(&obstacles[slot], k); }
                 }
                 amogus {
-                    rizz slot = -1;
-                    flex (rizz i = 0; i < MAX_BMB; i = i + 1) {
-                        edgy (!bombs[i].alive) {
-                            edgy (slot < 0) { slot = i; }
-                        }
-                    }
+                    rizz slot = bombs_free_slot(&bombs[0], MAX_BMB);
                     edgy (slot >= 0) { bomb_spawn(&bombs[slot], &bo); }
                 }
             }
@@ -200,26 +190,14 @@ skibidi main {
                 cap is_enemy = L;
                 edgy (wd.next_kind == t_kind_patapim()) { is_enemy = W; }
 
-                rizz slot = -1;
                 edgy (is_enemy) {
-                    flex (rizz i = 0; i < MAX_EN; i = i + 1) {
-                        edgy (!enemies[i].alive) {
-                            edgy (slot < 0) { slot = i; }
-                        }
-                    }
+                    rizz slot = pool_free_slot(&enemies[0], MAX_EN);
                     edgy (slot >= 0) { ent_spawn(&enemies[slot], wd.next_kind); }
                 }
                 amogus {
-                    flex (rizz i = 0; i < MAX_OBS; i = i + 1) {
-                        edgy (!obstacles[i].alive) {
-                            edgy (slot < 0) { slot = i; }
-                        }
-                    }
+                    rizz slot = pool_free_slot(&obstacles[0], MAX_OBS);
                     edgy (slot >= 0) { ent_spawn(&obstacles[slot], wd.next_kind); }
                 }
-
-                🚽 A full pool silently skips the spawn. That is correct
-                🚽 behaviour, not an error -- the gap still advances.
 
                 🚽 Decide the next kind now, so the fairness clamp knows
                 🚽 both ends of the gap it is about to size.
@@ -235,24 +213,13 @@ skibidi main {
 
         🚽 --- 7. obstacles: scroll, then body collision ----------------
         edgy (in_run) {
-            flex (rizz i = 0; i < MAX_OBS; i = i + 1) {
-                edgy (obstacles[i].alive) { ent_scroll(&obstacles[i], &wd, 0.0); }
-                edgy (obstacles[i].alive) {
-                    cap open = player_vulnerable(&pl);
-                    edgy (open) {
-                        cap crash = ent_hits_body(&obstacles[i], &pl);
-                        edgy (crash) {
-                            obstacles[i].alive = L;
-                            player_take_hit(&pl, &wd);
-                            boss_note_hit(&bo);
-                            🚽 The killing blow gets the death sting instead
-                            🚽 of the grunt -- see plat_sfx_bruh().
-                            edgy (pl.hearts > 0) {
-                                plat_sfx_play(sfx_damage);
-                            }
-                        }
-                    }
-                }
+            pool_scroll(&obstacles[0], MAX_OBS, &wd, 0.0);
+            cap obs_hurt = pool_body_pass(&obstacles[0], MAX_OBS, &pl, &wd);
+            edgy (obs_hurt) {
+                boss_note_hit(&bo);
+                🚽 The killing blow gets the death sting instead of the
+                🚽 grunt -- see the sfx_bruh play in step 9.
+                edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
             }
         }
 
@@ -260,58 +227,25 @@ skibidi main {
         🚽 Bat before body, so a frame-perfect swing always beats the
         🚽 collision.
         edgy (in_run) {
-            flex (rizz i = 0; i < MAX_EN; i = i + 1) {
-                edgy (enemies[i].alive) {
-                    ent_scroll(&enemies[i], &wd, t_enemy_close());
-                }
-                edgy (enemies[i].alive) {
-                    edgy (swinging) {
-                        cap bonk = ent_in_bat(&enemies[i], &pl);
-                        edgy (bonk) {
-                            enemies[i].alive = L;
-                            award_bonk(&wd);
-                            plat_sfx_play(sfx_tung);
-                        }
-                    }
-                }
-                edgy (enemies[i].alive) {
-                    cap open = player_vulnerable(&pl);
-                    edgy (open) {
-                        cap crash = ent_hits_body(&enemies[i], &pl);
-                        edgy (crash) {
-                            enemies[i].alive = L;
-                            player_take_hit(&pl, &wd);
-                            boss_note_hit(&bo);
-                            edgy (pl.hearts > 0) {
-                                plat_sfx_play(sfx_damage);
-                            }
-                        }
-                    }
-                }
+            pool_scroll(&enemies[0], MAX_EN, &wd, t_enemy_close());
+            edgy (swinging) {
+                rizz bonks = pool_bat_pass(&enemies[0], MAX_EN, &pl, &wd);
+                edgy (bonks > 0) { plat_sfx_play(sfx_tung); }
+            }
+            cap en_hurt = pool_body_pass(&enemies[0], MAX_EN, &pl, &wd);
+            edgy (en_hurt) {
+                boss_note_hit(&bo);
+                edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
             }
         }
 
         🚽 --- 8b. bombs: fall, burn, then hurt -------------------------
         edgy (in_run) {
-            flex (rizz i = 0; i < MAX_BMB; i = i + 1) {
-                edgy (bombs[i].alive) { bomb_tick(&bombs[i], &wd); }
-                edgy (bombs[i].alive) {
-                    cap bomb_open = player_vulnerable(&pl);
-                    edgy (bomb_open) {
-                        cap blast = bomb_hits_player(&bombs[i], &pl);
-                        edgy (blast) {
-                            🚽 The blast is NOT consumed by the hit. It is a
-                            🚽 hazard on the ground, not a projectile, and
-                            🚽 the 1.2s of iframes already stops it from
-                            🚽 draining more than one heart.
-                            player_take_hit(&pl, &wd);
-                            boss_note_hit(&bo);
-                            edgy (pl.hearts > 0) {
-                                plat_sfx_play(sfx_damage);
-                            }
-                        }
-                    }
-                }
+            bombs_step(&bombs[0], MAX_BMB, &wd);
+            cap bmb_hurt = bombs_body_pass(&bombs[0], MAX_BMB, &pl, &wd);
+            edgy (bmb_hurt) {
+                boss_note_hit(&bo);
+                edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
             }
         }
 
