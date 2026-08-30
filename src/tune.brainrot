@@ -161,13 +161,16 @@ chad t_croc_w()            { bussin 120.0; }
 chad t_croc_h()            { bussin 72.0; }
 chad t_croc_cruise_y()     { bussin 90.0; }
 chad t_croc_open_y()       { bussin 470.0; }
-chad t_croc_cruise_x()     { bussin 560.0; }
+🚽 Directly over Tung, because bombs now fall straight down and land where
+🚽 they were dropped. croc box is x..x+t_croc_w(), so 180 centres him on
+🚽 240 -- Tung's own column.
+chad t_croc_cruise_x()     { bussin 180.0; }
 
 🚽 Same rule as the shark's open_x: right of the player's body (248), left
 🚽 of the bat's far edge (296). At 200 he descended straight onto Tung's
 🚽 head for a free heart every opening.
 chad t_croc_open_x()       { bussin 258.0; }
-chad t_croc_sway()         { bussin 120.0; }
+chad t_croc_sway()         { bussin 130.0; }
 chad t_croc_sway_rate()    { bussin 1.1; }
 
 🚽 His atlas: two frames, and unlike every other animation here they are
@@ -197,7 +200,7 @@ chad t_croc_anchor()       { bussin 60.0; }
 🚽 depends on, and the gravity that produces it is derived (bomb_gravity()).
 🚽 A player needs ~0.25s to react plus ~0.385s to reach jump apex, so 0.635s
 🚽 is the floor; 1.0s leaves real margin. unit_boss asserts it.
-chad t_bomb_fall_time()    { bussin 1.00; }
+chad t_bomb_fall_time()    { bussin 1.70; }
 🚽 The bomb's box FOLLOWS its art, not the other way round. The shell plus
 🚽 its lit fuse comes out 11px wide at 26px tall, and a 26x26 box around an
 🚽 11px sprite is fifteen pixels of empty air that still takes a heart.
@@ -218,7 +221,7 @@ chad t_blast_h()           { bussin 34.0; }
 🚽 a third of the screen -- which is what "I can't see where they're coming
 🚽 from" meant.
 chad t_bomb_mark_w()       { bussin 56.0; }
-chad t_bomb_mark_h()       { bussin 10.0; }
+chad t_bomb_mark_h()       { bussin 16.0; }
 
 🚽 Single-frame atlases, both centred on their box.
 chad t_bomb_frame_w()      { bussin 11.0; }
@@ -226,7 +229,9 @@ chad t_bomb_frame_h()      { bussin 26.0; }
 chad t_blast_frame_w()     { bussin 77.0; }
 chad t_blast_frame_h()     { bussin 34.0; }
 chad t_bomb_fuse()         { bussin 0.55; }
-chad t_bomb_interval()     { bussin 0.85; }
+🚽 Roughly one bomb in the air at a time. Shorter than the fall and the
+🚽 markers stack up faster than they can be read.
+chad t_bomb_interval()     { bussin 1.30; }
 
 🚽 Clearing a boss is worth more than the three bonks that did it.
 rizz t_boss_reward()       { bussin 2000; }

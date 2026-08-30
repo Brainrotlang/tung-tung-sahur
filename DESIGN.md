@@ -663,16 +663,25 @@ column.** Both were wrong, and together they made the fight an instant kill:
 - So **`t_bomb_fall_time()` is the tuned number** (1.0 s) and the gravity that
   produces it is derived. A player needs ~0.25 s to react plus ~0.385 s to reach
   jump apex; 0.635 s is the floor and `unit_boss.brainrot` asserts it.
-- Slowing the fall moved every impact **left**, because a bomb drifts at world
-  speed the whole way down — at a fixed cruise `x` they all landed behind Tung
-  and the fight became a light show. So the croc **leads** the player by
-  `speed × fall_time`, derived rather than tuned, which keeps the bombs on
-  target at every speed and is what a bomber would actually do. The sway on top
-  spreads impacts over ~210px so it is not one memorised jump.
-- And every falling bomb draws a **landing marker** on the ground line from the
-  moment it is dropped, tightening and brightening as impact approaches. That is
-  the warning; without it the player was tracking a dark 11px object crossing a
-  third of the screen in half a second.
+- **A falling bomb does not scroll.** Tung is fixed at `t_player_x()` and the
+  croc is drawn at a screen `x`, so both are stationary in the camera's frame
+  and the croc is flying at exactly Tung's speed. A bomb released from him keeps
+  that speed and falls *straight down*, landing where it was dropped. It only
+  becomes part of the world, and starts scrolling, once it lands.
+
+  `bomb_tick()` scrolled it the whole way down, which was wrong twice: the
+  impact point drifted by `speed × fall_time`, and a longer fall needed the croc
+  further and further ahead to compensate — past the right edge of the screen at
+  anything over about 1.0 s. That coupling is why the first attempt at a fix
+  could only afford 1.0 s. Falling straight removes it, so the fall time is free,
+  and the croc **hovers over** Tung rather than leading him — which is also what
+  *"I can't see where the bombs are coming from"* wanted.
+- Every falling bomb draws a **guide line straight down to a ground marker**,
+  from the moment it is dropped. The marker sits *on* the ground band, fully
+  opaque, and its bright core widens as impact nears so "how soon" reads without
+  a number. The first version straddled the ground line at 35% alpha — half over
+  the foliage layer, half over the ground — which is a washed-out colour across
+  a boundary between two backgrounds, and could not be read.
 
 ### 12.3 Neither boss deals contact damage
 

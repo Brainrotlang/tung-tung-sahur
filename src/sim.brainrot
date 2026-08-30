@@ -575,20 +575,18 @@ chad boss_target_x(gang Boss *b, gang World *w) {
         bussin boss_lurk_x(b);
     }
     edgy (b.phase == t_boss_open()) { bussin t_croc_open_x(); }
-    🚽 He LEADS the player rather than sitting at a fixed column.
+    🚽 He hovers OVER Tung, not ahead of him.
     🚽
-    🚽 A bomb drifts left at world speed for the whole t_bomb_fall_time(),
-    🚽 so the drop point has to be that far ahead of Tung or the bombs land
-    🚽 behind him. A fixed cruise x only worked at one speed: slowing the
-    🚽 fall enough to be dodgeable moved every impact off the left of the
-    🚽 screen. Deriving the lead keeps the fight a threat at every speed,
-    🚽 and it is what a bomber would actually do.
+    🚽 There was a lead here, sized speed * fall_time, because bombs used to
+    🚽 drift left the whole way down. They fall straight now
+    🚽 (bomb_landing_x()), so a bomb lands where it was dropped and the croc
+    🚽 belongs directly above the thing he is bombing -- which is also what
+    🚽 "I can't see where the bombs are coming from" wanted.
     🚽
-    🚽 The sway on top is so the bombs do not all land on one column, which
-    🚽 would make the fight a single memorised jump.
-    chad lead = t_player_x() + w.speed * t_bomb_fall_time()
-                - t_croc_w() * 0.5;
-    bussin lead + wave(w.dist * 0.001 * t_croc_sway_rate()) * t_croc_sway();
+    🚽 The sway is so they do not all land on one column, which would make
+    🚽 the fight a single memorised jump.
+    bussin t_croc_cruise_x()
+           + wave(w.dist * 0.001 * t_croc_sway_rate()) * t_croc_sway();
 }
 
 chad boss_target_y(gang Boss *b, gang World *w) {
@@ -756,14 +754,22 @@ skibidi bomb_spawn(gang Bomb *bm, gang Boss *b) {
     bm.alive  = W;
 }
 
-🚽 Where this bomb is going to land.
+🚽 Where this bomb is going to land: directly below it.
 🚽
-🚽 It drifts left at world speed for every second it is still falling, so
-🚽 the answer is just that: current x, minus the ground it has yet to cover.
-🚽 The marker drawn at this x is the ONLY warning the player gets -- see
-🚽 t_bomb_fall_time() for what happened without one.
+🚽 A falling bomb does not scroll. Tung is fixed at t_player_x() and the croc
+🚽 is drawn at a screen x, so both are stationary in the camera's frame and
+🚽 the croc is flying at exactly Tung's speed. A bomb released from him keeps
+🚽 that speed, so in this frame it falls STRAIGHT DOWN. Only once it lands
+🚽 does it become part of the world and start scrolling.
+🚽
+🚽 It used to scroll the whole way down, which was wrong twice over: it made
+🚽 the impact point drift by speed * fall_time, and it meant a longer fall
+🚽 needed the croc further and further ahead to compensate -- past the right
+🚽 edge of the screen at anything over ~1.0s. Falling straight down removes
+🚽 that coupling entirely, so the fall time is free to be as generous as it
+🚽 needs to be.
 chad bomb_landing_x(gang Bomb *bm, gang World *w) {
-    bussin bm.x - w.speed * bm.fall_t;
+    bussin bm.x;
 }
 
 🚽 A landed bomb is not a second pool -- it is the same slot with a wider
@@ -781,9 +787,10 @@ chad bomb_h(gang Bomb *bm) {
 🚽 Falling, then burning. Both states scroll with the world -- a bomb is in
 🚽 world space like everything else, so standing still is not a dodge.
 skibidi bomb_tick(gang Bomb *bm, gang World *w) {
-    bm.x = bm.x - w.speed * w.dt;
-
     edgy (bm.fuse > 0.0) {
+        🚽 A blast IS part of the world, so it scrolls. A falling bomb is
+        🚽 not -- see bomb_landing_x().
+        bm.x    = bm.x - w.speed * w.dt;
         bm.fuse = bm.fuse - w.dt;
         edgy (bm.fuse <= 0.0) { bm.alive = L; }
     }
