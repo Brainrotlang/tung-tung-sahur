@@ -153,6 +153,48 @@ skibidi main {
             t_sahur_distance(), frames_to_sahur,
             frames_to_sahur / 3600, (frames_to_sahur % 3600) / 60);
 
+    🚽 --- the physics behind the fairness clamp -------------------------
+    🚽
+    🚽 A jump commits the player for 2 * |t_jump_v()| / t_gravity() seconds.
+    🚽 Any jump-to-jump gap SHORTER than that is not difficult, it is
+    🚽 impossible: the next obstacle arrives before the player has landed
+    🚽 from the last one, so there is no frame on which the jump can be made.
+    🚽
+    🚽 This is the rule fair_clamp() exists to enforce, and until now nothing
+    🚽 checked that its own constant satisfies it -- or that every producer of
+    🚽 a gap actually goes through it. The boss spawner did not: it set a flat
+    🚽 0.72s against a 0.769s airtime and spawned only jump obstacles, so the
+    🚽 Tralalero fight was unclearable by construction rather than hard.
+    yapping("-- jump airtime vs every gap the game can produce --");
+    chad airtime = 2.0 * absf(t_jump_v()) / t_gravity();
+    yapping("airtime %.3f s (jump_v %.0f, gravity %.0f)",
+            airtime, t_jump_v(), t_gravity());
+
+    chad floor_jj = t_fair_jump_jump();
+    yapping("world jump->jump floor %.3f  slack %+.3f", floor_jj, floor_jj - airtime);
+
+    🚽 The boss's gap AFTER the clamp, which is what actually reaches play.
+    chad boss_raw  = t_boss_gap();
+    chad boss_used = fair_clamp(boss_raw, t_kind_crate(), t_kind_post());
+    yapping("boss gap %.3f -> clamped %.3f  slack %+.3f",
+            boss_raw, boss_used, boss_used - airtime);
+
+    🚽 And the world spawner's, swept across the whole speed range with the
+    🚽 jitter pushing every gap to its shortest.
+    chad worst = 999.0;
+    flex (rizz sp = 260; sp <= 1200; sp = sp + 10) {
+        chad g = spawn_gap(sp) - t_gap_jitter();
+        chad c = fair_clamp(g, t_kind_crate(), t_kind_post());
+        edgy (c < worst) { worst = c; }
+    }
+    yapping("world worst jump->jump gap %.3f  slack %+.3f", worst, worst - airtime);
+
+    cap ok_floor = floor_jj > airtime;
+    cap ok_boss  = boss_used > airtime;
+    cap ok_world = worst > airtime;
+    cap all_fair = ok_floor && ok_boss && ok_world;
+    yapping("every jump->jump gap clears the airtime: %b", all_fair);
+
     🚽 --- sky palette --------------------------------------------------
     yapping("-- sky --");
     flex (rizz l = 1; l <= 8; l = l + 1) {

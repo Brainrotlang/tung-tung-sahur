@@ -43,7 +43,7 @@ the `rayrot` module built. Clone it next to this repo:
 git clone https://github.com/Brainrotlang/brainrot
 cd brainrot
 make            # the interpreter
-make rayrot   # the raylib binding -- needs raylib installed
+make rayrot     # the raylib binding -- needs raylib installed
 cd ..
 ```
 

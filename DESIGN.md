@@ -1,11 +1,11 @@
 # TUNG TUNG TUNG SAHUR: RUN — Design Document
 
 > An endless runner written in [Brainrot](https://github.com/Brainrotlang/brainrot),
-> rendered through [`brainray`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md).
+> rendered through [`rayrot`](https://github.com/Brainrotlang/brainrot/blob/main/docs/rayrot.md).
 >
 > **The game repository contains zero C.** Anything the game needs that raylib
 > can't reach from Brainrot today gets implemented *upstream*, in `brainrot` or
-> `brainray`. This repo is `.brainrot` files and assets, nothing else.
+> `rayrot`. This repo is `.brainrot` files and assets, nothing else.
 
 ---
 
@@ -55,7 +55,10 @@ unlock **ENDLESS SCHIZO MODE**, where the acceleration never stops.
 
 This section is not background reading. Brainrot has sharp edges that shape the
 architecture, and every claim below was verified by running the interpreter on
-`main` @ `3ce8a3a` with raylib 6.0.0 and `brainray/raylib.so` built.
+`main` @ `3ce8a3a` with raylib 6.0.0 and the raylib binding built. (That
+binding lived in `brainray/` until
+[brainrot#318](https://github.com/Brainrotlang/brainrot/pull/318) renamed the
+directory to `rayrot/`; the cooked module is `<raylib>` either way.)
 
 ### 3.1 What works, and is load-bearing
 
@@ -95,7 +98,7 @@ in one function — are gone with them.
 | **Signed overflow aborts** | The interpreter is built `-fsanitize=address,undefined`; `42 * 1103515245` kills the run | PRNG uses Schrage's method, which provably never leaves int32 |
 | **`W` and `L` are keywords** | `gang W { ... }` → parse error | Never name anything `W` or `L` |
 
-### 3.3 The `brainray` surface
+### 3.3 The `rayrot` surface
 
 Twenty-five functions total:
 
@@ -587,8 +590,27 @@ one bonk → repeat ×3*. Score thresholds line up with the distance curve
 ### 12.1 TRALALERO TRALALA — score 5,000
 
 The three-legged shark, characterised by speed, chases from the left. The game
-becomes pure obstacle survival: a dense scripted sequence with no bonkable
-enemies, the shark closing a little with each mistake.
+becomes pure obstacle survival: an unbroken sequence of jump obstacles with no
+bonkable enemies, the shark closing a little with each mistake.
+
+**"Unbroken", not "denser".** The boss's gaps go through the same
+`fair_clamp()` every other spawn does, because §7.3's rule — *any spawn the
+player cannot avoid is a bug, not a difficulty setting* — is not suspended for
+a boss. What makes the phase hard is that **every** obstacle needs a jump, with
+no Patapim to break the rhythm and a shark closing behind on each mistake.
+
+It shipped the other way and the fight was unclearable. `t_boss_gap()` was a
+flat 0.72s that `main` set directly, never calling `fair_clamp()` — against a
+jump airtime of `2 × |t_jump_v()| / t_gravity()` = **0.769s**. The next obstacle
+arrived 49ms *before* the player landed from the last one, and since the boss
+spawns only crates and posts, every single gap was jump-to-jump. There was no
+frame on which the jump could be made.
+
+`boss_spawn_gap()` exists as a function for one reason: a unit test can call it
+and a line inside `main`'s frame loop cannot. `unit_boss.brainrot` now sweeps
+every kind pair and asserts each jump-to-jump gap exceeds the airtime, and
+`unit_curve.brainrot` asserts the same of every gap the world spawner can
+produce.
 
 ```
                          🦈👟  ← closes on every obstacle you clip
@@ -912,7 +934,7 @@ skibidi main {
 The zero-C rule means every gap below is a PR to `Brainrotlang/brainrot`. **M0
 depends on none of them.**
 
-### 15.1 `brainray` additions
+### 15.1 `rayrot` additions
 
 | ID | Ask | Unblocks | Milestone |
 | --- | --- | --- | --- |
@@ -1079,20 +1101,20 @@ definitions only — no second `skibidi main`.
 ### 17.1 Build and run
 
 The game does not vendor Brainrot. It expects a `brainrot` checkout with
-`brainray` built, as a sibling directory by default and overridable:
+`rayrot` built, as a sibling directory by default and overridable:
 
 ```bash
 # once, in the brainrot checkout
-make && make brainray
+make && make rayrot
 
 # here
 make play
-# == BRAINROT_PATH=$(BRAINROT_DIR)/brainray $(BRAINROT_DIR)/brainrot src/main.brainrot
+# == BRAINROT_PATH=$(BRAINROT_DIR)/rayrot $(BRAINROT_DIR)/brainrot src/main.brainrot
 ```
 
 `BRAINROT_PATH` must point at a directory containing `raylib.so`, or
 `#cooked <raylib>` cannot resolve. See
-[`docs/brainray.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md)
+[`docs/rayrot.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/rayrot.md)
 for raylib installation — it is the single source of truth and this repo will
 not duplicate it.
 

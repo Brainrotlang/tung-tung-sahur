@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turn generated art into the atlases and layers brainray can draw.
+"""Turn generated art into the atlases and layers rayrot can draw.
 
 The image model emits ~1000px JPEGs on an approximately-magenta background,
 with no alpha channel. rl_draw_texture_rec needs exact-size PNGs with real

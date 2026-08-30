@@ -1,7 +1,7 @@
 # Art generation prompts
 
 Prompts for generating the game's sprites and parallax layers with ChatGPT's
-image model, constrained to what `brainray` can actually draw.
+image model, constrained to what `rayrot` can actually draw.
 
 Every number here is read from the source, not chosen for the prompt:
 `src/tune.brainrot` (sizes, ground line), `src/curve.brainrot` (entity sizes,

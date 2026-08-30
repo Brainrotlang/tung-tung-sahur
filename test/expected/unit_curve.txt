@@ -31,6 +31,12 @@ lvl 5 over 10000: crate 2985 post 2464 patapim 4551
 4:00  speed  900.00  lvl 8  dist    147722  gap 0.560
 5:00  speed  900.00  lvl 8  dist    201722  gap 0.560
 sahur at 200000 px reached after 17885 frames (4:58)
+-- jump airtime vs every gap the game can produce --
+airtime 0.769 s (jump_v -1000, gravity 2600)
+world jump->jump floor 0.950  slack +0.181
+boss gap 0.950 -> clamped 0.950  slack +0.181
+world worst jump->jump gap 0.950  slack +0.181
+every jump->jump gap clears the airtime: W
 -- sky --
 lvl 1: 12 14 34
 lvl 2: 12 14 34
