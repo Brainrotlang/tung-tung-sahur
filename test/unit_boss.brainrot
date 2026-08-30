@@ -277,6 +277,54 @@ skibidi main {
         yapping("        mistakes made during the fight: %d", worst_hits);
     }
 
+    🚽 --- the opening has to be long enough to USE -------------------------
+    🚽
+    🚽 "Can the bat reach him at all" was the only thing asked before, and it
+    🚽 passed on a fight nobody could win. Tralalero spends 0.78s of his lunge
+    🚽 rising, crossing over Tung and landing, and the opening's clock used to
+    🚽 run through all of it -- so of a 61-frame window he was inside bat reach
+    🚽 for the last 14. React to "he is open!", swing, hit nothing, and the
+    🚽 0.45s attack cooldown eats the only part that counted.
+    🚽
+    🚽 So measure the window that actually exists, not the one the phase
+    🚽 timer claims. It must be at least t_boss_open_time().
+    yapping("-- how long is an opening, really --");
+    flex (rizz k = 1; k <= 2; k = k + 1) {
+        boss_clear(&bo);
+        world_reset(&wd);
+        player_reset(&pl);
+        wd.dt = 0.016666;
+        boss_start(&bo, &wd, k);
+
+        rizz phase_f = 0;
+        rizz reach_f = 0;
+        rizz g = 0;
+        cap seen = L;
+        cap alive2 = boss_active(&bo);
+        goon (alive2 && g < 3000 && !seen) {
+            world_advance(&wd);
+            player_physics(&pl, &wd);
+            player_tick_timers(&pl, &wd);
+            boss_tick(&bo, &wd);
+            cap opening = boss_vulnerable(&bo);
+            edgy (opening) {
+                phase_f = phase_f + 1;
+                cap reach = boss_in_bat(&bo, &pl);
+                edgy (reach) { reach_f = reach_f + 1; }
+            }
+            amogus {
+                edgy (phase_f > 0) { seen = W; }
+            }
+            g = g + 1;
+            alive2 = boss_active(&bo);
+        }
+        chad secs = reach_f * 0.016666;
+        yapping("boss %d: opening %d frames, in bat reach %d of them (%.2fs)",
+                k, phase_f, reach_f, secs);
+        yapping("        t_boss_open_time() is %.2fs -- reach must not be less",
+                t_boss_open_time());
+    }
+
     🚽 And the shark's closing is clamped, so no number of mistakes walks him
     🚽 into the player even if t_hearts_max() grows later.
     yapping("-- shark closing is clamped --");

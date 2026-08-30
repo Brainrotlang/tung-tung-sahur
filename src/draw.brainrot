@@ -356,7 +356,7 @@ skibidi draw_bomb(chad x, chad y, chad w, chad h, cap burning) {
 
 🚽 Three pips, one per bonk still owed. Drawn top-centre so it does not
 🚽 fight the hearts (top-left) or the score (top-right).
-skibidi draw_boss_bar(rizz kind, rizz bonks) {
+skibidi draw_boss_bar(rizz kind, rizz bonks, cap ready) {
     chad bw = 64.0;
     chad x0 = t_screen_w() / 2.0 - (t_boss_bonks() * bw) / 2.0;
     rl_draw_rectangle(x0 - 8.0, 20.0, t_boss_bonks() * bw + 16.0, 26.0,
@@ -378,5 +378,18 @@ skibidi draw_boss_bar(rizz kind, rizz bonks) {
     amogus {
         rl_draw_text_int("BOMBARDIRO CROCODILO x", bonks, 0, x0 - 8.0, 50.0, 18,
                          255, 214, 64, 255);
+    }
+
+    🚽 The one thing the player has to act on, said out loud.
+    🚽
+    🚽 `ready` is "the boss has ARRIVED", not "the boss is in its open
+    🚽 phase". Those differ by the 0.78s Tralalero spends leaping over
+    🚽 Tung, and prompting during the leap would teach exactly the mistake
+    🚽 that made the fight feel impossible: swing on sight, hit nothing,
+    🚽 and spend the real window in t_attack_total()'s cooldown.
+    edgy (ready) {
+        rizz pw = rl_measure_text("TUNG HIM  --  X", 30);
+        rl_draw_text("TUNG HIM  --  X", t_screen_w() / 2 - pw / 2, 78, 30,
+                     255, 96, 96, 255);
     }
 }

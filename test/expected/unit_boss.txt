@@ -39,6 +39,11 @@ boss 1: 1702 frames, 171 open frames, body contacts 0 (must be 0)
 boss 2: 1683 frames, 152 open frames, body contacts 0 (must be 0)
         nose got within -660px of Tung's back (negative = in front)
         mistakes made during the fight: 2
+-- how long is an opening, really --
+boss 1: opening 117 frames, in bat reach 70 of them (1.17s)
+        t_boss_open_time() is 1.00s -- reach must not be less
+boss 2: opening 105 frames, in bat reach 66 of them (1.10s)
+        t_boss_open_time() is 1.00s -- reach must not be less
 -- shark closing is clamped --
    0 hits -> lurk x    -30, nose    110, Tung's back 200
    4 hits -> lurk x     36, nose    176, Tung's back 200

@@ -430,7 +430,11 @@ skibidi main {
         draw_hearts(pl.hearts);
         draw_speedbar(lvl);
         draw_hud(score, lvl);
-        edgy (boss_shown) { draw_boss_bar(bo.kind, bo.bonks); }
+        edgy (boss_shown) {
+            cap boss_ready = boss_vulnerable(&bo);
+            edgy (boss_ready) { boss_ready = boss_in_position(&bo, &wd); }
+            draw_boss_bar(bo.kind, bo.bonks, boss_ready);
+        }
 
         edgy (state == t_state_title()) { draw_title(title_t); }
         edgy (state == t_state_over())  { draw_gameover(score, run_seed); }

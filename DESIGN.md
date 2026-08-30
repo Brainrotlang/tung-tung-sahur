@@ -681,6 +681,23 @@ mistakes are made or however many hearts a future `t_hearts_max()` hands out.
 A missed opening costs time, not health: the phase returns to `survive` and the
 cycle repeats. The fight is long rather than unfair.
 
+**The opening's clock starts on arrival, not on the phase.** Tralalero spends
+0.78s of his lunge rising, crossing over Tung and coming down. When the timer
+ran from the start of the phase, he was inside bat reach for the *last 14
+frames of 61* — so a player reacting to "he's open!" swung immediately, hit
+nothing, and spent the only part that counted inside `t_attack_total()`'s 0.45s
+cooldown. `boss_in_position()` gates the tick, which buys the whole
+`t_boss_open_time()` with him actually there: 1.17s of real reach for
+Tralalero, 1.10s for Bombardiro.
+
+`unit_boss.brainrot` measures that reach directly. The old test only asked
+whether the bat *could* reach the boss at all, which is why it passed on a
+fight nobody could win.
+
+**And the game says so.** `draw_boss_bar()` puts `TUNG HIM — X` on screen while
+the boss is open *and has arrived*. Those two conditions differ by exactly the
+leap, and prompting during it would teach the same too-early swing.
+
 **Tralalero has art; Bombardiro is still primitives.** Both go through the same
 `tex >= 0` fallback every other draw uses, so a partial set degrades one boss at
 a time and the simulation does not know either way.

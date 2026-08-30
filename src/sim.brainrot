@@ -480,12 +480,29 @@ skibidi boss_move(gang Boss *b, gang World *w) {
     edgy (go) { b.x = approach(b.x, tx, step); }
 }
 
+🚽 Has the boss finished moving to where its phase wants it?
+cap boss_in_position(gang Boss *b, gang World *w) {
+    bussin absf(b.x - boss_target_x(b, w)) < 1.0
+        && absf(b.y - boss_target_y(b, w)) < 1.0;
+}
+
 🚽 The phase machine. Survive for a fixed stretch, open for a short one,
 🚽 and go back to surviving if the window closes unpunished -- a missed
 🚽 opening costs time, not health, so the fight is long rather than unfair.
+🚽
+🚽 The opening's clock does NOT start until the boss has arrived, and that
+🚽 is the difference between a fight and a coin flip. Tralalero spends 0.78s
+🚽 of his lunge rising, crossing over Tung and coming down; when the timer
+🚽 ran from the start of the phase, only the last 14 frames of a 61-frame
+🚽 window had him inside bat reach. A player reacting to "he is open!"
+🚽 swung immediately, hit nothing, and t_attack_total()'s 0.45s cooldown
+🚽 then ate the only part that counted. Starting the clock on arrival gives
+🚽 the whole t_boss_open_time() with him actually there.
 skibidi boss_tick(gang Boss *b, gang World *w) {
     edgy (b.kind != t_boss_none()) {
-        b.phase_t = b.phase_t + w.dt;
+        cap ticking = W;
+        edgy (b.phase == t_boss_open()) { ticking = boss_in_position(b, w); }
+        edgy (ticking) { b.phase_t = b.phase_t + w.dt; }
 
         boss_move(b, w);
 
