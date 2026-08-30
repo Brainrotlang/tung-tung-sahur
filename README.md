@@ -51,16 +51,18 @@ raylib setup for your OS is documented once, upstream, in
 [`docs/brainray.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md).
 This repo will not duplicate it.
 
-**Your brainrot checkout needs to be recent.** The game depends on three fixes
-it turned up itself — `rl_draw_text_int`
+**You need brainrot v0.2.0 or newer.** The game depends on four fixes it turned
+up itself — `rl_draw_text_int`
 ([#292](https://github.com/Brainrotlang/brainrot/pull/292)), working `!`
-([#296](https://github.com/Brainrotlang/brainrot/pull/296)), and float-to-integer
-assignment ([#299](https://github.com/Brainrotlang/brainrot/pull/299)).
+([#296](https://github.com/Brainrotlang/brainrot/pull/296)), float-to-integer
+assignment ([#299](https://github.com/Brainrotlang/brainrot/pull/299)), and a
+call running exactly once ([#303](https://github.com/Brainrotlang/brainrot/pull/303)).
 
-`make` probes for all three and tells you to update, because an older
-interpreter does not fail — it silently discards every `!` and reinterprets every
-float assignment, so the guards run backwards and the HUD reads plausible
-nonsense.
+`make` probes for them and tells you to update, because an older interpreter
+does not *fail* — it silently discards every `!`, reinterprets every float
+assignment, and runs every `rizz x = f();` twice while keeping the second
+result. The guards run backwards, the HUD reads plausible nonsense, and every
+texture and sound loads twice with one of each leaked.
 
 Then:
 
@@ -87,10 +89,23 @@ Two layers:
 
 - **Unit** (`test/unit_*.brainrot`) — the pure scalar functions. The PRNG is
   pinned against the published Park–Miller sequence, the fairness clamp is swept
-  across every speed, kind pair and jitter value, and the difficulty curve is
-  integrated at 60 Hz and checked against the table in DESIGN.md §7.2.
+  across every speed, kind pair and jitter value, the difficulty curve is
+  integrated at 60 Hz and checked against the table in DESIGN.md §7.2, and both
+  boss fights are driven through a full three-cycle kill.
 - **Integration** (`make headless`) — the real frame loop, run for 3000 frames
   with a fixed timestep and a scripted input tape.
+
+There is a third, separate check:
+
+```bash
+make lint-native
+```
+
+The tests swap `draw.brainrot` and `platform.brainrot` for fakes, which is the
+point — but it means the **real** `rl_*` calls are never looked at, and a wrong
+argument count there is invisible until someone runs the game. `lint-native`
+cooks the real modules into an empty `main`, so semantic analysis type-checks
+every native call and exits. No window, no GPU. `make play` runs it first.
 
 That second one is worth a note: the harness (`src/.headless.gen.brainrot`,
 gitignored) is **generated from `src/main.brainrot`**, not copied from it. Three `sed` edits swap the raylib
@@ -142,8 +157,14 @@ no upstream dependencies at all. **M1** shipped too — the numeric HUD landed
 with B1, B2 (`rl_draw_texture_rec`) unblocked sprites, animation and parallax,
 and all of it is drawn from real art now.
 
-**B3 has landed** ([brainrot#302](https://github.com/Brainrotlang/brainrot/pull/302)),
-so brainray has audio: a streamed music track and one-shot sounds. The game
+**M2 has shipped.** brainray got audio in
+[brainrot#302](https://github.com/Brainrotlang/brainrot/pull/302), so the game
 plays a title sting, a `TUNG` on every bat hit, a jump, a damage grunt, and a
-`bruh` on the run that ends. What's left of **M2** is the bosses. Duck and the
-Patapim variants need no engine work at all. Milestones are in DESIGN.md §18.
+`bruh` on the run that ends. Both bosses are in: **Tralalero Tralala** at 5,000
+and **Bombardiro Crocodilo** at 10,000, sharing one three-cycle phase machine
+and pausing the normal spawner while they own the screen. They render in
+primitives for now — there is no shark or crocodile art yet, and M0 already
+proved the game reads in rectangles.
+
+**M3** is next: the `SAHUR_DISTANCE` win state, the ending card, and Endless
+Schizo Mode. Milestones are in DESIGN.md §18.

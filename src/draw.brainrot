@@ -251,3 +251,103 @@ skibidi draw_gameover(rizz score, rizz seed) {
     rl_draw_text("R or SPACE to run again", cx - w4 / 2, 420, 24,
                  210, 210, 210, 255);
 }
+
+🚽 --- bosses ---------------------------------------------------------------
+🚽
+🚽 Primitives, deliberately. There is no shark or crocodile art yet, and M0
+🚽 proved the game reads fine in rectangles -- so the fight ships playable
+🚽 and the atlases drop in later behind the same `tex >= 0` fallback every
+🚽 other draw here already uses. Nothing in the simulation knows or cares.
+
+skibidi draw_boss(chad x, chad y, rizz kind, rizz phase, rizz tex) {
+    chad w = boss_w(kind);
+    chad h = boss_h(kind);
+
+    edgy (tex >= 0) {
+        🚽 Both bosses face LEFT at the player, so both want the mirror.
+        rl_draw_texture_rec(tex, 0.0, 0.0, 0.0 - w, h,
+                            x, y, 255, 255, 255, 255);
+    }
+    amogus {
+        edgy (kind == t_boss_tralalero()) {
+            🚽 A shark on three shoes. Grey body, pale belly, one eye, and
+            🚽 the legs that make him the joke.
+            rl_draw_rectangle(x, y, w, h - 22.0, 96, 108, 120, 255);
+            rl_draw_rectangle(x, y + h * 0.45, w * 0.82, h * 0.30,
+                              206, 210, 214, 255);
+            rl_draw_rectangle(x + w * 0.55, y - 16.0, w * 0.18, 18.0,
+                              96, 108, 120, 255);
+            rl_draw_rectangle(x + 14.0, y + 18.0, 12.0, 12.0, 250, 250, 250, 255);
+            rl_draw_rectangle(x + 16.0, y + 21.0, 6.0, 6.0, 20, 20, 20, 255);
+            flex (rizz i = 0; i < 3; i = i + 1) {
+                chad sx = x + 20.0 + i * 38.0;
+                rl_draw_rectangle(sx, y + h - 22.0, 12.0, 16.0, 70, 60, 54, 255);
+                rl_draw_rectangle(sx - 4.0, y + h - 8.0, 26.0, 10.0,
+                                  240, 240, 240, 255);
+            }
+        }
+        amogus {
+            🚽 A crocodile with wings and a bomb bay.
+            rl_draw_rectangle(x, y, w, h, 84, 124, 78, 255);
+            rl_draw_rectangle(x, y + h * 0.62, w * 0.9, h * 0.24,
+                              196, 206, 170, 255);
+            rl_draw_rectangle(x - 26.0, y + 10.0, 30.0, 20.0, 84, 124, 78, 255);
+            rl_draw_rectangle(x + w * 0.2, y - 14.0, w * 0.6, 14.0,
+                              120, 120, 128, 255);
+            rl_draw_rectangle(x + 12.0, y + 14.0, 12.0, 12.0, 250, 250, 250, 255);
+            rl_draw_rectangle(x + 14.0, y + 17.0, 6.0, 6.0, 20, 20, 20, 255);
+            flex (rizz i = 0; i < 5; i = i + 1) {
+                rl_draw_rectangle(x + 10.0 + i * 20.0, y + h - 6.0, 10.0, 6.0,
+                                  60, 50, 44, 255);
+            }
+        }
+    }
+
+    🚽 The opening is the only moment the bat matters, so it gets a ring.
+    🚽 Without it the window is invisible and the fight is guesswork.
+    edgy (phase == t_boss_open()) {
+        rl_draw_rectangle(x - 4.0, y - 4.0, w + 8.0, 4.0, 255, 214, 64, 255);
+        rl_draw_rectangle(x - 4.0, y + h, w + 8.0, 4.0, 255, 214, 64, 255);
+        rl_draw_rectangle(x - 4.0, y, 4.0, h, 255, 214, 64, 255);
+        rl_draw_rectangle(x + w, y, 4.0, h, 255, 214, 64, 255);
+    }
+}
+
+skibidi draw_bomb(chad x, chad y, chad w, chad h, cap burning) {
+    edgy (burning) {
+        rl_draw_rectangle(x, y, w, h, 255, 148, 40, 255);
+        rl_draw_rectangle(x + w * 0.15, y + h * 0.25, w * 0.7, h * 0.5,
+                          255, 226, 120, 255);
+    }
+    amogus {
+        rl_draw_rectangle(x, y, w, h, 34, 34, 40, 255);
+        rl_draw_rectangle(x + w * 0.35, y - 6.0, w * 0.3, 6.0, 190, 140, 60, 255);
+    }
+}
+
+🚽 Three pips, one per bonk still owed. Drawn top-centre so it does not
+🚽 fight the hearts (top-left) or the score (top-right).
+skibidi draw_boss_bar(rizz kind, rizz bonks) {
+    chad bw = 64.0;
+    chad x0 = t_screen_w() / 2.0 - (t_boss_bonks() * bw) / 2.0;
+    rl_draw_rectangle(x0 - 8.0, 20.0, t_boss_bonks() * bw + 16.0, 26.0,
+                      0, 0, 0, 140);
+    flex (rizz i = 0; i < t_boss_bonks(); i = i + 1) {
+        edgy (i < t_boss_bonks() - bonks) {
+            rl_draw_rectangle(x0 + i * bw + 4.0, 24.0, bw - 8.0, 18.0,
+                              214, 64, 64, 255);
+        }
+        amogus {
+            rl_draw_rectangle(x0 + i * bw + 4.0, 24.0, bw - 8.0, 18.0,
+                              60, 40, 40, 255);
+        }
+    }
+    edgy (kind == t_boss_tralalero()) {
+        rl_draw_text_int("TRALALERO TRALALA x", bonks, 0, x0 - 8.0, 50.0, 18,
+                         255, 214, 64, 255);
+    }
+    amogus {
+        rl_draw_text_int("BOMBARDIRO CROCODILO x", bonks, 0, x0 - 8.0, 50.0, 18,
+                         255, 214, 64, 255);
+    }
+}

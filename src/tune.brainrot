@@ -50,6 +50,77 @@ chad t_fair_any()        { bussin 0.60; }
 🚽 --- pools ---
 rizz t_max_obstacles()   { bussin 16; }
 rizz t_max_enemies()     { bussin 16; }
+rizz t_max_bombs()       { bussin 32; }
+
+🚽 --- bosses (DESIGN.md section 12) ---
+🚽
+🚽 Both bosses share one three-cycle shape: survive a phase, an opening
+🚽 appears, one bonk, repeat three times. The thresholds line up with the
+🚽 distance curve at roughly 1:55 and 3:06.
+rizz t_boss_none()         { bussin 0; }
+rizz t_boss_tralalero()    { bussin 1; }
+rizz t_boss_bombardiro()   { bussin 2; }
+
+rizz t_boss_off()          { bussin 0; }
+rizz t_boss_survive()      { bussin 1; }
+rizz t_boss_open()         { bussin 2; }
+rizz t_boss_leave()        { bussin 3; }
+
+rizz t_tralalero_score()   { bussin 5000; }
+rizz t_bombardiro_score()  { bussin 10000; }
+rizz t_boss_bonks()        { bussin 3; }
+
+chad t_boss_survive_time() { bussin 8.0; }
+chad t_boss_open_time()    { bussin 1.0; }
+chad t_boss_leave_time()   { bussin 1.5; }
+chad t_boss_move_speed()   { bussin 520.0; }
+chad t_boss_leave_speed()  { bussin 700.0; }
+
+🚽 The boss owns the spawner while it is up, and spawns denser than the
+🚽 curve ever would -- that density IS the fight.
+chad t_boss_gap()          { bussin 0.72; }
+
+🚽 TRALALERO TRALALA -- the three-legged shark, chasing from the left.
+🚽
+🚽 `open_x` is not a free number: the bat hitbox spans t_player_x() +
+🚽 t_hitbox_dx() for t_hitbox_w(), i.e. 240..296. At x 150 the shark spans
+🚽 150..290, so it overlaps. Move either and the opening stops connecting.
+chad t_shark_w()           { bussin 140.0; }
+chad t_shark_h()           { bussin 96.0; }
+chad t_shark_lurk_x()      { bussin -30.0; }
+chad t_shark_open_x()      { bussin 150.0; }
+
+🚽 He closes a little with every mistake, so a clean fight keeps him at
+🚽 arm's length and a sloppy one has him breathing on you. Three hits is
+🚽 also three hearts, so the fully-closed shark is a thing you see at the
+🚽 moment you die rather than a separate death.
+chad t_shark_close_step()  { bussin 34.0; }
+
+🚽 BOMBARDIRO CROCODILO -- does not chase. Bombs from overhead, so the
+🚽 whole vertical axis is hostile while you are still running.
+🚽
+🚽 `open_y` is bat-range for the same reason as the shark's open_x: the bat
+🚽 box is y 480..536 with the player grounded, and 470..542 overlaps it.
+chad t_croc_w()            { bussin 120.0; }
+chad t_croc_h()            { bussin 72.0; }
+chad t_croc_cruise_y()     { bussin 90.0; }
+chad t_croc_open_y()       { bussin 470.0; }
+chad t_croc_cruise_x()     { bussin 560.0; }
+chad t_croc_open_x()       { bussin 200.0; }
+chad t_croc_sway()         { bussin 180.0; }
+chad t_croc_sway_rate()    { bussin 1.1; }
+
+🚽 Bombs fall under the same gravity the player does, then sit as a ground
+🚽 hazard for a moment. Both states hurt.
+chad t_bomb_w()            { bussin 26.0; }
+chad t_bomb_h()            { bussin 26.0; }
+chad t_blast_w()           { bussin 64.0; }
+chad t_blast_h()           { bussin 34.0; }
+chad t_bomb_fuse()         { bussin 0.55; }
+chad t_bomb_interval()     { bussin 0.85; }
+
+🚽 Clearing a boss is worth more than the three bonks that did it.
+rizz t_boss_reward()       { bussin 2000; }
 
 🚽 --- audio ---
 🚽 Effects sit above the music so a bat connecting still reads over the

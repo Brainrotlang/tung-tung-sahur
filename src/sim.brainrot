@@ -27,6 +27,10 @@ gang World {
     rizz prev_kind;
     rizz next_kind;
     rizz seed;
+    🚽 Each boss fires once per run. Tracked here rather than on the Boss
+    🚽 itself, which is cleared the moment a fight ends and would forget.
+    cap  did_tralalero;
+    cap  did_bombardiro;
 };
 
 gang Player {
@@ -47,6 +51,37 @@ gang Ent {
     cap  alive;
 };
 
+🚽 A boss is not an Ent and does not live in a pool. It has phases, a bonk
+🚽 count and scripted movement that no generic entity wants, and putting it
+🚽 in `enemies[]` would drag all of that through the shared collision
+🚽 passes. One boss is up at a time, so it is a single value.
+🚽
+🚽 Width and height come from the kind (boss_w / boss_h) rather than being
+🚽 stored, so there is exactly one place a boss's size is written down.
+gang Boss {
+    rizz kind;
+    rizz phase;
+    rizz bonks;
+    🚽 Damage the PLAYER has taken this fight. Tralalero closes on it.
+    rizz hits;
+    chad x;
+    chad y;
+    chad phase_t;
+    chad spawn_t;
+};
+
+🚽 Bombardiro's ordnance. Falls under the same gravity the player does,
+🚽 then sits as a ground blast for t_bomb_fuse() seconds. `fuse > 0.0` is
+🚽 what distinguishes the two states -- a landed bomb is not a separate
+🚽 pool, it is the same slot with a different box and a countdown.
+gang Bomb {
+    chad x;
+    chad y;
+    chad vy;
+    chad fuse;
+    cap  alive;
+};
+
 🚽 --- world ---------------------------------------------------------------
 
 skibidi world_reset(gang World *w) {
@@ -56,6 +91,8 @@ skibidi world_reset(gang World *w) {
     w.combo     = 0;
     w.spawn_t   = 1.2;
     w.prev_kind = t_kind_patapim();
+    w.did_tralalero  = L;
+    w.did_bombardiro = L;
 }
 
 🚽 One variable drives the whole game (DESIGN.md section 7). The cap is
@@ -253,4 +290,232 @@ skibidi award_bonk(gang World *w) {
     w.combo = w.combo + 1;
     edgy (w.combo > 8) { w.combo = 8; }
     w.bonus = w.bonus + 100 * w.combo;
+}
+
+🚽 --- bosses --------------------------------------------------------------
+🚽
+🚽 DESIGN.md section 12. Tralalero and Bombardiro are set pieces, not
+🚽 generic enemies, and they share one shape:
+🚽
+🚽     survive a phase -> an opening appears -> one bonk -> repeat x3
+🚽
+🚽 While a boss is up the normal spawner is paused and the boss owns the
+🚽 pattern. You can still die the ordinary way, hearts and all -- a boss
+🚽 fight is a harder stretch of the same game, not a separate mode.
+🚽
+🚽 Note the shape of every function below: no early `bussin;`. A bare void
+🚽 return is still a parse error upstream (brainrot#283), so a void helper
+🚽 that wants to bail early has to nest instead. Value returns are fine.
+
+chad boss_w(rizz kind) {
+    edgy (kind == t_boss_tralalero()) { bussin t_shark_w(); }
+    bussin t_croc_w();
+}
+
+chad boss_h(rizz kind) {
+    edgy (kind == t_boss_tralalero()) { bussin t_shark_h(); }
+    bussin t_croc_h();
+}
+
+skibidi boss_clear(gang Boss *b) {
+    b.kind    = t_boss_none();
+    b.phase   = t_boss_off();
+    b.bonks   = 0;
+    b.hits    = 0;
+    b.x       = 0.0;
+    b.y       = 0.0;
+    b.phase_t = 0.0;
+    b.spawn_t = 0.0;
+}
+
+cap boss_active(gang Boss *b) {
+    bussin b.kind != t_boss_none();
+}
+
+🚽 Does the boss own the spawner this frame? True for the whole fight
+🚽 except the exit, so the normal curve resumes while he is still sliding
+🚽 off screen rather than leaving a dead beat behind him.
+cap boss_owns_spawner(gang Boss *b) {
+    bussin b.kind != t_boss_none() && b.phase != t_boss_leave();
+}
+
+🚽 Only during the opening, and only until the third bonk lands.
+cap boss_vulnerable(gang Boss *b) {
+    bussin b.phase == t_boss_open() && b.bonks < t_boss_bonks();
+}
+
+🚽 Which boss, if any, this score has just earned. The shark is checked
+🚽 first so a run that somehow crosses both thresholds while one is already
+🚽 up still takes them in order rather than skipping him.
+rizz boss_due(gang World *w, rizz score) {
+    edgy (!w.did_tralalero && score >= t_tralalero_score()) {
+        bussin t_boss_tralalero();
+    }
+    edgy (!w.did_bombardiro && score >= t_bombardiro_score()) {
+        bussin t_boss_bombardiro();
+    }
+    bussin t_boss_none();
+}
+
+skibidi boss_start(gang Boss *b, gang World *w, rizz kind) {
+    b.kind    = kind;
+    b.phase   = t_boss_survive();
+    b.bonks   = 0;
+    b.hits    = 0;
+    b.phase_t = 0.0;
+    b.spawn_t = 0.0;
+
+    🚽 Enter from where he lives, so the approach is visible rather than a
+    🚽 pop-in: the shark from off the left edge, the croc from overhead.
+    edgy (kind == t_boss_tralalero()) {
+        b.x = t_shark_lurk_x();
+        b.y = t_ground_y() - t_shark_h();
+        w.did_tralalero = W;
+    }
+    amogus {
+        b.x = t_croc_cruise_x();
+        b.y = t_croc_cruise_y();
+        w.did_bombardiro = W;
+    }
+}
+
+🚽 Where the boss wants to be right now. Movement is a pure function of
+🚽 (kind, phase, hits, dist), so the opening always arrives at the same
+🚽 place and the bat ranges written into tune.brainrot stay meaningful.
+chad boss_target_x(gang Boss *b, gang World *w) {
+    edgy (b.kind == t_boss_tralalero()) {
+        edgy (b.phase == t_boss_open()) { bussin t_shark_open_x(); }
+        🚽 Every mistake this fight drags him one step closer.
+        bussin t_shark_lurk_x() + b.hits * t_shark_close_step();
+    }
+    edgy (b.phase == t_boss_open()) { bussin t_croc_open_x(); }
+    🚽 The croc sways across the top so his bombs do not all land on one
+    🚽 column, which would make the fight a single memorised jump.
+    bussin t_croc_cruise_x()
+           + wave(w.dist * 0.001 * t_croc_sway_rate()) * t_croc_sway();
+}
+
+chad boss_target_y(gang Boss *b) {
+    edgy (b.kind == t_boss_tralalero()) { bussin t_ground_y() - t_shark_h(); }
+    edgy (b.phase == t_boss_open()) { bussin t_croc_open_y(); }
+    bussin t_croc_cruise_y();
+}
+
+skibidi boss_move(gang Boss *b, gang World *w) {
+    chad step = t_boss_move_speed() * w.dt;
+    b.x = approach(b.x, boss_target_x(b, w), step);
+    b.y = approach(b.y, boss_target_y(b), step);
+}
+
+🚽 The phase machine. Survive for a fixed stretch, open for a short one,
+🚽 and go back to surviving if the window closes unpunished -- a missed
+🚽 opening costs time, not health, so the fight is long rather than unfair.
+skibidi boss_tick(gang Boss *b, gang World *w) {
+    edgy (b.kind != t_boss_none()) {
+        b.phase_t = b.phase_t + w.dt;
+
+        edgy (b.phase == t_boss_leave()) {
+            b.x = b.x - t_boss_leave_speed() * w.dt;
+            edgy (b.phase_t >= t_boss_leave_time()) { boss_clear(b); }
+        }
+        amogus {
+            boss_move(b, w);
+            edgy (b.phase == t_boss_survive()) {
+                edgy (b.phase_t >= t_boss_survive_time()) {
+                    b.phase   = t_boss_open();
+                    b.phase_t = 0.0;
+                }
+            }
+            amogus {
+                edgy (b.phase_t >= t_boss_open_time()) {
+                    b.phase   = t_boss_survive();
+                    b.phase_t = 0.0;
+                }
+            }
+        }
+    }
+}
+
+cap boss_in_bat(gang Boss *b, gang Player *p) {
+    bussin aabb(t_player_x() + t_hitbox_dx(), p.y + t_hitbox_dy(),
+                t_hitbox_w(), t_hitbox_h(),
+                b.x, b.y, boss_w(b.kind), boss_h(b.kind));
+}
+
+cap boss_hits_body(gang Boss *b, gang Player *p) {
+    bussin aabb(t_player_x(), p.y, t_player_w(), t_player_h(),
+                b.x, b.y, boss_w(b.kind), boss_h(b.kind));
+}
+
+🚽 One bonk per opening: the phase flips away from `open` immediately, so a
+🚽 bat that is still out cannot count twice inside the same window.
+skibidi boss_take_bonk(gang Boss *b, gang World *w) {
+    b.bonks   = b.bonks + 1;
+    b.phase_t = 0.0;
+    award_bonk(w);
+    edgy (b.bonks >= t_boss_bonks()) {
+        b.phase = t_boss_leave();
+        🚽 Beating a boss is worth more than the three bonks that did it.
+        w.bonus = w.bonus + t_boss_reward();
+    }
+    amogus {
+        b.phase = t_boss_survive();
+    }
+}
+
+🚽 Tralalero closes on every mistake; the croc does not care.
+skibidi boss_note_hit(gang Boss *b) {
+    edgy (b.kind != t_boss_none()) { b.hits = b.hits + 1; }
+}
+
+🚽 --- bombs ---------------------------------------------------------------
+
+skibidi bomb_spawn(gang Bomb *bm, gang Boss *b) {
+    bm.x     = b.x + boss_w(b.kind) * 0.5 - t_bomb_w() * 0.5;
+    bm.y     = b.y + boss_h(b.kind);
+    bm.vy    = 0.0;
+    bm.fuse  = 0.0;
+    bm.alive = W;
+}
+
+🚽 A landed bomb is not a second pool -- it is the same slot with a wider
+🚽 box and a countdown. `fuse > 0.0` is the whole distinction.
+chad bomb_w(gang Bomb *bm) {
+    edgy (bm.fuse > 0.0) { bussin t_blast_w(); }
+    bussin t_bomb_w();
+}
+
+chad bomb_h(gang Bomb *bm) {
+    edgy (bm.fuse > 0.0) { bussin t_blast_h(); }
+    bussin t_bomb_h();
+}
+
+🚽 Falling, then burning. Both states scroll with the world -- a bomb is in
+🚽 world space like everything else, so standing still is not a dodge.
+skibidi bomb_tick(gang Bomb *bm, gang World *w) {
+    bm.x = bm.x - w.speed * w.dt;
+
+    edgy (bm.fuse > 0.0) {
+        bm.fuse = bm.fuse - w.dt;
+        edgy (bm.fuse <= 0.0) { bm.alive = L; }
+    }
+    amogus {
+        bm.vy = bm.vy + t_gravity() * w.dt;
+        bm.y  = bm.y + bm.vy * w.dt;
+        edgy (bm.y + t_bomb_h() >= t_ground_y()) {
+            🚽 Detonate: the box widens and drops to the ground line, so
+            🚽 the blast covers more than the shell that made it.
+            bm.y    = t_ground_y() - t_blast_h();
+            bm.x    = bm.x + t_bomb_w() * 0.5 - t_blast_w() * 0.5;
+            bm.vy   = 0.0;
+            bm.fuse = t_bomb_fuse();
+        }
+    }
+
+    edgy (bm.x < 0.0 - t_blast_w()) { bm.alive = L; }
+}
+
+cap bomb_hits_player(gang Bomb *bm, gang Player *p) {
+    bussin aabb(t_player_x(), p.y, t_player_w(), t_player_h(),
+                bm.x, bm.y, bomb_w(bm), bomb_h(bm));
 }

@@ -614,9 +614,41 @@ becomes hostile while you're still running:
 _/ \____________________
 ```
 
-Bombs are the `projectiles[32]` pool: spawned at his `x`, falling under the same
+Bombs are the `bombs[32]` pool: spawned at his `x`, falling under the same
 `GRAVITY`, exploding into a ground hazard on impact. Between volleys he descends
 to bat height for the opening. Three bonks.
+
+### 12.3 How it is built
+
+`gang Boss` is a single value in `skibidi main`, not a slot in `enemies[]`. It
+has phases, a bonk count and scripted movement that no generic `Ent` wants, and
+putting it in the pool would drag all of that through the shared collision
+passes. `gang Bomb` is its own pool for the same reason — it needs `vy` and a
+fuse, and a landed bomb is the same slot with a wider box rather than a second
+pool.
+
+Movement is a pure function of `(kind, phase, hits, dist)` fed through
+`approach()`, not a lerp. Lerp's step depends on the distance left, so a boss
+would ease in and never quite arrive, and the opening would land at a different
+`x` every cycle — which matters because the bat ranges in `tune.brainrot`
+(`t_shark_open_x`, `t_croc_open_y`) are chosen to overlap the hitbox exactly.
+`unit_boss.brainrot` asserts the boss actually *reaches* bat range inside the
+window, since the fight is unwinnable if it does not.
+
+A missed opening costs time, not health: the phase returns to `survive` and the
+cycle repeats. The fight is long rather than unfair.
+
+**Both fights render in primitives.** There is no shark or crocodile art yet,
+and M0 already proved the game reads in rectangles, so the fights ship playable
+behind the same `tex >= 0` fallback every other draw uses. The simulation does
+not know.
+
+**Coverage.** The headless input tape dies around score 400–700, so it never
+reaches 5,000 — the golden file proves the boss code does not disturb an
+ordinary run (it is byte-identical), and `test/unit_boss.brainrot` drives the
+fights directly, including a scripted frame loop that calls what `main` calls in
+the order `main` calls it. Both bosses were additionally verified in the real
+frame loop by temporarily lowering the thresholds.
 
 ---
 
@@ -825,13 +857,23 @@ loudly broken, and the reason `make` probes the interpreter's version.
 C4 and C5 were re-checked against v0.2.0 and are both still open, so the pool
 loops stay in `main` (§14.1).
 
+**C10 and C11 both shape code that looks like style.** Every `cap`-returning
+call in this game lands in a local before it is tested — `cap show =
+player_visible(&pl); edgy (show)` — because the direct form silently takes the
+wrong branch. And `sim.brainrot` names its parameters `w`, `p`, `b`, `e`, `bm`
+while `main` names its locals `wd`, `pl`, `bo`: that non-collision is
+load-bearing and nothing enforces it. Both were found writing the bosses.
+
 | ID | Bug | Severity |
 | --- | --- | --- |
 | ~~**C1**~~ | ~~`!` on `cap` returns the operand unchanged~~ — **fixed**, [#296](https://github.com/Brainrotlang/brainrot/pull/296). It had no lexer token at all; the catch-all discarded it | ✅ |
 | ~~**C2**~~ | ~~`rizz k = someChad;` reinterprets the float's bits~~ — **fixed**, [#299](https://github.com/Brainrotlang/brainrot/pull/299). Array elements and pointer targets were broken too, in both directions | ✅ |
 | ~~**C3**~~ | ~~Parameter list reversed for struct-pointer params~~ — **fixed**, [#294](https://github.com/Brainrotlang/brainrot/pull/294). The parser stores parameters backwards and the runtime compensated; the analyser did not | ✅ |
 | ~~**C9**~~ | ~~A user-defined call in a value position runs twice and keeps the SECOND result~~ — **fixed**, [#303](https://github.com/Brainrotlang/brainrot/pull/303). `ast_accept()`'s pre-visit executed the call, then the statement's own visitor executed it again | ✅ |
-| **C4** | A struct field cannot be an array of structs (`gang Game { gang Ent es[4]; };`) | Medium |
+| **C10** | A `cap`-returning call cannot be used directly as a condition — `edgy (f())` errors and takes the FALSE branch ([#313](https://github.com/Brainrotlang/brainrot/issues/313)) | **High** |
+| **C11** | A caller's local shadows a callee's *parameter name* during analysis, so a correct call is rejected ([#312](https://github.com/Brainrotlang/brainrot/issues/312)) | **High** |
+| **C12** | A bare `bussin;` is a parse error, so a `skibidi` cannot return early ([#283](https://github.com/Brainrotlang/brainrot/issues/283)) | Medium |
+| **C4** | A struct field cannot be an array of structs (`gang Game { gang Ent es[4]; };`) — [#311](https://github.com/Brainrotlang/brainrot/issues/311) | Medium |
 | **C5** | No pointer arithmetic on struct pointers | Medium |
 | **C6** | No top-level globals | Medium |
 | **C7** | No `*(p + i) = v` / `p[i] = v` through a pointer parameter | Low — workaround is fine |
@@ -976,11 +1018,12 @@ Playable core, primitives only. Title card, run, game over, restart.
 - [ ] Duck
 - [ ] Patapim variants; armored breaks the rule at LVL 4
 
-### M2 — "Bosses and noise" *(needs B3)*
+### M2 — "Bosses and noise"
 
-- [ ] Tralalero Tralala at 5,000
-- [ ] Bombardiro Crocodilo at 10,000, projectile pool
-- [ ] Audio: the `TUNG`, footsteps, ambience
+- [x] Tralalero Tralala at 5,000
+- [x] Bombardiro Crocodilo at 10,000, projectile pool
+- [x] Audio: the `TUNG`, the jump, damage, the opening sting, and a `bruh`
+- [ ] Boss art — both fights ship in primitives, like M0 did
 
 ### M3 — "Sahur"
 
