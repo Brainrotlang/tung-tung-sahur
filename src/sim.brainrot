@@ -379,14 +379,60 @@ skibidi boss_start(gang Boss *b, gang World *w, rizz kind) {
     }
 }
 
-🚽 Where the boss wants to be right now. Movement is a pure function of
-🚽 (kind, phase, hits, dist), so the opening always arrives at the same
-🚽 place and the bat ranges written into tune.brainrot stay meaningful.
+🚽 How far back the shark lurks, given the mistakes made this fight.
+🚽
+🚽 Clamped so his nose stops t_shark_close_min() short of Tung's back. The
+🚽 closing is dread, not damage: the player cannot move horizontally, so a
+🚽 boss that walks into them is unavoidable damage rather than difficulty.
+chad boss_lurk_x(gang Boss *b) {
+    chad want = t_shark_lurk_x() + b.hits * t_shark_close_step();
+    chad most = t_player_x() - t_shark_close_min() - t_shark_w();
+    bussin minf(want, most);
+}
+
+🚽 Which side of Tung is a box of width `w` sitting at `x` on?
+🚽 -1 behind him, +1 in front of him, 0 overlapping his column.
+rizz boss_side(chad x, chad w) {
+    edgy (x + w < t_player_x()) { bussin 0 - 1; }
+    edgy (x > t_player_x() + t_player_w()) { bussin 1; }
+    bussin 0;
+}
+
+🚽 May the boss move horizontally this frame without ending up inside Tung?
+🚽
+🚽 THIS is the rule that keeps a boss fight fair. The player is pinned at
+🚽 t_player_x() and can only jump, so a boss that slides through them is
+🚽 contact nobody can dodge -- and the bosses have to cross, because their
+🚽 openings are in FRONT of Tung (that is the only place the bat reaches)
+🚽 while Tralalero chases from BEHIND.
+🚽
+🚽 So every horizontal move is gated: either the boss is clear above Tung's
+🚽 head, or it is already on the side it is heading for and is not crossing
+🚽 at all. Combined with a vertical move that runs FIRST, that makes the
+🚽 leap lead the crossing -- rise in place, cross overhead, come down on the
+🚽 far side. Moving both axes together does not work: at t_boss_move_speed()
+🚽 a boss climbs exactly as fast as it advances, so it is still half-way up
+🚽 when it arrives, and clips through.
+cap boss_may_advance(gang Boss *b, chad target_x) {
+    chad w = boss_w(b.kind);
+    cap clear_above = b.y + boss_h(b.kind) < t_ground_y() - t_player_h();
+    edgy (clear_above) { bussin W; }
+    rizz here = boss_side(b.x, w);
+    rizz want = boss_side(target_x, w);
+    bussin here != 0 && here == want;
+}
+
+🚽 Where the boss wants to be right now -- a pure function of (kind, phase,
+🚽 hits, dist), so an opening always arrives at the same place and the bat
+🚽 ranges written into tune.brainrot stay meaningful.
 chad boss_target_x(gang Boss *b, gang World *w) {
+    🚽 Beaten: off the left edge, and far enough that the clamp in
+    🚽 boss_lurk_x() cannot pull him back.
+    edgy (b.phase == t_boss_leave()) { bussin 0.0 - t_screen_w(); }
+
     edgy (b.kind == t_boss_tralalero()) {
         edgy (b.phase == t_boss_open()) { bussin t_shark_open_x(); }
-        🚽 Every mistake this fight drags him one step closer.
-        bussin t_shark_lurk_x() + b.hits * t_shark_close_step();
+        bussin boss_lurk_x(b);
     }
     edgy (b.phase == t_boss_open()) { bussin t_croc_open_x(); }
     🚽 The croc sways across the top so his bombs do not all land on one
@@ -395,16 +441,43 @@ chad boss_target_x(gang Boss *b, gang World *w) {
            + wave(w.dist * 0.001 * t_croc_sway_rate()) * t_croc_sway();
 }
 
-chad boss_target_y(gang Boss *b) {
-    edgy (b.kind == t_boss_tralalero()) { bussin t_ground_y() - t_shark_h(); }
+chad boss_target_y(gang Boss *b, gang World *w) {
+    chad high = t_ground_y() - t_player_h() - boss_h(b.kind) - 8.0;
+
+    🚽 Beaten: launched. Three bat hits put him in the air, and it is also
+    🚽 what stops a defeated boss sliding back through Tung on the way out.
+    edgy (b.phase == t_boss_leave()) { bussin high - t_boss_leave_rise(); }
+
+    edgy (b.kind == t_boss_tralalero()) {
+        chad ground = t_ground_y() - t_shark_h();
+        🚽 Airborne while he is on a different side of Tung than he is
+        🚽 heading for -- which includes overlapping him (side 0).
+        🚽
+        🚽 Deliberately NOT phrased as "while boss_may_advance() is false":
+        🚽 that is circular. Rising makes may_advance true, which would make
+        🚽 the target the ground again, which drops him, which makes it
+        🚽 false. He hovered and never crossed.
+        rizz here = boss_side(b.x, t_shark_w());
+        rizz want = boss_side(boss_target_x(b, w), t_shark_w());
+        edgy (here != want) { bussin high; }
+        bussin ground;
+    }
+
     edgy (b.phase == t_boss_open()) { bussin t_croc_open_y(); }
     bussin t_croc_cruise_y();
 }
 
 skibidi boss_move(gang Boss *b, gang World *w) {
-    chad step = t_boss_move_speed() * w.dt;
-    b.x = approach(b.x, boss_target_x(b, w), step);
-    b.y = approach(b.y, boss_target_y(b), step);
+    chad speed = t_boss_move_speed();
+    edgy (b.phase == t_boss_leave()) { speed = t_boss_leave_speed(); }
+    chad step = speed * w.dt;
+
+    🚽 Vertical first, so the leap leads -- see boss_may_advance().
+    b.y = approach(b.y, boss_target_y(b, w), step);
+
+    chad tx = boss_target_x(b, w);
+    cap go = boss_may_advance(b, tx);
+    edgy (go) { b.x = approach(b.x, tx, step); }
 }
 
 🚽 The phase machine. Survive for a fixed stretch, open for a short one,
@@ -414,12 +487,12 @@ skibidi boss_tick(gang Boss *b, gang World *w) {
     edgy (b.kind != t_boss_none()) {
         b.phase_t = b.phase_t + w.dt;
 
+        boss_move(b, w);
+
         edgy (b.phase == t_boss_leave()) {
-            b.x = b.x - t_boss_leave_speed() * w.dt;
             edgy (b.phase_t >= t_boss_leave_time()) { boss_clear(b); }
         }
         amogus {
-            boss_move(b, w);
             edgy (b.phase == t_boss_survive()) {
                 edgy (b.phase_t >= t_boss_survive_time()) {
                     b.phase   = t_boss_open();
@@ -442,6 +515,22 @@ cap boss_in_bat(gang Boss *b, gang Player *p) {
                 b.x, b.y, boss_w(b.kind), boss_h(b.kind));
 }
 
+🚽 Does the boss's own body overlap the player's?
+🚽
+🚽 Nothing in the game calls this to deal damage, and that is the point. A
+🚽 boss is not dodgeable: the player is pinned at t_player_x() and can only
+🚽 jump, so contact damage from a boss that positions itself is damage the
+🚽 player cannot avoid. Both bosses' openings used to land on top of Tung
+🚽 for exactly that reason -- a heart per opening, three openings to win,
+🚽 three hearts.
+🚽
+🚽 What each boss damages the player WITH is the thing it produces and the
+🚽 player can read coming: Tralalero's obstacle barrage, Bombardiro's bombs.
+🚽 Those are dodgeable, so those are the fight.
+🚽
+🚽 This survives as an INVARIANT, asserted over a whole scripted fight in
+🚽 test/unit_boss.brainrot: if it is ever true, a boss is standing somewhere
+🚽 it must not.
 cap boss_hits_body(gang Boss *b, gang Player *p) {
     bussin aabb(t_player_x(), p.y, t_player_w(), t_player_h(),
                 b.x, b.y, boss_w(b.kind), boss_h(b.kind));

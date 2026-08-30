@@ -618,7 +618,28 @@ Bombs are the `bombs[32]` pool: spawned at his `x`, falling under the same
 `GRAVITY`, exploding into a ground hazard on impact. Between volleys he descends
 to bat height for the opening. Three bonks.
 
-### 12.3 How it is built
+### 12.3 Neither boss deals contact damage
+
+The player is pinned at `t_player_x()` and can only jump. A boss that
+*positions itself* is therefore not dodgeable, and contact damage from one is
+damage nobody can avoid — which is not difficulty, it is a coin the game takes.
+
+Both fights shipped with exactly that bug and it made them unwinnable. The
+openings have to be in **front** of the player, because the bat only reaches
+forward (`t_hitbox_dx()` onward). They were placed to overlap the bat and
+nothing else was checked — and a 140px shark at `x = 150` spans 150–290, which
+covers the bat box *and* Tung's own 200–248. So every opening cost a heart,
+three openings win a fight, and the player has three hearts.
+
+What each boss damages the player *with* is the thing it produces and the player
+can read coming: Tralalero's obstacle barrage, Bombardiro's bombs. Those are
+dodgeable, so those are the fight. `boss_hits_body()` survives as an
+**invariant** — `test/unit_boss.brainrot` replays both fights and asserts it is
+false on every frame.
+
+That invariant is what forces the movement rule in §12.4.
+
+### 12.4 How it is built
 
 `gang Boss` is a single value in `skibidi main`, not a slot in `enemies[]`. It
 has phases, a bonk count and scripted movement that no generic `Ent` wants, and
@@ -634,6 +655,28 @@ would ease in and never quite arrive, and the opening would land at a different
 (`t_shark_open_x`, `t_croc_open_y`) are chosen to overlap the hitbox exactly.
 `unit_boss.brainrot` asserts the boss actually *reaches* bat range inside the
 window, since the fight is unwinnable if it does not.
+
+**The leap leads the crossing.** Tralalero chases from behind and his opening is
+in front, so he has to cross Tung — and per §12.3 he must never occupy Tung's
+space while doing it. Two rules get that:
+
+1. `boss_move()` moves **vertically first**.
+2. `boss_may_advance()` gates every horizontal move on either being clear above
+   Tung's head, or already being on the side it is heading for.
+
+So he rises in place, crosses overhead, and comes down on the far side — and
+the same rule carries the return trip and the launched exit of a beaten boss,
+both of which slid straight back through the player before it existed.
+
+Moving both axes together cannot work: at `t_boss_move_speed()` a boss climbs
+exactly as fast as it advances, so it is only half-way up when it arrives. Nor
+can the airborne test be "while `boss_may_advance()` is false" — that is
+circular. Rising makes it true, which returns the target to the ground, which
+drops him, which makes it false. He hovers and never crosses.
+
+Tralalero's closing is clamped by `boss_lurk_x()` to stop `t_shark_close_min()`
+short of Tung's back, so it stays dread rather than becoming damage however many
+mistakes are made or however many hearts a future `t_hearts_max()` hands out.
 
 A missed opening costs time, not health: the phase returns to `survive` and the
 cycle repeats. The fight is long rather than unfair.

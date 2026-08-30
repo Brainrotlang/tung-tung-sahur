@@ -325,19 +325,13 @@ skibidi main {
                         plat_sfx_play(sfx_tung);
                     }
                 }
-                cap boss_open = player_vulnerable(&pl);
-                edgy (boss_open) {
-                    cap boss_crash = boss_hits_body(&bo, &pl);
-                    edgy (boss_crash) {
-                        🚽 The boss is not despawned by contact -- he is the
-                        🚽 fight. Iframes are what keep this to one heart.
-                        player_take_hit(&pl, &wd);
-                        boss_note_hit(&bo);
-                        edgy (pl.hearts > 0) {
-                            plat_sfx_play(sfx_damage);
-                        }
-                    }
-                }
+                🚽 No body-contact pass. The player is pinned at
+                🚽 t_player_x() and can only jump, so a boss that
+                🚽 positions ITSELF into them is damage nobody can dodge --
+                🚽 see boss_hits_body(), which is now an invariant the unit
+                🚽 test asserts is never true rather than a damage source.
+                🚽 Each boss hurts through what it produces: Tralalero's
+                🚽 obstacle barrage, Bombardiro's bombs.
             }
         }
 
