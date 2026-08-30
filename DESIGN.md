@@ -648,9 +648,31 @@ becomes hostile while you're still running:
 _/ \____________________
 ```
 
-Bombs are the `bombs[32]` pool: spawned at his `x`, falling under the same
-`GRAVITY`, exploding into a ground hazard on impact. Between volleys he descends
-to bat height for the opening. Three bonks.
+Bombs are the `bombs[32]` pool: spawned at his `x`, exploding into a ground
+hazard on impact. Between volleys he descends to bat height for the opening.
+Three bonks.
+
+**They do not fall under the player's gravity, and he does not fly at a fixed
+column.** Both were wrong, and together they made the fight an instant kill:
+
+- At `t_gravity()` the drop took **0.535 s**. A jump lasts **0.769 s**, so a
+  jump started the instant the bomb appeared finished *after* it had already
+  detonated. The player could not react, only pre-empt — and there was nothing
+  to pre-empt from, because an 11px shell of `rgb(34,34,40)` against a
+  `rgb(12,14,34)` sky is invisible.
+- So **`t_bomb_fall_time()` is the tuned number** (1.0 s) and the gravity that
+  produces it is derived. A player needs ~0.25 s to react plus ~0.385 s to reach
+  jump apex; 0.635 s is the floor and `unit_boss.brainrot` asserts it.
+- Slowing the fall moved every impact **left**, because a bomb drifts at world
+  speed the whole way down — at a fixed cruise `x` they all landed behind Tung
+  and the fight became a light show. So the croc **leads** the player by
+  `speed × fall_time`, derived rather than tuned, which keeps the bombs on
+  target at every speed and is what a bomber would actually do. The sway on top
+  spreads impacts over ~210px so it is not one memorised jump.
+- And every falling bomb draws a **landing marker** on the ground line from the
+  moment it is dropped, tightening and brightening as impact approaches. That is
+  the warning; without it the player was tracking a dark 11px object crossing a
+  third of the screen in half a second.
 
 ### 12.3 Neither boss deals contact damage
 

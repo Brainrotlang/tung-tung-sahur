@@ -194,6 +194,70 @@ skibidi main {
     hit.x = t_player_x() - 400.0;
     yapping("bomb well behind    %b", bomb_hits_player(&hit, &pl));
 
+    🚽 --- a bomb has to be dodgeable, and has to threaten ------------------
+    🚽
+    🚽 Reported from play: "bombardillo practically insta kills me every time,
+    🚽 I can't see where the bombs are coming from, they fall too fast and
+    🚽 there is no shadow."
+    🚽
+    🚽 All three were measurable. The fall took 0.535s under t_gravity() while
+    🚽 a jump lasts 0.769s, so a jump started the instant the bomb appeared
+    🚽 finished AFTER it had already detonated. The player could not react,
+    🚽 only pre-empt -- and there was nothing to pre-empt from, because an
+    🚽 11px shell of rgb(34,34,40) against a rgb(12,14,34) sky is invisible.
+    yapping("-- bombs: dodgeable, and still a threat --");
+    chad air  = 2.0 * absf(t_jump_v()) / t_gravity();
+    chad need = 0.25 + air / 2.0;
+    yapping("  fall %.3fs   need %.3fs (0.25 react + %.3f to apex)   slack %+.3f",
+            t_bomb_fall_time(), need, air / 2.0, t_bomb_fall_time() - need);
+    cap dodgeable = t_bomb_fall_time() > need;
+    yapping("  a bomb can be reacted to: %b", dodgeable);
+
+    🚽 Dodgeable is only half of it. Slowing the fall moves every impact
+    🚽 LEFT, because a bomb drifts at world speed the whole way down -- at a
+    🚽 fixed cruise x they all landed behind Tung and the fight became a
+    🚽 light show. boss_target_x() derives the croc's lead from the speed, so
+    🚽 this must hold at every speed the fight can happen at.
+    boss_clear(&bo);
+    world_reset(&wd);
+    boss_start(&bo, &wd, t_boss_bombardiro());
+    bo.phase = t_boss_survive();
+    cap always_threatens = W;
+    flex (rizz sp = 620; sp <= 900; sp = sp + 70) {
+        wd.speed = sp;
+        wd.dist  = 0.0;
+        bo.x = boss_target_x(&bo, &wd);
+        bo.y = t_croc_cruise_y();
+        gang Bomb probe;
+        bomb_spawn(&probe, &bo);
+        chad lx = bomb_landing_x(&probe, &wd);
+        chad dx = lx - t_player_x();
+        edgy (dx < 0.0 - 200.0) { always_threatens = L; }
+        edgy (dx > 260.0) { always_threatens = L; }
+        yapping("  speed %3d: croc x %6.0f -> bomb lands x %6.0f (%+.0f from Tung)",
+                sp, bo.x, lx, dx);
+    }
+    yapping("  bombs land within reach of Tung at every speed: %b",
+            always_threatens);
+
+    🚽 The lead alone would drop every bomb on one column, which is a single
+    🚽 memorised jump. The sway is what spreads them, so show the spread
+    🚽 rather than asserting it exists in a comment.
+    wd.speed = 710.0;
+    chad lo = 99999.0;
+    chad hi = 0.0 - 99999.0;
+    flex (rizz k = 0; k < 12; k = k + 1) {
+        wd.dist = k * 120.0;
+        bo.x = boss_target_x(&bo, &wd);
+        gang Bomb pr2;
+        bomb_spawn(&pr2, &bo);
+        chad lx2 = bomb_landing_x(&pr2, &wd);
+        edgy (lx2 < lo) { lo = lx2; }
+        edgy (lx2 > hi) { hi = lx2; }
+    }
+    yapping("  sway spreads impacts over x %.0f..%.0f (%.0fpx wide)",
+            lo, hi, hi - lo);
+
     🚽 --- integration: a scripted fight ------------------------------------
     🚽 The same calls main makes, in the same order, driven by a script
     🚽 that swings whenever the boss is open. Three openings, three bonks,
