@@ -590,8 +590,27 @@ one bonk → repeat ×3*. Score thresholds line up with the distance curve
 ### 12.1 TRALALERO TRALALA — score 5,000
 
 The three-legged shark, characterised by speed, chases from the left. The game
-becomes pure obstacle survival: a dense scripted sequence with no bonkable
-enemies, the shark closing a little with each mistake.
+becomes pure obstacle survival: an unbroken sequence of jump obstacles with no
+bonkable enemies, the shark closing a little with each mistake.
+
+**"Unbroken", not "denser".** The boss's gaps go through the same
+`fair_clamp()` every other spawn does, because §7.3's rule — *any spawn the
+player cannot avoid is a bug, not a difficulty setting* — is not suspended for
+a boss. What makes the phase hard is that **every** obstacle needs a jump, with
+no Patapim to break the rhythm and a shark closing behind on each mistake.
+
+It shipped the other way and the fight was unclearable. `t_boss_gap()` was a
+flat 0.72s that `main` set directly, never calling `fair_clamp()` — against a
+jump airtime of `2 × |t_jump_v()| / t_gravity()` = **0.769s**. The next obstacle
+arrived 49ms *before* the player landed from the last one, and since the boss
+spawns only crates and posts, every single gap was jump-to-jump. There was no
+frame on which the jump could be made.
+
+`boss_spawn_gap()` exists as a function for one reason: a unit test can call it
+and a line inside `main`'s frame loop cannot. `unit_boss.brainrot` now sweeps
+every kind pair and asserts each jump-to-jump gap exceeds the airtime, and
+`unit_curve.brainrot` asserts the same of every gap the world spawner can
+produce.
 
 ```
                          🦈👟  ← closes on every obstacle you clip

@@ -117,6 +117,40 @@ skibidi main {
     boss_note_hit(&bo);
     yapping("3 hits target x %.1f", boss_target_x(&bo, &wd));
 
+    🚽 --- the boss's own gaps must be jumpable ---------------------------
+    🚽
+    🚽 A jump commits the player for 2 * |t_jump_v()| / t_gravity() seconds.
+    🚽 A jump-to-jump gap shorter than that is not hard, it is impossible --
+    🚽 the next obstacle arrives before the player has landed from the last.
+    🚽
+    🚽 The boss spawner used to set a flat 0.72s and never call fair_clamp()
+    🚽 at all, against a 0.769s airtime, while spawning ONLY crates and
+    🚽 posts. Every gap in the Tralalero fight was jump-to-jump and 49ms too
+    🚽 short. It was unclearable by construction, and no test noticed because
+    🚽 nothing asked what gap the boss actually produced.
+    yapping("-- boss gaps are jumpable --");
+    chad airtime = 2.0 * absf(t_jump_v()) / t_gravity();
+    yapping("airtime %.3f s", airtime);
+
+    boss_clear(&bo);
+    world_reset(&wd);
+    boss_start(&bo, &wd, t_boss_tralalero());
+
+    cap all_ok = W;
+    flex (rizz prev = 0; prev <= 2; prev = prev + 1) {
+        flex (rizz next = 0; next <= 2; next = next + 1) {
+            bo.prev_kind = prev;
+            chad gap = boss_spawn_gap(&bo, next);
+            cap jj = kind_is_jump(prev) && kind_is_jump(next);
+            edgy (jj) {
+                edgy (gap <= airtime) { all_ok = L; }
+            }
+            yapping("  prev %d -> next %d: gap %.3f  jump->jump %b  slack %+.3f",
+                    prev, next, gap, jj, gap - airtime);
+        }
+    }
+    yapping("every boss jump->jump gap clears the airtime: %b", all_ok);
+
     🚽 --- Bombardiro's ordnance -------------------------------------------
     yapping("-- bombs --");
     boss_clear(&bo);

@@ -62,6 +62,9 @@ gang Boss {
     rizz kind;
     rizz phase;
     rizz bonks;
+    🚽 What it spawned last, so its own gaps can go through fair_clamp()
+    🚽 exactly like the world spawner's do.
+    rizz prev_kind;
     🚽 Damage the PLAYER has taken this fight. Tralalero closes on it.
     rizz hits;
     chad x;
@@ -451,6 +454,7 @@ skibidi boss_clear(gang Boss *b) {
     b.y       = 0.0;
     b.phase_t = 0.0;
     b.spawn_t = 0.0;
+    b.prev_kind = t_kind_crate();
 }
 
 cap boss_active(gang Boss *b) {
@@ -489,6 +493,7 @@ skibidi boss_start(gang Boss *b, gang World *w, rizz kind) {
     b.hits    = 0;
     b.phase_t = 0.0;
     b.spawn_t = 0.0;
+    b.prev_kind = t_kind_crate();
 
     🚽 Enter from where he lives, so the approach is visible rather than a
     🚽 pop-in: the shark from off the left edge, the croc from overhead.
@@ -692,6 +697,17 @@ skibidi boss_take_bonk(gang Boss *b, gang World *w) {
     amogus {
         b.phase = t_boss_survive();
     }
+}
+
+🚽 The gap before the boss's NEXT ground spawn.
+🚽
+🚽 It exists as a function so the rule is testable. The bug it replaces was
+🚽 not a bad constant -- it was main setting `bo.spawn_t = t_boss_gap()`
+🚽 directly and never calling fair_clamp() at all, so no constant could have
+🚽 saved it. A unit test can call this; it cannot call a line inside main's
+🚽 frame loop.
+chad boss_spawn_gap(gang Boss *b, rizz kind) {
+    bussin fair_clamp(t_boss_gap(), b.prev_kind, kind);
 }
 
 🚽 Tralalero closes on every mistake; the croc does not care.

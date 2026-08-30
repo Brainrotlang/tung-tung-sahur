@@ -22,6 +22,18 @@ cleared after 91 steps, kind 0 phase 0
 0 hits target x -30.0
 1 hit  target x 4.0
 3 hits target x 36.0
+-- boss gaps are jumpable --
+airtime 0.769 s
+  prev 0 -> next 0: gap 0.950  jump->jump W  slack +0.181
+  prev 0 -> next 1: gap 0.950  jump->jump W  slack +0.181
+  prev 0 -> next 2: gap 0.950  jump->jump L  slack +0.181
+  prev 1 -> next 0: gap 0.950  jump->jump W  slack +0.181
+  prev 1 -> next 1: gap 0.950  jump->jump W  slack +0.181
+  prev 1 -> next 2: gap 0.950  jump->jump L  slack +0.181
+  prev 2 -> next 0: gap 0.950  jump->jump L  slack +0.181
+  prev 2 -> next 1: gap 0.950  jump->jump L  slack +0.181
+  prev 2 -> next 2: gap 0.950  jump->jump L  slack +0.181
+every boss jump->jump gap clears the airtime: W
 -- bombs --
 spawned at y 162.0, w 12.0 (shell)
 landed after 32 steps at y 526.0, w 64.0 (blast)

@@ -79,9 +79,21 @@ chad t_boss_leave_speed()  { bussin 700.0; }
 🚽 How far above Tung's head a beaten boss is launched on his way out.
 chad t_boss_leave_rise()   { bussin 90.0; }
 
-🚽 The boss owns the spawner while it is up, and spawns denser than the
-🚽 curve ever would -- that density IS the fight.
-chad t_boss_gap()          { bussin 0.72; }
+🚽 The boss owns the spawner while it is up. That is NOT a licence to spawn
+🚽 something unjumpable -- it goes through fair_clamp() like every other
+🚽 gap in the game, because "any spawn the player cannot avoid is a bug,
+🚽 not a difficulty setting" does not get suspended for a boss.
+🚽
+🚽 It was 0.72s, and it was never clamped. A jump lasts 2 * t_jump_v() /
+🚽 t_gravity() = 0.769s, so the next obstacle arrived 49ms BEFORE the
+🚽 player landed from the last one -- and since the boss spawns only crates
+🚽 and posts, EVERY gap was jump-to-jump. The fight was not hard, it was
+🚽 arithmetically impossible.
+🚽
+🚽 What makes the phase harder is not density: it is that every single
+🚽 obstacle needs a jump, with no bonkable Patapim to break the rhythm, and
+🚽 a shark closing behind on every mistake.
+chad t_boss_gap()          { bussin 0.95; }
 
 🚽 TRALALERO TRALALA -- the three-legged shark, chasing from the left.
 🚽
