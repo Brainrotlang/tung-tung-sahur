@@ -43,44 +43,61 @@ TORSO_FRACTION = 0.60
 BLEED_PASSES = 12
 SCREEN_W = 1280          # must equal t_screen_w() in src/tune.brainrot
 
-# name -> (source dir, frames, target height). Order is ANIMATION order.
-#
-# The swing is deliberately not bat1, bat2, bat3. Tung's attack has no windup
-# time: t_attack_total() starts at 0.45s and the hitbox is live while it is
-# above t_attack_active() (0.30s), so frame 0 is displayed exactly when the bat
-# is hitting. Leading with the windup would be the animation lying about the
-# gameplay. Strike, recoil, return.
+# name -> (source dir, frames, target height). Order is ANIMATION order, and
+# in no case is it filename order -- see each entry for what was measured.
 #
 # Heights are the game's own boxes: t_player_h() for Tung, kind_h() for the
 # rest. Width falls out of the art's own proportions, which is why the tool
-# prints the anchor column -- the draw call needs it.
+# prints the frame size and anchor column -- tune.brainrot needs both
+# (t_sprite_w/t_sprite_anchor, t_patapim_w/t_patapim_anchor).
 CHARACTERS = {
-    # NOT tung1..tung6. Filename order is not cycle order, and the frames
-    # were measured rather than guessed: across the set the body bob
-    # (head-top row) and the front foot's distance ahead of the torso both
-    # order the same way, which is a real stride --
+    # Ordered by MEASUREMENT, not by filename.
     #
-    #   tung5  front foot +25, head 5   contact, foot planted well ahead
-    #   tung6  front foot +23, head 5
-    #   tung1  front foot +20, head 6   down, body at its lowest
-    #   tung2  front foot +17, head 3   rising
-    #   tung4  front foot +17, head 1
-    #   tung3  front foot +10, head 0   pass, legs together, body highest
+    # The property that matters in a runner is that the planted foot's
+    # contact point sweeps monotonically BACKWARD relative to the torso.
+    # If it does not, the feet skate. In every frame but running6 the
+    # frontmost foot is the planted one, so its offset from the torso
+    # centre is the contact point, and sorting on it descending gives:
     #
-    # then back to tung5 as the body falls into the next contact.
+    #   running4  +60   full reach, foot furthest ahead
+    #   running1  +36   planted forward
+    #   running3  +34
+    #   running5   +7   gathering
+    #   running2   +5   passing
+    #   running6  -65   toe-off -- the only frame with the BACK foot
+    #                   planted, and the lowest hip of the six
     #
-    # Be aware this is ONE step, not two. A run cycle needs two passing
-    # poses, one per leg, and this set has exactly one (tung3, the only
-    # frame whose feet are together -- spread 10px against 47-61px for
-    # every other frame). Ordering makes it a coherent stride instead of a
-    # shuffle; it cannot make it a run. That needs the six distinct poses
-    # the prompt in assets/PROMPTS.md asks for.
-    "tung_run":    ("tung", ["tung5.jpg", "tung6.jpg", "tung1.jpg",
-                             "tung2.jpg", "tung4.jpg", "tung3.jpg"], 96),
-    "tung_jump":   ("tung", ["jump1.jpg", "jump2.jpg"], 96),
-    "tung_swing":  ("tung", ["bat2.jpg", "bat3.jpg", "bat1.jpg"], 96),
-    "patapim_run": ("brr-brr-patapim",
-                    [f"brr{i}.jpg" for i in range(1, 6)], 64),
+    # running5/running2 differ by only 674 pixels, so the cycle holds
+    # very briefly at the passing pose. That is the art, not the order.
+    "tung_run":    ("tung-tung-tung",
+                    ["running4.jpg", "running1.jpg", "running3.jpg",
+                     "running5.jpg", "running2.jpg", "running6.jpg"], 96),
+
+    # jump1 is the tuck (hip 19px above the feet), jump2 the extension
+    # (24px) -- rising then falling, which is the order jump_frame()
+    # asks for: index 0 while vy < 0.
+    "tung_jump":   ("tung-tung-tung", ["jump1.jpg", "jump2.jpg"], 96),
+
+    # Strike first, and not for tidiness: t_attack_total() is 0.45s and
+    # the hitbox is live while atk_t is above t_attack_active() (0.30s),
+    # so frame 0 is on screen exactly when the bat is connecting. Leading
+    # with a windup would be the animation lying about the gameplay.
+    # Measured by how far the bat reaches past the torso:
+    #
+    #   swing2  bat tip +130   the strike
+    #   swing3  bat tip -112   follow-through, swung across the body
+    #   swing1  bat tip  +91   returning to rest at the side
+    "tung_swing":  ("tung-tung-tung",
+                    ["swing2.jpg", "swing3.jpg", "swing1.jpg"], 96),
+
+    # A quadruped bound, ordered on the same contact-sweep rule:
+    # patapim4 +29 (body up, limbs gathered), patapim2 +13 (forelimbs
+    # planting, spread at its widest 201), patapim1 +13 (all fours down),
+    # patapim3 -60 (push-off, spread collapsed to 101).
+    "patapim_run": ("patapim",
+                    ["patapim4.jpg", "patapim2.jpg",
+                     "patapim1.jpg", "patapim3.jpg"], 64),
+
     "crate":       ("obstacles", ["crate.jpg"], 48),
     "post":        ("obstacles", ["post.jpg"], 96),
 }
@@ -162,6 +179,14 @@ def binarise(img):
     return Image.fromarray(arr, "RGBA")
 
 
+# A frame whose character is more than this far from the animation's median
+# size was drawn at a different zoom, and is corrected before the shared
+# scale is applied. Below it, the difference is pose (a crouch is genuinely
+# shorter) and must NOT be corrected -- that would make the character
+# breathe.
+ZOOM_TOLERANCE = 0.12
+
+
 def render_frames(src_dir, files, frame_h, assets):
     """Key, scale and measure every frame of one animation."""
     frames = []
@@ -171,16 +196,33 @@ def render_frames(src_dir, files, frame_h, assets):
             sys.exit(f"missing source frame: {path}")
         rgb, mask = key_background(path)
         ys, _ = np.where(mask)
-        frames.append(dict(rgb=rgb, mask=mask, h=ys.max() - ys.min() + 1))
+        # sqrt(area), not bounding-box height, as the character's size: area
+        # barely moves between poses, while a crouch shortens the box by a
+        # third. That is what makes the outlier test below safe to apply.
+        frames.append(dict(rgb=rgb, mask=mask, h=ys.max() - ys.min() + 1,
+                           size=float(np.sqrt(mask.sum()))))
 
-    scale = frame_h / max(f["h"] for f in frames)
+    # ONE scale across an animation, so the character does not change size
+    # between frames -- with one exception. The generator does not always
+    # return the same canvas: patapim1.jpg came back 784x1168 where its
+    # siblings were 1152x1712, framed identically but 0.72x as many pixels.
+    # A single scale derived from the tallest frame then rendered it
+    # visibly smaller than the rest of its own run cycle. Frames far enough
+    # from the median get brought to it first; everything else is untouched.
+    median = float(np.median([f["size"] for f in frames]))
+    for f in frames:
+        ratio = f["size"] / median
+        f["zoom"] = 1.0 / ratio if abs(ratio - 1.0) > ZOOM_TOLERANCE else 1.0
+
+    scale = frame_h / max(f["h"] * f["zoom"] for f in frames)
 
     out = []
     for f in frames:
         img = to_rgba(f["rgb"], f["mask"])
+        fs = scale * f["zoom"]
         small = binarise(img.resize(
-            (max(1, round(img.width * scale)),
-             max(1, round(img.height * scale))), Image.LANCZOS))
+            (max(1, round(img.width * fs)),
+             max(1, round(img.height * fs))), Image.LANCZOS))
         a = np.asarray(small)[..., 3]
         if not (a > 0).any():
             sys.exit("nothing survived the key")

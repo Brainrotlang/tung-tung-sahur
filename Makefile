@@ -13,7 +13,7 @@ EXPECTED := test/expected
 PROBE    := /tmp/tts-version-probe.brainrot
 
 .PHONY: all play test units headless bless clean check-brainrot check-brainray \
-        lint-native
+        lint-native check-atlases
 
 all: test
 
@@ -44,6 +44,12 @@ lint-native: check-brainray
 	        echo "native call check FAILED:"; echo "$$out"; exit 1; \
 	    fi; \
 	    echo "ok    native calls" 
+
+# Do the generated atlases still match the constants the game draws with?
+# Needs Python + Pillow (same as tools/process_sprites.py), so it is not part
+# of `make test`, which deliberately needs nothing but the interpreter.
+check-atlases:
+	@python3 tools/check_atlases.py
 
 # --------------------------------------------------------------- test
 

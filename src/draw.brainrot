@@ -106,8 +106,11 @@ skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind,
             🚽 and needs no flip. Patapim charges LEFT at the player, so
             🚽 without this it runs backwards -- tail first, at the thing
             🚽 it is supposed to be attacking.
-            rl_draw_texture_rec(tex_pat, frame * 101.0, 0.0, 0.0 - 101.0, 64.0,
-                                x + w / 2.0 - 51.0, y, 255, 255, 255, 255);
+            chad pw = t_patapim_w();
+            rl_draw_texture_rec(tex_pat, frame * pw, 0.0, 0.0 - pw,
+                                t_patapim_h(),
+                                x + w / 2.0 - t_patapim_anchor(), y,
+                                255, 255, 255, 255);
         }
         amogus {
             rl_draw_rectangle(x, y, w, h, 150, 80, 44, 255);

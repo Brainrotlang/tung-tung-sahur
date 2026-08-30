@@ -134,12 +134,20 @@ chad t_sfx_volume()      { bussin 0.9; }
 🚽 the bat reach past it -- so the draw call offsets by the anchor rather
 🚽 than using the player's x directly. tools/process_sprites.py prints these
 🚽 when it builds the atlases; they are not free parameters.
-rizz t_sprite_w()        { bussin 103; }
+rizz t_sprite_w()        { bussin 112; }
 rizz t_sprite_h()        { bussin 96; }
-rizz t_sprite_anchor()   { bussin 45; }
+rizz t_sprite_anchor()   { bussin 54; }
 rizz t_run_frames()      { bussin 6; }
 rizz t_swing_frames()    { bussin 3; }
-rizz t_patapim_frames()  { bussin 5; }
+
+🚽 Patapim's atlas is its own group -- a different frame size and anchor
+🚽 from Tung's three, because nothing draws them with the same call. These
+🚽 used to be magic numbers inside draw.brainrot, which meant regenerating
+🚽 the art silently desynced the draw from the atlas.
+rizz t_patapim_frames()  { bussin 4; }
+chad t_patapim_w()       { bussin 74.0; }
+chad t_patapim_h()       { bussin 64.0; }
+chad t_patapim_anchor()  { bussin 37.0; }
 
 🚽 Pixels of ground per Patapim stride. Shorter than Tung's: it is a
 🚽 four-legged bound, and it closes faster than the world scrolls.
