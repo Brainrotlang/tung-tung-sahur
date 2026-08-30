@@ -98,6 +98,16 @@ CHARACTERS = {
                     ["patapim4.jpg", "patapim2.jpg",
                      "patapim1.jpg", "patapim3.jpg"], 64),
 
+    # The two boss poses, not a locomotion cycle: frame 0 is the survive
+    # phase (8s per cycle, cannot be hit), frame 1 the opening (1s, three
+    # times a fight, the bat connects). tralalero2's jaws are wide open --
+    # that IS the tell, and it is the whole reason the fight is readable.
+    #
+    # Target height is t_shark_h(). The art comes out WIDER than the 140px
+    # collision box because a shark's snout and tail overhang it, which is
+    # the same split Tung already has (112px of art over a 48px box).
+    "tralalero":   ("tralalero", ["tralalero1.jpg", "tralalero2.jpg"], 96),
+
     "crate":       ("obstacles", ["crate.jpg"], 48),
     "post":        ("obstacles", ["post.jpg"], 96),
 }
@@ -109,6 +119,7 @@ CHARACTERS = {
 GROUPS = {
     "tung": ["tung_run", "tung_jump", "tung_swing"],
     "patapim": ["patapim_run"],
+    "tralalero": ["tralalero"],
     "crate": ["crate"],
     "post": ["post"],
 }

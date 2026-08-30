@@ -24,6 +24,7 @@ rizz draw_load_bg_far()  { bussin 0 - 1; }
 rizz draw_load_bg_mid()  { bussin 0 - 1; }
 rizz draw_load_bg_near() { bussin 0 - 1; }
 rizz draw_load_bg_fore() { bussin 0 - 1; }
+rizz draw_load_shark()   { bussin 0 - 1; }
 skibidi draw_background(rizz far, rizz mid, rizz near, rizz fore, chad dist) { rizz noop = 0; }
 skibidi draw_unload(rizz tex) { rizz noop = 0; }
 
@@ -38,6 +39,7 @@ skibidi draw_speedbar(rizz lvl)    { rizz noop = 0; }
 skibidi draw_hud(rizz score, rizz lvl) { rizz noop = 0; }
 skibidi draw_title(chad t)         { rizz noop = 0; }
 skibidi draw_gameover(rizz score, rizz seed) { rizz noop = 0; }
-skibidi draw_boss(chad x, chad y, rizz kind, rizz phase, rizz tex) { rizz noop = 0; }
+skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
+                  rizz tex_shark, rizz tex_croc) { rizz noop = 0; }
 skibidi draw_bomb(chad x, chad y, chad w, chad h, cap burning) { rizz noop = 0; }
 skibidi draw_boss_bar(rizz kind, rizz bonks) { rizz noop = 0; }

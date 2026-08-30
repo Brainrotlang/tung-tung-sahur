@@ -681,10 +681,21 @@ mistakes are made or however many hearts a future `t_hearts_max()` hands out.
 A missed opening costs time, not health: the phase returns to `survive` and the
 cycle repeats. The fight is long rather than unfair.
 
-**Both fights render in primitives.** There is no shark or crocodile art yet,
-and M0 already proved the game reads in rectangles, so the fights ship playable
-behind the same `tex >= 0` fallback every other draw uses. The simulation does
-not know.
+**Tralalero has art; Bombardiro is still primitives.** Both go through the same
+`tex >= 0` fallback every other draw uses, so a partial set degrades one boss at
+a time and the simulation does not know either way.
+
+Tralalero's atlas is two frames — survive and opening — and `draw_boss()` picks
+the column from the phase. His art frame is 168px wide against a 140×96
+collision box, because a shark's snout and tail overhang what it collides with;
+that is the same split Tung has (112px of art over a 48px box), which is why
+`t_shark_frame_w()` and `t_shark_w()` are separate constants that
+`tools/check_atlases.py` checks independently.
+
+He is drawn **unmirrored**, unlike Patapim, and that is not an oversight: he
+chases from behind, so the art's own right-facing is toward the player — and
+once he has leapt past, right-facing means his back is turned, which is exactly
+why he is open.
 
 **Coverage.** The headless input tape dies around score 400–700, so it never
 reaches 5,000 — the golden file proves the boss code does not disturb an

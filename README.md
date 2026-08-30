@@ -175,9 +175,9 @@ and all of it is drawn from real art now.
 plays a title sting, a `TUNG` on every bat hit, a jump, a damage grunt, and a
 `bruh` on the run that ends. Both bosses are in: **Tralalero Tralala** at 5,000
 and **Bombardiro Crocodilo** at 10,000, sharing one three-cycle phase machine
-and pausing the normal spawner while they own the screen. They render in
-primitives for now — there is no shark or crocodile art yet, and M0 already
-proved the game reads in rectangles.
+and pausing the normal spawner while they own the screen. Tralalero is drawn
+from art; Bombardiro is still primitives, which M0 already proved the game reads
+fine in.
 
 **M3** is next: the `SAHUR_DISTANCE` win state, the ending card, and Endless
 Schizo Mode. Milestones are in DESIGN.md §18.

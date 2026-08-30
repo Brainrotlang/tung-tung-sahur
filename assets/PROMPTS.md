@@ -263,9 +263,9 @@ vertical column.
 
 ## 4. Boss sprites
 
-The two M2 set pieces (DESIGN.md §12). Both fights **ship playable in
-primitives today** — art replaces them behind the same `tex >= 0` fallback
-every other draw already uses, so a partial set degrades one boss at a time.
+The two M2 set pieces (DESIGN.md §12). **Tralalero's art has landed**;
+Bombardiro still renders in primitives, behind the same `tex >= 0` fallback
+every other draw uses, so a partial set degrades one boss at a time.
 
 ### 4.0 What the engine gives them
 
@@ -296,12 +296,11 @@ Three openings kill a boss (`t_boss_bonks()`), so frame 1 is seen three times a
 fight for a second each. It carries the whole read of "hit me **now**", and it
 is the frame to spend the most effort on.
 
-> `draw_boss()` currently draws frame 0 only — the source rectangle starts at
-> `0.0`. A two-frame atlas is therefore safe to drop in now and will show the
-> survive pose correctly. Indexing frame 1 is a one-line change (`phase ==
-> t_boss_open()` picks the offset), and when it lands the gold ring
-> `draw_boss()` paints around an open boss becomes redundant: that ring exists
-> only because an invisible window is guesswork.
+> Both frames are drawn: `draw_boss()` picks the column from `phase ==
+> t_boss_open()`. The gold ring it used to paint around an open boss is now
+> drawn only for a boss with **no** art — the open pose is the tell, and the
+> ring traces the collision box, so on a wider sprite it cuts through the
+> art.
 
 ### 4.1 Palette additions
 
@@ -321,7 +320,22 @@ not shift the scene's colour.
 | Bomb shell | `34,34,40`, fuse `190,140,60` |
 | Blast | `255,148,40`, hot centre `255,226,120` |
 
-### 4.2 Tralalero Tralala — `140 × 96`, 2 frames → atlas `280 × 96`
+### 4.2 Tralalero Tralala — 2 frames ✅ *done*
+
+**Shipped**: `assets/tralalero/tralalero1.jpg` (survive) and `tralalero2.jpg`
+(the opening, jaws wide). Processed to a `336 × 96` atlas of `168 × 96` frames,
+anchor column 104.
+
+Note the art frame is **168** wide against a **140 × 96** collision box — a
+shark's snout and tail overhang what it collides with, the same split Tung has
+(112px of art over a 48px box). That is normal and is why `t_shark_frame_w()`
+and `t_shark_w()` are separate constants.
+
+He is drawn **unmirrored**, unlike Patapim. He chases from behind, so the art's
+own right-facing is toward the player; and once he has leapt past, right-facing
+means his back is turned — which is exactly why he is open.
+
+The prompt used, for reference and for regenerating:
 
 He chases from the **left**, along the ground, and the survive phase is pure
 obstacle dodging — the player is running away from him while jumping crates. So

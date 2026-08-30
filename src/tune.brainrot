@@ -100,6 +100,18 @@ chad t_shark_h()           { bussin 96.0; }
 chad t_shark_lurk_x()      { bussin -30.0; }
 chad t_shark_open_x()      { bussin 258.0; }
 
+🚽 His atlas: two frames (survive, opening), authored facing RIGHT and drawn
+🚽 UNMIRRORED. He chases from behind, so right IS toward the player -- and
+🚽 after the leap he is in front with his back turned, which is exactly why
+🚽 he is hittable. tools/process_sprites.py prints these three numbers.
+🚽
+🚽 The art is wider than the 140px collision box because a shark's snout and
+🚽 tail overhang it, same as Tung's 112px of art over a 48px box.
+rizz t_shark_frames()      { bussin 2; }
+chad t_shark_frame_w()     { bussin 168.0; }
+chad t_shark_frame_h()     { bussin 96.0; }
+chad t_shark_anchor()      { bussin 104.0; }
+
 🚽 How high he goes while passing over Tung. He has to end up in front to
 🚽 be hittable, and he starts behind, so he crosses -- as a leap rather
 🚽 than a slide through the player's body.

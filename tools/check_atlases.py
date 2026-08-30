@@ -45,6 +45,8 @@ def main():
         ("tung_jump", tw, th, 2.0),
         ("tung_swing", tw, th, const(t, "t_swing_frames")),
         ("patapim_run", pw, ph, const(t, "t_patapim_frames")),
+        ("tralalero", const(t, "t_shark_frame_w"),
+         const(t, "t_shark_frame_h"), const(t, "t_shark_frames")),
     ]
 
     bad = 0
@@ -64,7 +66,9 @@ def main():
         else:
             print(f"  ok       {name} {w}x{h} ({int(n)} frames)")
 
-    for label, anchor, fw in (("tung", ta, tw), ("patapim", pa, pw)):
+    for label, anchor, fw in (("tung", ta, tw), ("patapim", pa, pw),
+                              ("tralalero", const(t, "t_shark_anchor"),
+                               const(t, "t_shark_frame_w"))):
         if not 0 <= anchor < fw:
             print(f"  MISMATCH {label} anchor {int(anchor)} outside frame "
                   f"width {int(fw)}")

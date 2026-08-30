@@ -44,6 +44,7 @@ rizz draw_load_bg_far()  { bussin rl_load_texture("assets/bg_far.png"); }
 rizz draw_load_bg_mid()  { bussin rl_load_texture("assets/bg_mid.png"); }
 rizz draw_load_bg_near() { bussin rl_load_texture("assets/bg_near.png"); }
 rizz draw_load_bg_fore() { bussin rl_load_texture("assets/bg_fore.png"); }
+rizz draw_load_shark()   { bussin rl_load_texture("assets/tralalero.png"); }
 
 skibidi draw_unload(rizz tex) {
     edgy (tex >= 0) { rl_unload_texture(tex); }
@@ -263,14 +264,30 @@ skibidi draw_gameover(rizz score, rizz seed) {
 🚽 and the atlases drop in later behind the same `tex >= 0` fallback every
 🚽 other draw here already uses. Nothing in the simulation knows or cares.
 
-skibidi draw_boss(chad x, chad y, rizz kind, rizz phase, rizz tex) {
+skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
+                  rizz tex_shark, rizz tex_croc) {
     chad w = boss_w(kind);
     chad h = boss_h(kind);
 
+    rizz tex = tex_croc;
+    edgy (kind == t_boss_tralalero()) { tex = tex_shark; }
+
     edgy (tex >= 0) {
-        🚽 Both bosses face LEFT at the player, so both want the mirror.
-        rl_draw_texture_rec(tex, 0.0, 0.0, 0.0 - w, h,
-                            x, y, 255, 255, 255, 255);
+        🚽 Frame 1 is the opening. That is the whole tell -- jaws wide, and
+        🚽 the one second in three cycles where the bat connects.
+        chad fw = t_shark_frame_w();
+        chad col = 0.0;
+        edgy (phase == t_boss_open()) { col = fw; }
+
+        🚽 NOT mirrored, unlike Patapim. He chases from behind, so the
+        🚽 art's own right-facing IS toward the player; and once he has
+        🚽 leapt past, right-facing means his back is turned, which is
+        🚽 exactly why he is open. Positive source width, so the anchor
+        🚽 column maps straight through rather than to (fw - anchor).
+        rl_draw_texture_rec(tex, col, 0.0, fw, t_shark_frame_h(),
+                            x + w / 2.0 - t_shark_anchor(),
+                            y + h - t_shark_frame_h(),
+                            255, 255, 255, 255);
     }
     amogus {
         edgy (kind == t_boss_tralalero()) {
@@ -307,13 +324,21 @@ skibidi draw_boss(chad x, chad y, rizz kind, rizz phase, rizz tex) {
         }
     }
 
-    🚽 The opening is the only moment the bat matters, so it gets a ring.
-    🚽 Without it the window is invisible and the fight is guesswork.
-    edgy (phase == t_boss_open()) {
-        rl_draw_rectangle(x - 4.0, y - 4.0, w + 8.0, 4.0, 255, 214, 64, 255);
-        rl_draw_rectangle(x - 4.0, y + h, w + 8.0, 4.0, 255, 214, 64, 255);
-        rl_draw_rectangle(x - 4.0, y, 4.0, h, 255, 214, 64, 255);
-        rl_draw_rectangle(x + w, y, 4.0, h, 255, 214, 64, 255);
+    🚽 The opening ring, for a boss with no art yet.
+    🚽
+    🚽 It exists because a one-second window nobody can see is guesswork. A
+    🚽 boss WITH art does not need it: the open frame is a different pose --
+    🚽 Tralalero's jaws come wide open -- and he is on the other side of
+    🚽 Tung by then, which is a second cue. Drawing it anyway would also
+    🚽 look wrong, because the ring traces the 140x96 collision box while
+    🚽 the art is 168px wide, so it would cut straight through his tail.
+    edgy (tex < 0) {
+        edgy (phase == t_boss_open()) {
+            rl_draw_rectangle(x - 4.0, y - 4.0, w + 8.0, 4.0, 255, 214, 64, 255);
+            rl_draw_rectangle(x - 4.0, y + h, w + 8.0, 4.0, 255, 214, 64, 255);
+            rl_draw_rectangle(x - 4.0, y, 4.0, h, 255, 214, 64, 255);
+            rl_draw_rectangle(x + w, y, 4.0, h, 255, 214, 64, 255);
+        }
     }
 }
 
