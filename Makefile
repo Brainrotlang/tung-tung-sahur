@@ -5,7 +5,13 @@
 
 BRAINROT_DIR ?= ../brainrot
 BRAINROT     := $(BRAINROT_DIR)/brainrot
-BRAINRAY     := $(BRAINROT_DIR)/brainray
+# The raylib binding's directory. Upstream is renaming brainray/ -> rayrot/
+# (Brainrotlang/brainrot), so take whichever exists rather than breaking on
+# the day that merges. The COOKED MODULE is still `<raylib>` either way --
+# only the directory and the make target change.
+RAYMOD       := $(firstword $(wildcard $(BRAINROT_DIR)/rayrot \
+                                       $(BRAINROT_DIR)/brainray) \
+                            $(BRAINROT_DIR)/rayrot)
 
 GEN      := src/.headless.gen.brainrot
 UNITS    := $(wildcard test/unit_*.brainrot)
@@ -20,7 +26,7 @@ all: test
 # ---------------------------------------------------------------- run
 
 play: check-brainray lint-native
-	BRAINROT_PATH=$(BRAINRAY) $(BRAINROT) src/main.brainrot
+	BRAINROT_PATH=$(RAYMOD) $(BRAINROT) src/main.brainrot
 
 # Every rl_* call in the game, checked without opening a window.
 #
@@ -39,7 +45,7 @@ lint-native: check-brainray
 	    printf '#cooked "%s/src/%s.brainrot"\n' "$$(pwd)" "$$m" >> $(LINT); \
 	done
 	@printf 'skibidi main { bussin 0; }\n' >> $(LINT)
-	@out=$$(BRAINROT_PATH=$(BRAINRAY) $(BRAINROT) $(LINT) 2>&1); rm -f $(LINT); \
+	@out=$$(BRAINROT_PATH=$(RAYMOD) $(BRAINROT) $(LINT) 2>&1); rm -f $(LINT); \
 	    if [ -n "$$out" ]; then \
 	        echo "native call check FAILED:"; echo "$$out"; exit 1; \
 	    fi; \
@@ -138,29 +144,37 @@ check-brainrot:
 #                              attempt -- the one that finds itself already
 #                              airborne -- so the jump sound never fired
 #                              while the jump itself worked.
+#   7   rant parameters     -- one loader taking a path instead of twenty
+#                              identical ones (#311).
+#   9   struct ptr indexing -- `e[1].v`, which is what lets a helper walk
+#                              an entity pool instead of every loop living
+#                              in `skibidi main` (#311).
 #
-# v0.1.8 answers this probe 'L 1099694080 2'. All three, silently.
-	@printf 'rizz p(rizz *n){ *n = *n + 1; bussin *n; } skibidi main{ cap off = L; chad g = 17.5; rizz k = g; rizz c = 0; rizz h = p(&c); yapping("%%b %%d %%d", !off, k, c); bussin 0;}' > $(PROBE)
+# The last two DO fail loudly rather than silently, but they fail inside
+# whichever cooked file used them, which is a worse place to read the news
+# than here. v0.1.8 answers 'L 1099694080 2'; v0.2.0 errors out.
+	@printf 'gang E { rizz v; }; rizz plen(rant s){ bussin 7; } rizz pidx(gang E *e){ bussin e[1].v; } rizz p(rizz *n){ *n = *n + 1; bussin *n; } skibidi main{ cap off = L; chad g = 17.5; rizz k = g; rizz c = 0; rizz h = p(&c); gang E pool[2]; pool[0].v = 3; pool[1].v = 9; yapping("%%b %%d %%d %%d %%d", !off, k, c, plen("x"), pidx(&pool[0])); bussin 0;}' > $(PROBE)
 	@got=$$($(BRAINROT) $(PROBE) 2>/dev/null); rm -f $(PROBE); \
-	    test "$$got" = "W 17 1" || { \
-	        echo "$(BRAINROT) is too old: probe printed '$$got', expected 'W 17 1'"; \
-	        echo "the game needs brainrot v0.2.0 or newer -- logical NOT"; \
-	        echo "(brainrot#296), float-to-int conversion (#299), and a call"; \
-	        echo "running exactly once (#303). Update and rebuild:"; \
+	    test "$$got" = "W 17 1 7 9" || { \
+	        echo "$(BRAINROT) is too old: probe printed '$$got', expected 'W 17 1 7 9'"; \
+	        echo "the game needs a brainrot NEWER than v0.2.0 -- logical NOT"; \
+	        echo "(brainrot#296), float-to-int conversion (#299), a call running"; \
+	        echo "exactly once (#303), rant parameters and struct pointer"; \
+	        echo "indexing (both #311). Update and rebuild:"; \
 	        echo "    git -C $(BRAINROT_DIR) pull && make -C $(BRAINROT_DIR)"; \
 	        exit 1; }
 
 check-brainray: check-brainrot
-	@test -f $(BRAINRAY)/raylib.so || { \
-	    echo "no brainray module at $(BRAINRAY)/raylib.so"; \
-	    echo "install raylib, then run 'make brainray' in $(BRAINROT_DIR)"; \
+	@test -f $(RAYMOD)/raylib.so || { \
+	    echo "no raylib module at $(RAYMOD)/raylib.so"; \
+	    echo "install raylib, then run 'make rayrot (or make brainray on older checkouts)' in $(BRAINROT_DIR)"; \
 	    echo "setup instructions: $(BRAINROT_DIR)/docs/brainray.md"; \
 	    exit 1; }
 # The HUD needs rl_draw_text_int, which landed in Brainrotlang/brainrot#292.
 # Without this check a stale brainray fails at parse time with a bare
 # "Undefined function" and a line number, which says nothing about why.
-	@grep -q rl_draw_text_int $(BRAINRAY)/raylib.so || { \
-	    echo "$(BRAINRAY)/raylib.so predates rl_draw_text_int (brainrot#292)"; \
+	@grep -q rl_draw_text_int $(RAYMOD)/raylib.so || { \
+	    echo "$(RAYMOD)/raylib.so predates rl_draw_text_int (brainrot#292)"; \
 	    echo "the HUD needs it. Update $(BRAINROT_DIR) and rebuild:"; \
 	    echo "    git -C $(BRAINROT_DIR) pull && make -C $(BRAINROT_DIR) brainray"; \
 	    exit 1; }

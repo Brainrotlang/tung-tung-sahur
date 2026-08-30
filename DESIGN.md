@@ -782,11 +782,28 @@ So the extraction this section promised would be mechanical has happened.
 `main` holds the loop's *shape*: the state machine, the pools, and the order the
 eleven steps run in.
 
-**The pool loops stay in `main`, and that is still forced.** C4 (a struct field
-cannot be an array of structs) means there is no God-struct to hand over, and C5
-(no pointer arithmetic on struct pointers) means a helper cannot walk a pool
-itself — it can only be handed one already-resolved `&pool[i]`. Both are still
-open.
+**The pool loops have left `main` too.** They were forced there by C5 — no
+pointer arithmetic or indexing on struct pointers, so a helper could only ever
+be handed one already-resolved `&pool[i]` and the iteration had to live at the
+call site. That landed upstream
+([brainrot#316](https://github.com/Brainrotlang/brainrot/pull/316), from #311),
+so `sim.brainrot` now owns the passes: `pool_scroll`, `pool_bat_pass`,
+`pool_body_pass`, `pool_free_slot`, and the `bombs_*` set for the other pool
+type.
+
+Each pass owns the **iteration and the geometry**; `main` keeps the **response**
+— the sound, the scoring, the state change. That is why they hand back a count
+or a flag rather than reaching for the audio seam: simulation never draws and
+never plays, and that split is what the headless harness relies on.
+
+`main` went 477 → 411 lines. The only pool loops left in it are the three
+*draw* loops, and those belong there — `sim.brainrot` must not draw.
+
+C4 (a struct field as an array of structs) landed at the same time
+([#315](https://github.com/Brainrotlang/brainrot/pull/315)), so a God-struct is
+now possible. It is deliberately **not** used: passing `(pool, n, world)` says
+what a pass needs, while nesting the pools inside `World` would hand every
+helper everything and call it an improvement.
 
 The evidence that the extraction was behaviour-preserving is that
 `test/expected/headless.txt` did not move by a single byte: 3000 frames of
@@ -938,8 +955,13 @@ Filed with the reproductions from §3.2. C3 is the one that changes this
 document's architecture; C9 is the one that was silently wrong rather than
 loudly broken, and the reason `make` probes the interpreter's version.
 
-C4 and C5 were re-checked against v0.2.0 and are both still open, so the pool
-loops stay in `main` (§14.1).
+C4, C5 and `rant` parameters — the three filed as
+[#311](https://github.com/Brainrotlang/brainrot/issues/311) after the v0.2.0
+audit — all landed, and §14.1 records what they bought.
+
+C14 replaced them as the limitation that shapes code here. It is why
+`pool_free_slot()` scans the whole pool and keeps the first index instead of
+returning the moment it finds one.
 
 **C10 and C11 both shape code that looks like style.** Every `cap`-returning
 call in this game lands in a local before it is tested — `cap show =
@@ -957,8 +979,10 @@ load-bearing and nothing enforces it. Both were found writing the bosses.
 | **C10** | A `cap`-returning call cannot be used directly as a condition — `edgy (f())` errors and takes the FALSE branch ([#313](https://github.com/Brainrotlang/brainrot/issues/313)) | **High** |
 | **C11** | A caller's local shadows a callee's *parameter name* during analysis, so a correct call is rejected ([#312](https://github.com/Brainrotlang/brainrot/issues/312)) | **High** |
 | **C12** | A bare `bussin;` is a parse error, so a `skibidi` cannot return early ([#283](https://github.com/Brainrotlang/brainrot/issues/283)) | Medium |
-| **C4** | A struct field cannot be an array of structs (`gang Game { gang Ent es[4]; };`) — [#311](https://github.com/Brainrotlang/brainrot/issues/311) | Medium |
-| **C5** | No pointer arithmetic on struct pointers | Medium |
+| ~~**C4**~~ | ~~A struct field cannot be an array of structs~~ — **fixed**, [#315](https://github.com/Brainrotlang/brainrot/pull/315) | ✅ |
+| ~~**C5**~~ | ~~No pointer arithmetic on struct pointers~~ — **fixed**, [#316](https://github.com/Brainrotlang/brainrot/pull/316). This is the one that let the pool loops leave `main` | ✅ |
+| ~~**C13**~~ | ~~`rant` parameters on user-defined functions~~ — **fixed**, [#314](https://github.com/Brainrotlang/brainrot/pull/314). Twenty one-per-file loaders became two | ✅ |
+| **C14** | A `bussin` inside a loop is caught by the loop's own jump buffer, so it runs as `break` and then kills the process with "No scope to exit" and no output ([#319](https://github.com/Brainrotlang/brainrot/issues/319)) | **High** |
 | **C6** | No top-level globals | Medium |
 | **C7** | No `*(p + i) = v` / `p[i] = v` through a pointer parameter | Low — workaround is fine |
 | **C8** | No math builtins (`sqrt`, `floor`, `abs`, `min`, `max`, `rand`) | Low — hand-rolled |

@@ -34,20 +34,17 @@ skibidi draw_ground() {
 🚽 One loader per atlas, each returning a handle or -1. Hardcoding the paths
 🚽 here rather than passing them in keeps every rl_* call inside this file,
 🚽 which is the rule that lets the headless harness swap the whole layer out.
-rizz draw_load_run()   { bussin rl_load_texture("assets/tung_run.png"); }
-rizz draw_load_jump()  { bussin rl_load_texture("assets/tung_jump.png"); }
-rizz draw_load_swing() { bussin rl_load_texture("assets/tung_swing.png"); }
-rizz draw_load_patapim() { bussin rl_load_texture("assets/patapim_run.png"); }
-rizz draw_load_crate() { bussin rl_load_texture("assets/crate.png"); }
-rizz draw_load_post()  { bussin rl_load_texture("assets/post.png"); }
-rizz draw_load_bg_far()  { bussin rl_load_texture("assets/bg_far.png"); }
-rizz draw_load_bg_mid()  { bussin rl_load_texture("assets/bg_mid.png"); }
-rizz draw_load_bg_near() { bussin rl_load_texture("assets/bg_near.png"); }
-rizz draw_load_bg_fore() { bussin rl_load_texture("assets/bg_fore.png"); }
-rizz draw_load_shark()   { bussin rl_load_texture("assets/tralalero.png"); }
-rizz draw_load_croc()    { bussin rl_load_texture("assets/bombardiro.png"); }
-rizz draw_load_bomb()    { bussin rl_load_texture("assets/bomb.png"); }
-rizz draw_load_blast()   { bussin rl_load_texture("assets/blast.png"); }
+🚽 ONE loader, taking the path.
+🚽
+🚽 There were fourteen of these, identical but for a string literal, because
+🚽 a user-defined function could not take a `rant` -- "String parameters are
+🚽 not supported". Landed upstream as part of
+🚽 [brainrot#311](https://github.com/Brainrotlang/brainrot/issues/311), so
+🚽 the workaround is gone.
+🚽
+🚽 A missing file still returns -1 and every consumer already handles that,
+🚽 so cloning without assets still gives a game.
+rizz draw_load(rant path) { bussin rl_load_texture(path); }
 
 skibidi draw_unload(rizz tex) {
     edgy (tex >= 0) { rl_unload_texture(tex); }

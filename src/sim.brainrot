@@ -292,6 +292,131 @@ skibidi award_bonk(gang World *w) {
     w.bonus = w.bonus + 100 * w.combo;
 }
 
+🚽 --- pools ----------------------------------------------------------------
+🚽
+🚽 These could not exist until brainrot#311. A helper had no way to WALK a
+🚽 pool -- there was no pointer arithmetic or indexing on struct pointers, so
+🚽 it could only be handed one already-resolved `&pool[i]`, and every loop
+🚽 had to live in `skibidi main`. DESIGN.md 14.1 called that "still forced".
+🚽 It is not any more.
+🚽
+🚽 Each pass owns the ITERATION and the geometry. `main` keeps the response --
+🚽 the sound, the scoring, the state change -- which is why these hand back a
+🚽 count or a flag instead of reaching for the audio seam. Simulation never
+🚽 draws and never plays; that split is what the headless harness relies on.
+
+skibidi pool_clear(gang Ent *pool, rizz n) {
+    flex (rizz i = 0; i < n; i = i + 1) { pool[i].alive = L; }
+}
+
+🚽 The first free slot, or -1. A full pool silently skips the spawn, and that
+🚽 is correct behaviour rather than an error -- the gap still advances.
+🚽
+🚽 It scans the WHOLE pool and keeps the first index rather than returning
+🚽 the moment it finds one, and that is not a style choice. A `bussin` from
+🚽 inside a loop is caught by the loop's own jump buffer instead of the
+🚽 function's, so it runs as a `break` and then takes the process down with
+🚽 "No scope to exit" and no output at all -- brainrot#319. Same reason
+🚽 bombs_free_slot() below is written this way.
+rizz pool_free_slot(gang Ent *pool, rizz n) {
+    rizz slot = 0 - 1;
+    flex (rizz i = 0; i < n; i = i + 1) {
+        edgy (!pool[i].alive) {
+            edgy (slot < 0) { slot = i; }
+        }
+    }
+    bussin slot;
+}
+
+skibidi pool_scroll(gang Ent *pool, rizz n, gang World *w, chad extra) {
+    flex (rizz i = 0; i < n; i = i + 1) {
+        edgy (pool[i].alive) { ent_scroll(&pool[i], w, extra); }
+    }
+}
+
+🚽 How many the bat connected with. Plural on purpose: two enemies can sit
+🚽 inside the hitbox at once and both should score.
+rizz pool_bat_pass(gang Ent *pool, rizz n, gang Player *p, gang World *w) {
+    rizz bonks = 0;
+    flex (rizz i = 0; i < n; i = i + 1) {
+        edgy (pool[i].alive) {
+            cap bonk = ent_in_bat(&pool[i], p);
+            edgy (bonk) {
+                pool[i].alive = L;
+                award_bonk(w);
+                bonks = bonks + 1;
+            }
+        }
+    }
+    bussin bonks;
+}
+
+🚽 Did the player take a hit? At most one per frame in practice --
+🚽 player_take_hit() starts the iframes that make every later check fail --
+🚽 but the vulnerability is re-read per entity rather than assumed, because
+🚽 that is what makes the "at most one" true rather than hoped for.
+cap pool_body_pass(gang Ent *pool, rizz n, gang Player *p, gang World *w) {
+    cap hurt = L;
+    flex (rizz i = 0; i < n; i = i + 1) {
+        edgy (pool[i].alive) {
+            cap open = player_vulnerable(p);
+            edgy (open) {
+                cap crash = ent_hits_body(&pool[i], p);
+                edgy (crash) {
+                    pool[i].alive = L;
+                    player_take_hit(p, w);
+                    hurt = W;
+                }
+            }
+        }
+    }
+    bussin hurt;
+}
+
+🚽 --- bomb pool ------------------------------------------------------------
+🚽 Its own set, because gang Bomb is its own type -- there is still no
+🚽 generic over two struct types.
+
+skibidi bombs_clear(gang Bomb *pool, rizz n) {
+    flex (rizz i = 0; i < n; i = i + 1) { pool[i].alive = L; }
+}
+
+rizz bombs_free_slot(gang Bomb *pool, rizz n) {
+    rizz slot = 0 - 1;
+    flex (rizz i = 0; i < n; i = i + 1) {
+        edgy (!pool[i].alive) {
+            edgy (slot < 0) { slot = i; }
+        }
+    }
+    bussin slot;
+}
+
+skibidi bombs_step(gang Bomb *pool, rizz n, gang World *w) {
+    flex (rizz i = 0; i < n; i = i + 1) {
+        edgy (pool[i].alive) { bomb_tick(&pool[i], w); }
+    }
+}
+
+🚽 The blast is NOT consumed by the hit. It is a hazard sitting on the
+🚽 ground, not a projectile, and the iframes already stop it draining more
+🚽 than one heart.
+cap bombs_body_pass(gang Bomb *pool, rizz n, gang Player *p, gang World *w) {
+    cap hurt = L;
+    flex (rizz i = 0; i < n; i = i + 1) {
+        edgy (pool[i].alive) {
+            cap open = player_vulnerable(p);
+            edgy (open) {
+                cap blast = bomb_hits_player(&pool[i], p);
+                edgy (blast) {
+                    player_take_hit(p, w);
+                    hurt = W;
+                }
+            }
+        }
+    }
+    bussin hurt;
+}
+
 🚽 --- bosses --------------------------------------------------------------
 🚽
 🚽 DESIGN.md section 12. Tralalero and Bombardiro are set pieces, not
