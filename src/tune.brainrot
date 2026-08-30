@@ -145,12 +145,41 @@ chad t_croc_open_x()       { bussin 258.0; }
 chad t_croc_sway()         { bussin 180.0; }
 chad t_croc_sway_rate()    { bussin 1.1; }
 
+🚽 His atlas: two frames, and unlike every other animation here they are
+🚽 two VIEWS rather than two poses. Frame 0 is level cruise seen side-on
+🚽 (long and flat); frame 1 is the opening, pitched up and banked with the
+🚽 jaws wide (short and tall). That foreshortening is what an aircraft
+🚽 pulling up actually looks like, so the shape change is the animation
+🚽 rather than a scaling bug.
+🚽
+🚽 Centre-aligned in the frame, not bottom-aligned: he flies, so he has no
+🚽 contact row. See ALIGN in tools/process_sprites.py.
+rizz t_croc_frames()       { bussin 2; }
+chad t_croc_frame_w()      { bussin 149.0; }
+chad t_croc_frame_h()      { bussin 72.0; }
+chad t_croc_anchor()       { bussin 60.0; }
+
 🚽 Bombs fall under the same gravity the player does, then sit as a ground
 🚽 hazard for a moment. Both states hurt.
-chad t_bomb_w()            { bussin 26.0; }
+🚽 The bomb's box FOLLOWS its art, not the other way round. The shell plus
+🚽 its lit fuse comes out 11px wide at 26px tall, and a 26x26 box around an
+🚽 11px sprite is fifteen pixels of empty air that still takes a heart.
+🚽 A hitbox wider than what the player can see is not difficulty.
+chad t_bomb_w()            { bussin 12.0; }
 chad t_bomb_h()            { bussin 26.0; }
+
+🚽 The blast is the opposite and deliberately so: the art is 77px of
+🚽 spreading fire over a 64px box, so the outer flames are decoration you
+🚽 can stand in. Erring wide on the sprite and narrow on the box is the
+🚽 forgiving direction.
 chad t_blast_w()           { bussin 64.0; }
 chad t_blast_h()           { bussin 34.0; }
+
+🚽 Single-frame atlases, both centred on their box.
+chad t_bomb_frame_w()      { bussin 11.0; }
+chad t_bomb_frame_h()      { bussin 26.0; }
+chad t_blast_frame_w()     { bussin 77.0; }
+chad t_blast_frame_h()     { bussin 34.0; }
 chad t_bomb_fuse()         { bussin 0.55; }
 chad t_bomb_interval()     { bussin 0.85; }
 

@@ -47,6 +47,12 @@ def main():
         ("patapim_run", pw, ph, const(t, "t_patapim_frames")),
         ("tralalero", const(t, "t_shark_frame_w"),
          const(t, "t_shark_frame_h"), const(t, "t_shark_frames")),
+        ("bombardiro", const(t, "t_croc_frame_w"),
+         const(t, "t_croc_frame_h"), const(t, "t_croc_frames")),
+        ("bomb", const(t, "t_bomb_frame_w"),
+         const(t, "t_bomb_frame_h"), 1.0),
+        ("blast", const(t, "t_blast_frame_w"),
+         const(t, "t_blast_frame_h"), 1.0),
     ]
 
     bad = 0
@@ -68,7 +74,9 @@ def main():
 
     for label, anchor, fw in (("tung", ta, tw), ("patapim", pa, pw),
                               ("tralalero", const(t, "t_shark_anchor"),
-                               const(t, "t_shark_frame_w"))):
+                               const(t, "t_shark_frame_w")),
+                              ("bombardiro", const(t, "t_croc_anchor"),
+                               const(t, "t_croc_frame_w"))):
         if not 0 <= anchor < fw:
             print(f"  MISMATCH {label} anchor {int(anchor)} outside frame "
                   f"width {int(fw)}")

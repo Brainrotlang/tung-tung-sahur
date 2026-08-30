@@ -698,9 +698,9 @@ fight nobody could win.
 the boss is open *and has arrived*. Those two conditions differ by exactly the
 leap, and prompting during it would teach the same too-early swing.
 
-**Tralalero has art; Bombardiro is still primitives.** Both go through the same
-`tex >= 0` fallback every other draw uses, so a partial set degrades one boss at
-a time and the simulation does not know either way.
+**Both bosses are drawn from art**, as are the bomb and its blast. They go
+through the same `tex >= 0` fallback every other draw uses, so a missing file
+degrades one asset at a time and the simulation does not know either way.
 
 Tralalero's atlas is two frames — survive and opening — and `draw_boss()` picks
 the column from the phase. His art frame is 168px wide against a 140×96
@@ -713,6 +713,19 @@ He is drawn **unmirrored**, unlike Patapim, and that is not an oversight: he
 chases from behind, so the art's own right-facing is toward the player — and
 once he has leapt past, right-facing means his back is turned, which is exactly
 why he is open.
+
+Bombardiro's two frames are two *views* rather than two poses — a level side
+elevation and a pitched, banked three-quarter — which is what an aircraft
+pulling up looks like. He is also **centre-aligned** in his frame rather than
+bottom-aligned: he flies, so he has no contact row, and bottom-aligning a 36px
+frame inside a 72px box would sink him to its floor and then jump him 36px when
+the opening starts.
+
+The **bomb's hitbox follows its art**: `t_bomb_w()` went 26 → 12 because the
+shell keys out 11px wide, and a 26px box around an 11px sprite is empty air that
+still takes a heart. The blast is deliberately the reverse — 77px of art over a
+64px box, so its outer flames are decoration you can stand in. Wide sprite,
+narrow box, is the forgiving direction.
 
 **Coverage.** The headless input tape dies around score 400–700, so it never
 reaches 5,000 — the golden file proves the boss code does not disturb an

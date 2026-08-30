@@ -263,9 +263,9 @@ vertical column.
 
 ## 4. Boss sprites
 
-The two M2 set pieces (DESIGN.md §12). **Tralalero's art has landed**;
-Bombardiro still renders in primitives, behind the same `tex >= 0` fallback
-every other draw uses, so a partial set degrades one boss at a time.
+The two M2 set pieces (DESIGN.md §12). **Both are drawn from art now**, as are
+the bomb and its blast. The `tex >= 0` fallback stays in the code so a missing
+file degrades one asset at a time rather than crashing.
 
 ### 4.0 What the engine gives them
 
@@ -382,7 +382,31 @@ in which the player is supposed to swing.]
 Same shark, same colours, same size as frame 1 — only the pose changes.
 ```
 
-### 4.3 Bombardiro Crocodilo — `120 × 72`, 2 frames → atlas `240 × 72`
+### 4.3 Bombardiro Crocodilo — 2 frames ✅ *done*
+
+**Shipped**: `assets/bombardino/bombardino1.jpg` (level cruise) and
+`bombardino2.jpg` (the opening). Processed to a `298 × 72` atlas of `149 × 72`
+frames, anchor column 60. (Source folder is spelled *bombardino*; the code and
+atlas use *bombardiro*, which is the character's name.)
+
+Two things worth knowing before regenerating these:
+
+**They are two VIEWS, not two poses.** Frame 0 is a level side elevation (4.22:1
+silhouette); frame 1 is pitched up and banked (1.39:1). That is what an aircraft
+pulling up actually looks like, so the shape change is the animation — but it
+means no single scale factor makes them "the same size", and the tool's
+equal-area correction is doing the best it can rather than something exact.
+A replacement pair drawn from the *same* camera would behave more predictably.
+
+**They are centre-aligned, not bottom-aligned.** Everything else in this game
+stands on the ground and its bottom row is its contact row. A flier has none,
+and bottom-aligning frame 0 (36px of content in a 72px frame) would sink it to
+the floor of its own box and then jump 36px the instant the opening starts. See
+`ALIGN` in `tools/process_sprites.py`.
+
+The prompt used, for reference:
+
+### 4.3b The original ask — `120 × 72`, 2 frames → atlas `240 × 72`
 
 He does not chase. He flies overhead at `y = 90`, sways across the top of the
 screen, and drops bombs — so frame 0 is seen small, high up, against the near-
@@ -427,7 +451,23 @@ the player is supposed to swing.]
 Same crocodile, same colours, same size as frame 1 — only the pose changes.
 ```
 
-### 4.4 Bomb — `26 × 26`, single frame
+### 4.4 Bomb — single frame ✅ *done*
+
+**Shipped**: `assets/bombardino/bomb.jpg` → an `11 × 26` sprite.
+
+Note what moved: the **hitbox followed the art**, not the other way round.
+`t_bomb_w()` was 26 and is now 12. The shell plus its lit fuse keys out to 11px
+wide at 26px tall, and a 26×26 box around an 11px sprite is fifteen pixels of
+empty air that still takes a heart. A hitbox wider than what the player can see
+is not difficulty.
+
+The blast is deliberately the opposite: 77px of art over a 64px box, so the
+outer flames are decoration you can stand in. Wide sprite, narrow box, is the
+forgiving direction.
+
+The prompt used, for reference:
+
+### 4.4b The original ask — `26 × 26`, single frame
 
 Dropped from Bombardiro's belly and falls under the player's own gravity.
 
@@ -452,7 +492,12 @@ Falling, nose down, upright.
 The bomb is the one asset where **facing does not matter** — it is drawn
 unmirrored and symmetric about its vertical axis. Keep it symmetric.
 
-### 4.5 Blast — `64 × 34`, single frame
+### 4.5 Blast — single frame ✅ *done*
+
+**Shipped**: `assets/bombardino/blast.jpg` → a `77 × 34` sprite, centred on its
+64 × 34 box. The prompt used, for reference:
+
+### 4.5b The original ask — `64 × 34`, single frame
 
 What the bomb becomes on impact: a ground hazard that hurts for
 `t_bomb_fuse()` = 0.55 s. Wide and low, sitting **on** the ground line.
