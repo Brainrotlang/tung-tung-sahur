@@ -37,7 +37,7 @@ design, the verified engine constraints, and the upstream dependency list.
 ## Running it
 
 You need a [`brainrot`](https://github.com/Brainrotlang/brainrot) checkout with
-the `rayrot` raylib binding built. Clone it next to this repo:
+the `rayrot` module built. Clone it next to this repo:
 
 ```bash
 git clone https://github.com/Brainrotlang/brainrot
@@ -174,7 +174,7 @@ no upstream dependencies at all. **M1** shipped too — the numeric HUD landed
 with B1, B2 (`rl_draw_texture_rec`) unblocked sprites, animation and parallax,
 and all of it is drawn from real art now.
 
-**M2 has shipped.** The raylib binding got audio in
+**M2 has shipped.** rayrot got audio in
 [brainrot#302](https://github.com/Brainrotlang/brainrot/pull/302), so the game
 plays a title sting, a `TUNG` on every bat hit, a jump, a damage grunt, and a
 `bruh` on the run that ends. Both bosses are in: **Tralalero Tralala** at 5,000
