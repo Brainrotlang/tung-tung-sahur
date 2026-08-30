@@ -44,6 +44,7 @@ skibidi main {
     rizz bg_mid    = draw_load_bg_mid();
     rizz bg_near   = draw_load_bg_near();
     rizz bg_fore   = draw_load_bg_fore();
+    rizz tex_shark = draw_load_shark();
     rizz music     = plat_music_open();
     rizz sfx_tung   = plat_sfx_tung();
     rizz sfx_jump   = plat_sfx_jump();
@@ -325,19 +326,13 @@ skibidi main {
                         plat_sfx_play(sfx_tung);
                     }
                 }
-                cap boss_open = player_vulnerable(&pl);
-                edgy (boss_open) {
-                    cap boss_crash = boss_hits_body(&bo, &pl);
-                    edgy (boss_crash) {
-                        🚽 The boss is not despawned by contact -- he is the
-                        🚽 fight. Iframes are what keep this to one heart.
-                        player_take_hit(&pl, &wd);
-                        boss_note_hit(&bo);
-                        edgy (pl.hearts > 0) {
-                            plat_sfx_play(sfx_damage);
-                        }
-                    }
-                }
+                🚽 No body-contact pass. The player is pinned at
+                🚽 t_player_x() and can only jump, so a boss that
+                🚽 positions ITSELF into them is damage nobody can dodge --
+                🚽 see boss_hits_body(), which is now an invariant the unit
+                🚽 test asserts is never true rather than a damage source.
+                🚽 Each boss hurts through what it produces: Tralalero's
+                🚽 obstacle barrage, Bombardiro's bombs.
             }
         }
 
@@ -429,13 +424,17 @@ skibidi main {
 
         cap boss_shown = boss_active(&bo);
         edgy (boss_shown) {
-            draw_boss(bo.x, bo.y, bo.kind, bo.phase, 0 - 1);
+            draw_boss(bo.x, bo.y, bo.kind, bo.phase, tex_shark, 0 - 1);
         }
 
         draw_hearts(pl.hearts);
         draw_speedbar(lvl);
         draw_hud(score, lvl);
-        edgy (boss_shown) { draw_boss_bar(bo.kind, bo.bonks); }
+        edgy (boss_shown) {
+            cap boss_ready = boss_vulnerable(&bo);
+            edgy (boss_ready) { boss_ready = boss_in_position(&bo, &wd); }
+            draw_boss_bar(bo.kind, bo.bonks, boss_ready);
+        }
 
         edgy (state == t_state_title()) { draw_title(title_t); }
         edgy (state == t_state_over())  { draw_gameover(score, run_seed); }
@@ -459,6 +458,7 @@ skibidi main {
     draw_unload(bg_mid);
     draw_unload(bg_near);
     draw_unload(bg_fore);
+    draw_unload(tex_shark);
     plat_sfx_close(sfx_open);
     plat_sfx_close(sfx_tung);
     plat_sfx_close(sfx_jump);

@@ -1,2 +1,10 @@
 src/.headless.gen.brainrot
 build/
+
+# Windows alternate-data-stream junk, created when assets are copied into WSL
+# through Explorer. Harmless, 25 bytes each, and not art.
+*:Zone.Identifier
+
+# Python bytecode, from importing the sprite tool for one-off analysis.
+__pycache__/
+*.pyc

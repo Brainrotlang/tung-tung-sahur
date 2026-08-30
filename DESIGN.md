@@ -618,7 +618,28 @@ Bombs are the `bombs[32]` pool: spawned at his `x`, falling under the same
 `GRAVITY`, exploding into a ground hazard on impact. Between volleys he descends
 to bat height for the opening. Three bonks.
 
-### 12.3 How it is built
+### 12.3 Neither boss deals contact damage
+
+The player is pinned at `t_player_x()` and can only jump. A boss that
+*positions itself* is therefore not dodgeable, and contact damage from one is
+damage nobody can avoid — which is not difficulty, it is a coin the game takes.
+
+Both fights shipped with exactly that bug and it made them unwinnable. The
+openings have to be in **front** of the player, because the bat only reaches
+forward (`t_hitbox_dx()` onward). They were placed to overlap the bat and
+nothing else was checked — and a 140px shark at `x = 150` spans 150–290, which
+covers the bat box *and* Tung's own 200–248. So every opening cost a heart,
+three openings win a fight, and the player has three hearts.
+
+What each boss damages the player *with* is the thing it produces and the player
+can read coming: Tralalero's obstacle barrage, Bombardiro's bombs. Those are
+dodgeable, so those are the fight. `boss_hits_body()` survives as an
+**invariant** — `test/unit_boss.brainrot` replays both fights and asserts it is
+false on every frame.
+
+That invariant is what forces the movement rule in §12.4.
+
+### 12.4 How it is built
 
 `gang Boss` is a single value in `skibidi main`, not a slot in `enemies[]`. It
 has phases, a bonk count and scripted movement that no generic `Ent` wants, and
@@ -635,13 +656,63 @@ would ease in and never quite arrive, and the opening would land at a different
 `unit_boss.brainrot` asserts the boss actually *reaches* bat range inside the
 window, since the fight is unwinnable if it does not.
 
+**The leap leads the crossing.** Tralalero chases from behind and his opening is
+in front, so he has to cross Tung — and per §12.3 he must never occupy Tung's
+space while doing it. Two rules get that:
+
+1. `boss_move()` moves **vertically first**.
+2. `boss_may_advance()` gates every horizontal move on either being clear above
+   Tung's head, or already being on the side it is heading for.
+
+So he rises in place, crosses overhead, and comes down on the far side — and
+the same rule carries the return trip and the launched exit of a beaten boss,
+both of which slid straight back through the player before it existed.
+
+Moving both axes together cannot work: at `t_boss_move_speed()` a boss climbs
+exactly as fast as it advances, so it is only half-way up when it arrives. Nor
+can the airborne test be "while `boss_may_advance()` is false" — that is
+circular. Rising makes it true, which returns the target to the ground, which
+drops him, which makes it false. He hovers and never crosses.
+
+Tralalero's closing is clamped by `boss_lurk_x()` to stop `t_shark_close_min()`
+short of Tung's back, so it stays dread rather than becoming damage however many
+mistakes are made or however many hearts a future `t_hearts_max()` hands out.
+
 A missed opening costs time, not health: the phase returns to `survive` and the
 cycle repeats. The fight is long rather than unfair.
 
-**Both fights render in primitives.** There is no shark or crocodile art yet,
-and M0 already proved the game reads in rectangles, so the fights ship playable
-behind the same `tex >= 0` fallback every other draw uses. The simulation does
-not know.
+**The opening's clock starts on arrival, not on the phase.** Tralalero spends
+0.78s of his lunge rising, crossing over Tung and coming down. When the timer
+ran from the start of the phase, he was inside bat reach for the *last 14
+frames of 61* — so a player reacting to "he's open!" swung immediately, hit
+nothing, and spent the only part that counted inside `t_attack_total()`'s 0.45s
+cooldown. `boss_in_position()` gates the tick, which buys the whole
+`t_boss_open_time()` with him actually there: 1.17s of real reach for
+Tralalero, 1.10s for Bombardiro.
+
+`unit_boss.brainrot` measures that reach directly. The old test only asked
+whether the bat *could* reach the boss at all, which is why it passed on a
+fight nobody could win.
+
+**And the game says so.** `draw_boss_bar()` puts `TUNG HIM — X` on screen while
+the boss is open *and has arrived*. Those two conditions differ by exactly the
+leap, and prompting during it would teach the same too-early swing.
+
+**Tralalero has art; Bombardiro is still primitives.** Both go through the same
+`tex >= 0` fallback every other draw uses, so a partial set degrades one boss at
+a time and the simulation does not know either way.
+
+Tralalero's atlas is two frames — survive and opening — and `draw_boss()` picks
+the column from the phase. His art frame is 168px wide against a 140×96
+collision box, because a shark's snout and tail overhang what it collides with;
+that is the same split Tung has (112px of art over a 48px box), which is why
+`t_shark_frame_w()` and `t_shark_w()` are separate constants that
+`tools/check_atlases.py` checks independently.
+
+He is drawn **unmirrored**, unlike Patapim, and that is not an oversight: he
+chases from behind, so the art's own right-facing is toward the player — and
+once he has leapt past, right-facing means his back is turned, which is exactly
+why he is open.
 
 **Coverage.** The headless input tape dies around score 400–700, so it never
 reaches 5,000 — the golden file proves the boss code does not disturb an

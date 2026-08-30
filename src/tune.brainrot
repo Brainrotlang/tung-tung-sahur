@@ -76,25 +76,56 @@ chad t_boss_leave_time()   { bussin 1.5; }
 chad t_boss_move_speed()   { bussin 520.0; }
 chad t_boss_leave_speed()  { bussin 700.0; }
 
+🚽 How far above Tung's head a beaten boss is launched on his way out.
+chad t_boss_leave_rise()   { bussin 90.0; }
+
 🚽 The boss owns the spawner while it is up, and spawns denser than the
 🚽 curve ever would -- that density IS the fight.
 chad t_boss_gap()          { bussin 0.72; }
 
 🚽 TRALALERO TRALALA -- the three-legged shark, chasing from the left.
 🚽
-🚽 `open_x` is not a free number: the bat hitbox spans t_player_x() +
-🚽 t_hitbox_dx() for t_hitbox_w(), i.e. 240..296. At x 150 the shark spans
-🚽 150..290, so it overlaps. Move either and the opening stops connecting.
+🚽 `open_x` is not a free number, and it has to satisfy TWO constraints at
+🚽 once. The bat reaches 240..296 (t_player_x + t_hitbox_dx, for
+🚽 t_hitbox_w), and the player's own body is 200..248. So an openable boss
+🚽 must start right of 248 and left of 296 -- in FRONT of the player.
+🚽
+🚽 It used to be 150, chosen for the bat alone. A 140px shark at 150 spans
+🚽 150..290: it reaches the bat, and it also stands on top of Tung. Since
+🚽 the player cannot move horizontally, that was a heart per opening with
+🚽 no way to avoid it, and three openings is three hearts. The fight was
+🚽 unwinnable and the damage was unfair in the same stroke.
 chad t_shark_w()           { bussin 140.0; }
 chad t_shark_h()           { bussin 96.0; }
 chad t_shark_lurk_x()      { bussin -30.0; }
-chad t_shark_open_x()      { bussin 150.0; }
+chad t_shark_open_x()      { bussin 258.0; }
+
+🚽 His atlas: two frames (survive, opening), authored facing RIGHT and drawn
+🚽 UNMIRRORED. He chases from behind, so right IS toward the player -- and
+🚽 after the leap he is in front with his back turned, which is exactly why
+🚽 he is hittable. tools/process_sprites.py prints these three numbers.
+🚽
+🚽 The art is wider than the 140px collision box because a shark's snout and
+🚽 tail overhang it, same as Tung's 112px of art over a 48px box.
+rizz t_shark_frames()      { bussin 2; }
+chad t_shark_frame_w()     { bussin 168.0; }
+chad t_shark_frame_h()     { bussin 96.0; }
+chad t_shark_anchor()      { bussin 104.0; }
+
+🚽 How high he goes while passing over Tung. He has to end up in front to
+🚽 be hittable, and he starts behind, so he crosses -- as a leap rather
+🚽 than a slide through the player's body.
+chad t_shark_leap()        { bussin 120.0; }
 
 🚽 He closes a little with every mistake, so a clean fight keeps him at
-🚽 arm's length and a sloppy one has him breathing on you. Three hits is
-🚽 also three hearts, so the fully-closed shark is a thing you see at the
-🚽 moment you die rather than a separate death.
+🚽 arm's length and a sloppy one has him breathing on you. Dread, not
+🚽 damage -- boss_lurk_x() clamps the result so his nose can never actually
+🚽 reach Tung however many hits are taken or however many hearts a future
+🚽 t_hearts_max() hands out.
 chad t_shark_close_step()  { bussin 34.0; }
+
+🚽 The gap his nose keeps from Tung's back at full close.
+chad t_shark_close_min()   { bussin 24.0; }
 
 🚽 BOMBARDIRO CROCODILO -- does not chase. Bombs from overhead, so the
 🚽 whole vertical axis is hostile while you are still running.
@@ -106,7 +137,11 @@ chad t_croc_h()            { bussin 72.0; }
 chad t_croc_cruise_y()     { bussin 90.0; }
 chad t_croc_open_y()       { bussin 470.0; }
 chad t_croc_cruise_x()     { bussin 560.0; }
-chad t_croc_open_x()       { bussin 200.0; }
+
+🚽 Same rule as the shark's open_x: right of the player's body (248), left
+🚽 of the bat's far edge (296). At 200 he descended straight onto Tung's
+🚽 head for a free heart every opening.
+chad t_croc_open_x()       { bussin 258.0; }
 chad t_croc_sway()         { bussin 180.0; }
 chad t_croc_sway_rate()    { bussin 1.1; }
 
@@ -134,12 +169,59 @@ chad t_sfx_volume()      { bussin 0.9; }
 🚽 the bat reach past it -- so the draw call offsets by the anchor rather
 🚽 than using the player's x directly. tools/process_sprites.py prints these
 🚽 when it builds the atlases; they are not free parameters.
-rizz t_sprite_w()        { bussin 103; }
+rizz t_sprite_w()        { bussin 112; }
 rizz t_sprite_h()        { bussin 96; }
-rizz t_sprite_anchor()   { bussin 45; }
+rizz t_sprite_anchor()   { bussin 54; }
 rizz t_run_frames()      { bussin 6; }
 rizz t_swing_frames()    { bussin 3; }
-rizz t_patapim_frames()  { bussin 5; }
+
+🚽 Patapim's atlas is its own group -- a different frame size and anchor
+🚽 from Tung's three, because nothing draws them with the same call. These
+🚽 used to be magic numbers inside draw.brainrot, which meant regenerating
+🚽 the art silently desynced the draw from the atlas.
+rizz t_patapim_frames()  { bussin 4; }
+chad t_patapim_w()       { bussin 74.0; }
+chad t_patapim_h()       { bussin 64.0; }
+chad t_patapim_anchor()  { bussin 37.0; }
+
+🚽 --- parallax layers ---
+🚽
+🚽 Tile width, on-screen height, and parallax rate per layer, back to front.
+🚽
+🚽 The WIDTH is not a composition choice -- it must equal the generated
+🚽 PNG's width exactly, because draw_layer() passes it to
+🚽 rl_draw_texture_rec() as the source rectangle AND as the tile stride. Too
+🚽 small and every tile is cut off on its right edge; too large and each
+🚽 tile is padded with whatever the sampler returns past the texture.
+🚽
+🚽 These lived in draw_background() as literals, and regenerating bg_near
+🚽 from an updated source took it from 503px to 698px while the draw call
+🚽 kept asking for 503 -- so 195px of every house strip was sliced off and
+🚽 the seam butted against the next tile. tools/check_atlases.py asserts all
+🚽 four against the PNGs now.
+🚽
+🚽 The HEIGHT is a composition decision, and is what these are scaled to:
+🚽 see the note in draw.brainrot about scaling to width instead, which
+🚽 produced a 472px foliage band against a 96px character.
+chad t_bg_far_w()        { bussin 2353.0; }
+chad t_bg_far_h()        { bussin 200.0; }
+chad t_bg_far_rate()     { bussin 0.10; }
+
+chad t_bg_mid_w()        { bussin 803.0; }
+chad t_bg_mid_h()        { bussin 220.0; }
+chad t_bg_mid_rate()     { bussin 0.25; }
+
+chad t_bg_near_w()       { bussin 698.0; }
+chad t_bg_near_h()       { bussin 190.0; }
+chad t_bg_near_rate()    { bussin 0.50; }
+
+chad t_bg_fore_w()       { bussin 299.0; }
+chad t_bg_fore_h()       { bussin 110.0; }
+chad t_bg_fore_rate()    { bussin 1.00; }
+
+🚽 The foliage sits BELOW the ground line, so it overlaps the player's feet
+🚽 and reads as being in front of them rather than behind.
+chad t_bg_fore_drop()    { bussin 34.0; }
 
 🚽 Pixels of ground per Patapim stride. Shorter than Tung's: it is a
 🚽 four-legged bound, and it closes faster than the world scrolls.

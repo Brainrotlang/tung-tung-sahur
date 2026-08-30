@@ -10,7 +10,7 @@ start phase 1 bonks 0 owns_spawner W vulnerable L
 survive -> 2 after 481 steps (want phase 2)
 opening: vulnerable W
   at flip   x -30.0
-  0.5s in   x 150.0, in bat range W
+  0.5s in   x 134.7, in bat range L
 missed opening -> 1, bonks still 0
 -- bonks --
 bonk 1: bonks 1 phase 1 bonus 100
@@ -21,7 +21,7 @@ cleared after 91 steps, kind 0 phase 0
 -- shark closes --
 0 hits target x -30.0
 1 hit  target x 4.0
-3 hits target x 72.0
+3 hits target x 36.0
 -- bombs --
 spawned at y 162.0, w 26.0 (shell)
 landed after 32 steps at y 526.0, w 64.0 (blast)
@@ -30,5 +30,22 @@ blast gone after 34 more steps
 bomb on the player  W
 bomb well behind    L
 -- scripted fight --
-fight over in 1618 frames, 87 swing attempts
+fight over in 1702 frames, 171 swing attempts
 boss kind 0, hearts 3, bonus 2600
+-- no unavoidable contact --
+boss 1: 1702 frames, 171 open frames, body contacts 0 (must be 0)
+        nose got within -198px of Tung's back (negative = in front)
+        mistakes made during the fight: 2
+boss 2: 1683 frames, 152 open frames, body contacts 0 (must be 0)
+        nose got within -660px of Tung's back (negative = in front)
+        mistakes made during the fight: 2
+-- how long is an opening, really --
+boss 1: opening 117 frames, in bat reach 70 of them (1.17s)
+        t_boss_open_time() is 1.00s -- reach must not be less
+boss 2: opening 105 frames, in bat reach 66 of them (1.10s)
+        t_boss_open_time() is 1.00s -- reach must not be less
+-- shark closing is clamped --
+   0 hits -> lurk x    -30, nose    110, Tung's back 200
+   4 hits -> lurk x     36, nose    176, Tung's back 200
+   8 hits -> lurk x     36, nose    176, Tung's back 200
+  12 hits -> lurk x     36, nose    176, Tung's back 200

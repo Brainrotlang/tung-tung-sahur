@@ -204,5 +204,139 @@ skibidi main {
     yapping("fight over in %d frames, %d swing attempts", frames, swings);
     yapping("boss kind %d, hearts %d, bonus %d", bo.kind, pl.hearts, wd.bonus);
 
+    🚽 --- the invariant that was missing -------------------------------------
+    🚽
+    🚽 The fight above passed while the game was unwinnable, because it only
+    🚽 ever asked whether the bat could reach the boss. It never asked whether
+    🚽 the BOSS could reach the player -- and both openings were positioned on
+    🚽 top of Tung, so every opening cost a heart, three openings win, three
+    🚽 hearts. Unwinnable, and unavoidable, and green.
+    🚽
+    🚽 So: replay both fights and assert boss_hits_body() is false on every
+    🚽 single frame. The player is pinned at t_player_x() and can only jump;
+    🚽 anything that positions itself into them is damage nobody can dodge.
+    yapping("-- no unavoidable contact --");
+
+    flex (rizz which = 1; which <= 2; which = which + 1) {
+        boss_clear(&bo);
+        world_reset(&wd);
+        player_reset(&pl);
+        wd.dt = 0.016666;
+        boss_start(&bo, &wd, which);
+
+        rizz touches = 0;
+        rizz openings = 0;
+        rizz worst_hits = 0;
+        chad nearest = 99999.0;
+        rizz f = 0;
+        cap up = boss_active(&bo);
+        goon (up && f < 6000) {
+            world_advance(&wd);
+            player_physics(&pl, &wd);
+            player_tick_timers(&pl, &wd);
+            boss_tick(&bo, &wd);
+
+            cap touching = boss_hits_body(&bo, &pl);
+            edgy (touching) { touches = touches + 1; }
+
+            🚽 The smallest gap between Tung's back and the boss's nose.
+            🚽 Negative means the boss is in FRONT of him, which is where an
+            🚽 opening happens -- the bat only reaches forward.
+            chad gap = t_player_x() - (bo.x + boss_w(bo.kind));
+            edgy (gap < nearest) { nearest = gap; }
+            edgy (bo.hits > worst_hits) { worst_hits = bo.hits; }
+
+            cap can = boss_vulnerable(&bo);
+            edgy (can) {
+                openings = openings + 1;
+                player_swing(&pl);
+            }
+            cap sw = player_swinging(&pl);
+            edgy (sw) {
+                edgy (can) {
+                    cap hit = boss_in_bat(&bo, &pl);
+                    edgy (hit) { boss_take_bonk(&bo, &wd); }
+                }
+            }
+            🚽 Every mistake drags the shark closer, so make some.
+            edgy (f % 900 == 0) {
+                player_take_hit(&pl, &wd);
+                boss_note_hit(&bo);
+                pl.hearts = t_hearts_max();
+                pl.iframe_t = 0.0;
+            }
+            f = f + 1;
+            up = boss_active(&bo);
+        }
+        yapping("boss %d: %d frames, %d open frames, body contacts %d (must be 0)",
+                which, f, openings, touches);
+        🚽 bo.hits is read from worst_hits, not the boss: the loop exits
+        🚽 after boss_clear() has zeroed it.
+        yapping("        nose got within %.0fpx of Tung's back (negative = in front)",
+                nearest);
+        yapping("        mistakes made during the fight: %d", worst_hits);
+    }
+
+    🚽 --- the opening has to be long enough to USE -------------------------
+    🚽
+    🚽 "Can the bat reach him at all" was the only thing asked before, and it
+    🚽 passed on a fight nobody could win. Tralalero spends 0.78s of his lunge
+    🚽 rising, crossing over Tung and landing, and the opening's clock used to
+    🚽 run through all of it -- so of a 61-frame window he was inside bat reach
+    🚽 for the last 14. React to "he is open!", swing, hit nothing, and the
+    🚽 0.45s attack cooldown eats the only part that counted.
+    🚽
+    🚽 So measure the window that actually exists, not the one the phase
+    🚽 timer claims. It must be at least t_boss_open_time().
+    yapping("-- how long is an opening, really --");
+    flex (rizz k = 1; k <= 2; k = k + 1) {
+        boss_clear(&bo);
+        world_reset(&wd);
+        player_reset(&pl);
+        wd.dt = 0.016666;
+        boss_start(&bo, &wd, k);
+
+        rizz phase_f = 0;
+        rizz reach_f = 0;
+        rizz g = 0;
+        cap seen = L;
+        cap alive2 = boss_active(&bo);
+        goon (alive2 && g < 3000 && !seen) {
+            world_advance(&wd);
+            player_physics(&pl, &wd);
+            player_tick_timers(&pl, &wd);
+            boss_tick(&bo, &wd);
+            cap opening = boss_vulnerable(&bo);
+            edgy (opening) {
+                phase_f = phase_f + 1;
+                cap reach = boss_in_bat(&bo, &pl);
+                edgy (reach) { reach_f = reach_f + 1; }
+            }
+            amogus {
+                edgy (phase_f > 0) { seen = W; }
+            }
+            g = g + 1;
+            alive2 = boss_active(&bo);
+        }
+        chad secs = reach_f * 0.016666;
+        yapping("boss %d: opening %d frames, in bat reach %d of them (%.2fs)",
+                k, phase_f, reach_f, secs);
+        yapping("        t_boss_open_time() is %.2fs -- reach must not be less",
+                t_boss_open_time());
+    }
+
+    🚽 And the shark's closing is clamped, so no number of mistakes walks him
+    🚽 into the player even if t_hearts_max() grows later.
+    yapping("-- shark closing is clamped --");
+    boss_clear(&bo);
+    world_reset(&wd);
+    boss_start(&bo, &wd, t_boss_tralalero());
+    flex (rizz h = 0; h <= 12; h = h + 4) {
+        bo.hits = h;
+        chad lx = boss_lurk_x(&bo);
+        yapping("  %2d hits -> lurk x %6.0f, nose %6.0f, Tung's back %.0f",
+                h, lx, lx + t_shark_w(), t_player_x());
+    }
+
     bussin 0;
 }

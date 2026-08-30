@@ -44,6 +44,7 @@ rizz draw_load_bg_far()  { bussin rl_load_texture("assets/bg_far.png"); }
 rizz draw_load_bg_mid()  { bussin rl_load_texture("assets/bg_mid.png"); }
 rizz draw_load_bg_near() { bussin rl_load_texture("assets/bg_near.png"); }
 rizz draw_load_bg_fore() { bussin rl_load_texture("assets/bg_fore.png"); }
+rizz draw_load_shark()   { bussin rl_load_texture("assets/tralalero.png"); }
 
 skibidi draw_unload(rizz tex) {
     edgy (tex >= 0) { rl_unload_texture(tex); }
@@ -106,8 +107,11 @@ skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind,
             🚽 and needs no flip. Patapim charges LEFT at the player, so
             🚽 without this it runs backwards -- tail first, at the thing
             🚽 it is supposed to be attacking.
-            rl_draw_texture_rec(tex_pat, frame * 101.0, 0.0, 0.0 - 101.0, 64.0,
-                                x + w / 2.0 - 51.0, y, 255, 255, 255, 255);
+            chad pw = t_patapim_w();
+            rl_draw_texture_rec(tex_pat, frame * pw, 0.0, 0.0 - pw,
+                                t_patapim_h(),
+                                x + w / 2.0 - t_patapim_anchor(), y,
+                                255, 255, 255, 255);
         }
         amogus {
             rl_draw_rectangle(x, y, w, h, 150, 80, 44, 255);
@@ -169,10 +173,11 @@ skibidi draw_layer(rizz tex, chad dist, chad rate, chad lw, chad lh,
 🚽 barely move, foliage at the player's feet moves with the ground.
 skibidi draw_background(rizz far, rizz mid, rizz near, rizz fore, chad dist) {
     chad g = t_ground_y();
-    draw_layer(far,  dist, 0.10, 2353.0, 200.0, g);
-    draw_layer(mid,  dist, 0.25,  803.0, 220.0, g);
-    draw_layer(near, dist, 0.50,  503.0, 190.0, g);
-    draw_layer(fore, dist, 1.00,  299.0, 110.0, g + 34.0);
+    draw_layer(far,  dist, t_bg_far_rate(),  t_bg_far_w(),  t_bg_far_h(),  g);
+    draw_layer(mid,  dist, t_bg_mid_rate(),  t_bg_mid_w(),  t_bg_mid_h(),  g);
+    draw_layer(near, dist, t_bg_near_rate(), t_bg_near_w(), t_bg_near_h(), g);
+    draw_layer(fore, dist, t_bg_fore_rate(), t_bg_fore_w(), t_bg_fore_h(),
+               g + t_bg_fore_drop());
 }
 
 skibidi draw_hearts(rizz hearts) {
@@ -259,14 +264,30 @@ skibidi draw_gameover(rizz score, rizz seed) {
 🚽 and the atlases drop in later behind the same `tex >= 0` fallback every
 🚽 other draw here already uses. Nothing in the simulation knows or cares.
 
-skibidi draw_boss(chad x, chad y, rizz kind, rizz phase, rizz tex) {
+skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
+                  rizz tex_shark, rizz tex_croc) {
     chad w = boss_w(kind);
     chad h = boss_h(kind);
 
+    rizz tex = tex_croc;
+    edgy (kind == t_boss_tralalero()) { tex = tex_shark; }
+
     edgy (tex >= 0) {
-        🚽 Both bosses face LEFT at the player, so both want the mirror.
-        rl_draw_texture_rec(tex, 0.0, 0.0, 0.0 - w, h,
-                            x, y, 255, 255, 255, 255);
+        🚽 Frame 1 is the opening. That is the whole tell -- jaws wide, and
+        🚽 the one second in three cycles where the bat connects.
+        chad fw = t_shark_frame_w();
+        chad col = 0.0;
+        edgy (phase == t_boss_open()) { col = fw; }
+
+        🚽 NOT mirrored, unlike Patapim. He chases from behind, so the
+        🚽 art's own right-facing IS toward the player; and once he has
+        🚽 leapt past, right-facing means his back is turned, which is
+        🚽 exactly why he is open. Positive source width, so the anchor
+        🚽 column maps straight through rather than to (fw - anchor).
+        rl_draw_texture_rec(tex, col, 0.0, fw, t_shark_frame_h(),
+                            x + w / 2.0 - t_shark_anchor(),
+                            y + h - t_shark_frame_h(),
+                            255, 255, 255, 255);
     }
     amogus {
         edgy (kind == t_boss_tralalero()) {
@@ -303,13 +324,21 @@ skibidi draw_boss(chad x, chad y, rizz kind, rizz phase, rizz tex) {
         }
     }
 
-    🚽 The opening is the only moment the bat matters, so it gets a ring.
-    🚽 Without it the window is invisible and the fight is guesswork.
-    edgy (phase == t_boss_open()) {
-        rl_draw_rectangle(x - 4.0, y - 4.0, w + 8.0, 4.0, 255, 214, 64, 255);
-        rl_draw_rectangle(x - 4.0, y + h, w + 8.0, 4.0, 255, 214, 64, 255);
-        rl_draw_rectangle(x - 4.0, y, 4.0, h, 255, 214, 64, 255);
-        rl_draw_rectangle(x + w, y, 4.0, h, 255, 214, 64, 255);
+    🚽 The opening ring, for a boss with no art yet.
+    🚽
+    🚽 It exists because a one-second window nobody can see is guesswork. A
+    🚽 boss WITH art does not need it: the open frame is a different pose --
+    🚽 Tralalero's jaws come wide open -- and he is on the other side of
+    🚽 Tung by then, which is a second cue. Drawing it anyway would also
+    🚽 look wrong, because the ring traces the 140x96 collision box while
+    🚽 the art is 168px wide, so it would cut straight through his tail.
+    edgy (tex < 0) {
+        edgy (phase == t_boss_open()) {
+            rl_draw_rectangle(x - 4.0, y - 4.0, w + 8.0, 4.0, 255, 214, 64, 255);
+            rl_draw_rectangle(x - 4.0, y + h, w + 8.0, 4.0, 255, 214, 64, 255);
+            rl_draw_rectangle(x - 4.0, y, 4.0, h, 255, 214, 64, 255);
+            rl_draw_rectangle(x + w, y, 4.0, h, 255, 214, 64, 255);
+        }
     }
 }
 
@@ -327,7 +356,7 @@ skibidi draw_bomb(chad x, chad y, chad w, chad h, cap burning) {
 
 🚽 Three pips, one per bonk still owed. Drawn top-centre so it does not
 🚽 fight the hearts (top-left) or the score (top-right).
-skibidi draw_boss_bar(rizz kind, rizz bonks) {
+skibidi draw_boss_bar(rizz kind, rizz bonks, cap ready) {
     chad bw = 64.0;
     chad x0 = t_screen_w() / 2.0 - (t_boss_bonks() * bw) / 2.0;
     rl_draw_rectangle(x0 - 8.0, 20.0, t_boss_bonks() * bw + 16.0, 26.0,
@@ -349,5 +378,18 @@ skibidi draw_boss_bar(rizz kind, rizz bonks) {
     amogus {
         rl_draw_text_int("BOMBARDIRO CROCODILO x", bonks, 0, x0 - 8.0, 50.0, 18,
                          255, 214, 64, 255);
+    }
+
+    🚽 The one thing the player has to act on, said out loud.
+    🚽
+    🚽 `ready` is "the boss has ARRIVED", not "the boss is in its open
+    🚽 phase". Those differ by the 0.78s Tralalero spends leaping over
+    🚽 Tung, and prompting during the leap would teach exactly the mistake
+    🚽 that made the fight feel impossible: swing on sight, hit nothing,
+    🚽 and spend the real window in t_attack_total()'s cooldown.
+    edgy (ready) {
+        rizz pw = rl_measure_text("TUNG HIM  --  X", 30);
+        rl_draw_text("TUNG HIM  --  X", t_screen_w() / 2 - pw / 2, 78, 30,
+                     255, 96, 96, 255);
     }
 }

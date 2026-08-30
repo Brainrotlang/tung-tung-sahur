@@ -95,10 +95,11 @@ Two layers:
 - **Integration** (`make headless`) — the real frame loop, run for 3000 frames
   with a fixed timestep and a scripted input tape.
 
-There is a third, separate check:
+Two more, separate:
 
 ```bash
-make lint-native
+make lint-native     # every rl_* call, type-checked without a window
+make check-atlases   # the generated atlases still match tune.brainrot
 ```
 
 The tests swap `draw.brainrot` and `platform.brainrot` for fakes, which is the
@@ -106,6 +107,12 @@ point — but it means the **real** `rl_*` calls are never looked at, and a wron
 argument count there is invisible until someone runs the game. `lint-native`
 cooks the real modules into an empty `main`, so semantic analysis type-checks
 every native call and exits. No window, no GPU. `make play` runs it first.
+
+`check-atlases` guards the other half of the same seam. `tools/process_sprites.py`
+decides each atlas's frame size and anchor from the art's own proportions, and
+`tune.brainrot` has to be *told* — nothing connected the two, so regenerating art
+at a different size silently desynced the draw call from the atlas. It needs
+Python and Pillow, so it is not part of `make test`.
 
 That second one is worth a note: the harness (`src/.headless.gen.brainrot`,
 gitignored) is **generated from `src/main.brainrot`**, not copied from it. Three `sed` edits swap the raylib
@@ -123,6 +130,12 @@ make bless      # then read the diff before you commit it
 ## Layout
 
 ```
+assets/
+  tung-tung-tung/    Tung's source frames (running/jump/swing)
+  patapim/           Patapim's source frames
+  obstacles/         crate, post
+  backgrounds/       the four parallax layers
+  *.png              the generated atlases -- tools/process_sprites.py
 src/
   main.brainrot      skibidi main: the state machine, the pools, step order
   sim.brainrot       the simulation: one function per step, over structs
@@ -162,9 +175,9 @@ and all of it is drawn from real art now.
 plays a title sting, a `TUNG` on every bat hit, a jump, a damage grunt, and a
 `bruh` on the run that ends. Both bosses are in: **Tralalero Tralala** at 5,000
 and **Bombardiro Crocodilo** at 10,000, sharing one three-cycle phase machine
-and pausing the normal spawner while they own the screen. They render in
-primitives for now — there is no shark or crocodile art yet, and M0 already
-proved the game reads in rectangles.
+and pausing the normal spawner while they own the screen. Tralalero is drawn
+from art; Bombardiro is still primitives, which M0 already proved the game reads
+fine in.
 
 **M3** is next: the `SAHUR_DISTANCE` win state, the ending card, and Endless
 Schizo Mode. Milestones are in DESIGN.md §18.

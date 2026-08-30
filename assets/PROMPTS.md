@@ -261,7 +261,224 @@ vertical column.
 
 ---
 
-## 4. Background — parallax layers
+## 4. Boss sprites
+
+The two M2 set pieces (DESIGN.md §12). **Tralalero's art has landed**;
+Bombardiro still renders in primitives, behind the same `tex >= 0` fallback
+every other draw uses, so a partial set degrades one boss at a time.
+
+### 4.0 What the engine gives them
+
+| | Tralalero Tralala | Bombardiro Crocodilo |
+| --- | --- | --- |
+| Frame size | **140 × 96** | **120 × 72** |
+| Where it lives | on the ground, `y = 560 − 96` | in the air, `y = 90` cruising |
+| Faces | **left**, at the player | **left**, at the player |
+
+Both are **wider than they are tall**, unlike every sprite above — Tralalero is
+a long shark and Bombardiro is an aircraft. Do not draw them upright.
+
+Tralalero's 96 px is exactly `t_player_h()`, so he stands eye-to-eye with Tung
+on the same ground line. That is deliberate: he is a threat at the player's own
+height, not a backdrop.
+
+Both face left at the player and are drawn through the mirror, so the preamble's
+rule still holds — **author facing right**.
+
+**Two frames each**, and the split is the fight rather than a walk cycle:
+
+| Frame | Phase | On screen for |
+| --- | --- | --- |
+| 0 | `survive` — the boss owns the pattern and cannot be hit | `t_boss_survive_time()` = 8.0 s per cycle |
+| 1 | `open` — over-committed, the bat connects | `t_boss_open_time()` = 1.0 s per cycle |
+
+Three openings kill a boss (`t_boss_bonks()`), so frame 1 is seen three times a
+fight for a second each. It carries the whole read of "hit me **now**", and it
+is the frame to spend the most effort on.
+
+> Both frames are drawn: `draw_boss()` picks the column from `phase ==
+> t_boss_open()`. The gold ring it used to paint around an open boss is now
+> drawn only for a boss with **no** art — the open pose is the tell, and the
+> ring traces the collision box, so on a wider sprite it cuts through the
+> art.
+
+### 4.1 Palette additions
+
+From the placeholder rectangles in `src/draw.brainrot`, so replacing them does
+not shift the scene's colour.
+
+| Role | RGB |
+| --- | --- |
+| Tralalero body | `96,108,120` |
+| Tralalero belly | `206,210,214` |
+| Tralalero shoes | `70,60,54`, soles `240,240,240` |
+| Bombardiro body | `84,124,78` |
+| Bombardiro belly | `196,206,170` |
+| Bombardiro wings / fuselage metal | `120,120,128` |
+| Bombardiro bomb bay | `60,50,44` |
+| Both — eye white / pupil | `250,250,250` / `20,20,20` |
+| Bomb shell | `34,34,40`, fuse `190,140,60` |
+| Blast | `255,148,40`, hot centre `255,226,120` |
+
+### 4.2 Tralalero Tralala — 2 frames ✅ *done*
+
+**Shipped**: `assets/tralalero/tralalero1.jpg` (survive) and `tralalero2.jpg`
+(the opening, jaws wide). Processed to a `336 × 96` atlas of `168 × 96` frames,
+anchor column 104.
+
+Note the art frame is **168** wide against a **140 × 96** collision box — a
+shark's snout and tail overhang what it collides with, the same split Tung has
+(112px of art over a 48px box). That is normal and is why `t_shark_frame_w()`
+and `t_shark_w()` are separate constants.
+
+He is drawn **unmirrored**, unlike Patapim. He chases from behind, so the art's
+own right-facing is toward the player; and once he has leapt past, right-facing
+means his back is turned — which is exactly why he is open.
+
+The prompt used, for reference and for regenerating:
+
+He chases from the **left**, along the ground, and the survive phase is pure
+obstacle dodging — the player is running away from him while jumping crates. So
+frame 0 is seen mostly at the screen's left edge, partly off it, and needs to
+read from its **right** end: the head.
+
+```text
+CANVAS OVERRIDE
+Output a wide image with a 3:2 aspect ratio, not a square. The subject is
+horizontal.
+
+SUBJECT
+A shark, seen in full side view, standing and running on three human legs.
+The body is a long muscular shark: blue-grey above (#606C78) with a pale
+off-white belly (#CED2D6), a tall dorsal fin, pectoral fins, and a heavy tail
+that trails behind. The head is at the RIGHT end of the image, with a black eye
+(#141414) ringed in white (#FAFAFA) and a mouth of small triangular teeth. Three
+thin human legs come down from the underside of the body, each wearing a chunky
+worn trainer with a pale sole (#463C36 with #F0F0F0 soles). The absurdity is the
+point: it is a real shark that happens to have legs and shoes.
+
+The silhouette is much longer than it is tall — roughly one and a half times as
+wide as high — and it must read as a shark from the outline alone.
+
+POSE
+[FRAME 1 of 2: chasing. The body is low and driving forward, all three legs
+mid-stride at different phases, tail streaming out behind, mouth closed or
+slightly parted in a snarl, eye fixed forward. Menacing but controlled — this is
+the pose he holds while he cannot be hit.]
+
+The shark is running to the right. Do not draw water, spray, or a shadow.
+```
+
+Frame 2 — the **opening**, and the one that has to be unmistakable:
+
+```text
+POSE
+[FRAME 2 of 2: over-committed. He has lunged too far forward and is off
+balance — mouth thrown wide open showing the full set of teeth, head and neck
+extended well ahead of the legs, front leg splayed out, tail whipped up behind
+for counterbalance. He is exposed and he looks it. This is the one-second window
+in which the player is supposed to swing.]
+
+Same shark, same colours, same size as frame 1 — only the pose changes.
+```
+
+### 4.3 Bombardiro Crocodilo — `120 × 72`, 2 frames → atlas `240 × 72`
+
+He does not chase. He flies overhead at `y = 90`, sways across the top of the
+screen, and drops bombs — so frame 0 is seen small, high up, against the near-
+black sky, and its **silhouette from below** is what identifies it.
+
+```text
+CANVAS OVERRIDE
+Output a wide image with a 5:3 aspect ratio, not a square. The subject is
+horizontal.
+
+SUBJECT
+A crocodile fused with a military bomber aircraft, seen in full side view. The
+body is a crocodile: scaly olive-green back (#547C4E) with a pale ridged
+underbelly (#C4CEAA), a long snout at the RIGHT end of the image with visible
+teeth, one eye (#141414 in #FAFAFA), and a thick tapering tail at the left. Grey
+metal aircraft parts are bolted onto it (#787880): a straight wing jutting from
+the near side, a small tailplane, and a row of dark bomb-bay hatches (#3C322C)
+along the belly. Bare metal, riveted, no insignia and no text.
+
+The silhouette is much longer than it is tall — roughly one and two thirds as
+wide as high — and it must read as "aircraft" from below at small size.
+
+POSE
+[FRAME 1 of 2: cruising level. The body is horizontal and stable, wing extended
+straight out, tail streaming behind, snout closed, bomb-bay hatches shut. Calm
+and mechanical — this is the pose he holds high up while he cannot be hit.]
+
+The crocodile is flying to the right. Do not draw clouds, motion streaks,
+propeller blur, or a shadow.
+```
+
+Frame 2 — the **opening**:
+
+```text
+POSE
+[FRAME 2 of 2: descended and braking. He has dropped to head height and pulled
+up hard — nose angled up, body pitched back, wing flared wide and tilted to
+brake, jaws open, bomb-bay hatches hanging open and empty. He has stalled out of
+his own attack run and is hanging there. This is the one-second window in which
+the player is supposed to swing.]
+
+Same crocodile, same colours, same size as frame 1 — only the pose changes.
+```
+
+### 4.4 Bomb — `26 × 26`, single frame
+
+Dropped from Bombardiro's belly and falls under the player's own gravity.
+
+```text
+CANVAS OVERRIDE
+Output a square image. The subject is small and compact.
+
+SUBJECT
+A small cartoon aerial bomb seen from the side: a stubby dark iron shell
+(#222228) with a rounded nose pointing DOWN, three small fins at the top, and a
+short length of fuse cord (#BE8C3C) sticking up from the tail with a bright warm
+spark at its tip (#F09628). A single pale highlight along the upper-left of the
+shell so it reads as metal.
+
+The bomb is as wide as it is tall and fills the subject area. It must be legible
+at 26 pixels: shape and one bright spark, nothing finer.
+
+POSE
+Falling, nose down, upright.
+```
+
+The bomb is the one asset where **facing does not matter** — it is drawn
+unmirrored and symmetric about its vertical axis. Keep it symmetric.
+
+### 4.5 Blast — `64 × 34`, single frame
+
+What the bomb becomes on impact: a ground hazard that hurts for
+`t_bomb_fuse()` = 0.55 s. Wide and low, sitting **on** the ground line.
+
+```text
+CANVAS OVERRIDE
+Output a wide image with a 2:1 aspect ratio. The subject is a low horizontal
+band, not a ball.
+
+SUBJECT
+A burst of fire spreading sideways along the ground: a wide, low fan of flame,
+brightest and palest at its centre (#FFE278) grading out to strong orange at the
+edges (#FF9428), with a few detached sparks above it. Flat hard-edged shapes, no
+smoke, no soft glow, no radial gradient.
+
+The blast is twice as wide as it is tall and spreads HORIZONTALLY. Its bottom
+edge is flat and fully opaque — it sits on the ground, and the game places that
+bottom row exactly on the ground line. Nothing may be drawn below it.
+
+POSE
+A single frozen moment near the peak of the burst, seen from the side.
+```
+
+---
+
+## 5. Background — parallax layers
 
 Four layers, each **1280 px wide** and **horizontally tileable**: the right edge
 must continue seamlessly into the left edge, because the layer is drawn twice
@@ -372,14 +589,15 @@ and no leaf cut in half at either edge.
 
 ---
 
-## 5. Acceptance checklist
+## 6. Acceptance checklist
 
 Check each processed asset before it goes in the repo. Most of these are
 scriptable, and should be scripted.
 
 **Every sprite**
 
-- [ ] Exact pixel dimensions (`48×96`, `64×64`, `48×48`, `40×96`, atlas widths as listed)
+- [ ] Exact pixel dimensions (`48×96`, `64×64`, `48×48`, `40×96`, `140×96`,
+      `120×72`, `26×26`, `64×34`, atlas widths as listed)
 - [ ] Every pixel's alpha is exactly 0 or 255 — no partial transparency
 - [ ] No magenta survives anywhere, including single fringe pixels
 - [ ] ≤ 16 distinct RGB values
@@ -402,19 +620,39 @@ scriptable, and should be scripted.
 - [ ] Upper region fully transparent, so the sky tier shows through
 - [ ] Bottom row fully opaque
 
+**Every boss**
+
+- [ ] Wider than tall — both are, and drawing them upright breaks the box
+- [ ] Frame 1 (the opening) is unmistakably different from frame 0 at a glance,
+      not a small pose tweak. It is on screen for one second, three times a
+      fight, and it is the entire signal to swing
+- [ ] Tralalero's head is at the RIGHT end of the frame: he is seen entering
+      from the screen's left edge, partly off it, so the head is what arrives
+- [ ] Bombardiro reads as an aircraft in silhouette from below, small and high
+      against a near-black sky
+- [ ] `tools/check_atlases.py` passes — and if the atlas size changes, the
+      constants it checks live in `src/tune.brainrot`, not in `draw.brainrot`
+
 **In-game**
 
 - [ ] Readable against the LVL 1 sky (`12,14,34`) — the hardest case, and the
       first thing a player sees
 - [ ] Still readable against the LVL 8 dawn sky (`140,74,60`)
 - [ ] Tung and Patapim are distinguishable by silhouette alone at 900 px/s
+- [ ] Tralalero is distinguishable from Patapim at a glance — both are wide,
+      ground-level and coming at you, and confusing "bonk the boss when it
+      opens" with "bonk this enemy now" costs a heart
 
 ---
 
-## 6. What this does not cover
+## 7. What this does not cover
 
-Sprites for the M1 Patapim variants (small, big, jumping, armored) and the M2
-bosses — Tralalero Tralala and Bombardiro Crocodilo — are deliberately out of
-scope until the base set is in the game and proven. Armored Patapim in particular
-needs a silhouette that reads as *unbonkable* before it is worth drawing, and
-that is a design question rather than a prompting one.
+Sprites for the M1 Patapim variants (small, big, jumping, armored) are still out
+of scope. Armored Patapim in particular needs a silhouette that reads as
+*unbonkable* before it is worth drawing, and that is a design question rather
+than a prompting one.
+
+The M2 bosses moved into scope (§4) once both fights were implemented and
+playable — the sizes, frame split and placeholder palette in that section are
+read from the shipped code, so the prompts describe art the game can already
+load rather than art a future version might want.
