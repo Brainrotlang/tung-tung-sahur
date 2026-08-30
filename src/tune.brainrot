@@ -167,7 +167,7 @@ chad t_croc_cruise_x()     { bussin 560.0; }
 🚽 of the bat's far edge (296). At 200 he descended straight onto Tung's
 🚽 head for a free heart every opening.
 chad t_croc_open_x()       { bussin 258.0; }
-chad t_croc_sway()         { bussin 180.0; }
+chad t_croc_sway()         { bussin 120.0; }
 chad t_croc_sway_rate()    { bussin 1.1; }
 
 🚽 His atlas: two frames, and unlike every other animation here they are
@@ -184,8 +184,20 @@ chad t_croc_frame_w()      { bussin 149.0; }
 chad t_croc_frame_h()      { bussin 72.0; }
 chad t_croc_anchor()       { bussin 60.0; }
 
-🚽 Bombs fall under the same gravity the player does, then sit as a ground
-🚽 hazard for a moment. Both states hurt.
+🚽 Bombs do NOT fall under the player's gravity, and that is the whole
+🚽 difference between a threat and a coin flip.
+🚽
+🚽 At t_gravity() the drop took 0.535s. A jump lasts 0.769s. So a jump
+🚽 started the instant the bomb became visible finished AFTER the bomb had
+🚽 already landed and detonated -- the player could never react, only
+🚽 pre-empt, and there was nothing to pre-empt from because an 11px shell
+🚽 of rgb(34,34,40) against a rgb(12,14,34) sky is invisible.
+🚽
+🚽 So the FALL TIME is the tuned number, because it is the one fairness
+🚽 depends on, and the gravity that produces it is derived (bomb_gravity()).
+🚽 A player needs ~0.25s to react plus ~0.385s to reach jump apex, so 0.635s
+🚽 is the floor; 1.0s leaves real margin. unit_boss asserts it.
+chad t_bomb_fall_time()    { bussin 1.00; }
 🚽 The bomb's box FOLLOWS its art, not the other way round. The shell plus
 🚽 its lit fuse comes out 11px wide at 26px tall, and a 26x26 box around an
 🚽 11px sprite is fifteen pixels of empty air that still takes a heart.
@@ -199,6 +211,14 @@ chad t_bomb_h()            { bussin 26.0; }
 🚽 forgiving direction.
 chad t_blast_w()           { bussin 64.0; }
 chad t_blast_h()           { bussin 34.0; }
+
+🚽 The landing marker: a flat shadow on the ground under where a bomb is
+🚽 going to hit, drawn from the moment it is dropped. Without it the player
+🚽 is tracking an 11px dark object against a near-black sky while it crosses
+🚽 a third of the screen -- which is what "I can't see where they're coming
+🚽 from" meant.
+chad t_bomb_mark_w()       { bussin 56.0; }
+chad t_bomb_mark_h()       { bussin 10.0; }
 
 🚽 Single-frame atlases, both centred on their box.
 chad t_bomb_frame_w()      { bussin 11.0; }

@@ -360,6 +360,16 @@ skibidi main {
         edgy (show) { draw_player(t_player_x(), pl.y, tex, frame_i); }
         edgy (swinging) { draw_bat(t_player_x(), pl.y, tex_swing); }
 
+        🚽 Markers first, so a bomb never hides its own warning.
+        flex (rizz i = 0; i < MAX_BMB; i = i + 1) {
+            edgy (bombs[i].alive) {
+                cap falling = bombs[i].fuse <= 0.0;
+                edgy (falling) {
+                    draw_bomb_mark(bomb_landing_x(&bombs[i], &wd),
+                                   bombs[i].fall_t);
+                }
+            }
+        }
         flex (rizz i = 0; i < MAX_BMB; i = i + 1) {
             edgy (bombs[i].alive) {
                 cap burning = bombs[i].fuse > 0.0;

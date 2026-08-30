@@ -32,6 +32,7 @@ skibidi draw_title(chad t)         { rizz noop = 0; }
 skibidi draw_gameover(rizz score, rizz seed) { rizz noop = 0; }
 skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
                   rizz tex_shark, rizz tex_croc) { rizz noop = 0; }
+skibidi draw_bomb_mark(chad lx, chad t_left) { rizz noop = 0; }
 skibidi draw_bomb(chad x, chad y, chad w, chad h, cap burning,
                   rizz tex_bomb, rizz tex_blast) { rizz noop = 0; }
 skibidi draw_boss_bar(rizz kind, rizz bonks, cap ready) { rizz noop = 0; }

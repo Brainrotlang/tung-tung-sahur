@@ -81,6 +81,10 @@ gang Bomb {
     chad x;
     chad y;
     chad vy;
+    🚽 Seconds until impact. Kept rather than re-derived because recovering
+    🚽 it from y and vy needs a square root, and the landing marker wants it
+    🚽 every frame.
+    chad fall_t;
     chad fuse;
     cap  alive;
 };
@@ -381,7 +385,10 @@ cap pool_body_pass(gang Ent *pool, rizz n, gang Player *p, gang World *w) {
 🚽 generic over two struct types.
 
 skibidi bombs_clear(gang Bomb *pool, rizz n) {
-    flex (rizz i = 0; i < n; i = i + 1) { pool[i].alive = L; }
+    flex (rizz i = 0; i < n; i = i + 1) {
+        pool[i].alive  = L;
+        pool[i].fall_t = 0.0;
+    }
 }
 
 rizz bombs_free_slot(gang Bomb *pool, rizz n) {
@@ -568,10 +575,20 @@ chad boss_target_x(gang Boss *b, gang World *w) {
         bussin boss_lurk_x(b);
     }
     edgy (b.phase == t_boss_open()) { bussin t_croc_open_x(); }
-    🚽 The croc sways across the top so his bombs do not all land on one
-    🚽 column, which would make the fight a single memorised jump.
-    bussin t_croc_cruise_x()
-           + wave(w.dist * 0.001 * t_croc_sway_rate()) * t_croc_sway();
+    🚽 He LEADS the player rather than sitting at a fixed column.
+    🚽
+    🚽 A bomb drifts left at world speed for the whole t_bomb_fall_time(),
+    🚽 so the drop point has to be that far ahead of Tung or the bombs land
+    🚽 behind him. A fixed cruise x only worked at one speed: slowing the
+    🚽 fall enough to be dodgeable moved every impact off the left of the
+    🚽 screen. Deriving the lead keeps the fight a threat at every speed,
+    🚽 and it is what a bomber would actually do.
+    🚽
+    🚽 The sway on top is so the bombs do not all land on one column, which
+    🚽 would make the fight a single memorised jump.
+    chad lead = t_player_x() + w.speed * t_bomb_fall_time()
+                - t_croc_w() * 0.5;
+    bussin lead + wave(w.dist * 0.001 * t_croc_sway_rate()) * t_croc_sway();
 }
 
 chad boss_target_y(gang Boss *b, gang World *w) {
@@ -720,12 +737,33 @@ skibidi boss_note_hit(gang Boss *b) {
 
 🚽 --- bombs ---------------------------------------------------------------
 
+🚽 The gravity that makes a bomb take exactly t_bomb_fall_time() to reach
+🚽 the ground from the croc's cruising height. Derived rather than tuned:
+🚽 the fall TIME is what fairness depends on, so that is the number a human
+🚽 sets, and this follows from it. It also avoids needing a square root,
+🚽 which math.brainrot does not have.
+chad bomb_gravity() {
+    chad drop = t_ground_y() - t_blast_h() - (t_croc_cruise_y() + t_croc_h());
+    bussin 2.0 * drop / (t_bomb_fall_time() * t_bomb_fall_time());
+}
+
 skibidi bomb_spawn(gang Bomb *bm, gang Boss *b) {
-    bm.x     = b.x + boss_w(b.kind) * 0.5 - t_bomb_w() * 0.5;
-    bm.y     = b.y + boss_h(b.kind);
-    bm.vy    = 0.0;
-    bm.fuse  = 0.0;
-    bm.alive = W;
+    bm.x      = b.x + boss_w(b.kind) * 0.5 - t_bomb_w() * 0.5;
+    bm.y      = b.y + boss_h(b.kind);
+    bm.vy     = 0.0;
+    bm.fall_t = t_bomb_fall_time();
+    bm.fuse   = 0.0;
+    bm.alive  = W;
+}
+
+🚽 Where this bomb is going to land.
+🚽
+🚽 It drifts left at world speed for every second it is still falling, so
+🚽 the answer is just that: current x, minus the ground it has yet to cover.
+🚽 The marker drawn at this x is the ONLY warning the player gets -- see
+🚽 t_bomb_fall_time() for what happened without one.
+chad bomb_landing_x(gang Bomb *bm, gang World *w) {
+    bussin bm.x - w.speed * bm.fall_t;
 }
 
 🚽 A landed bomb is not a second pool -- it is the same slot with a wider
@@ -750,15 +788,18 @@ skibidi bomb_tick(gang Bomb *bm, gang World *w) {
         edgy (bm.fuse <= 0.0) { bm.alive = L; }
     }
     amogus {
-        bm.vy = bm.vy + t_gravity() * w.dt;
+        bm.vy = bm.vy + bomb_gravity() * w.dt;
         bm.y  = bm.y + bm.vy * w.dt;
+        bm.fall_t = bm.fall_t - w.dt;
+        edgy (bm.fall_t < 0.0) { bm.fall_t = 0.0; }
         edgy (bm.y + t_bomb_h() >= t_ground_y()) {
             🚽 Detonate: the box widens and drops to the ground line, so
             🚽 the blast covers more than the shell that made it.
-            bm.y    = t_ground_y() - t_blast_h();
-            bm.x    = bm.x + t_bomb_w() * 0.5 - t_blast_w() * 0.5;
-            bm.vy   = 0.0;
-            bm.fuse = t_bomb_fuse();
+            bm.y      = t_ground_y() - t_blast_h();
+            bm.x      = bm.x + t_bomb_w() * 0.5 - t_blast_w() * 0.5;
+            bm.vy     = 0.0;
+            bm.fall_t = 0.0;
+            bm.fuse   = t_bomb_fuse();
         }
     }
 

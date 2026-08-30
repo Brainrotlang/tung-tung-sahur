@@ -40,11 +40,21 @@ airtime 0.769 s
 every boss jump->jump gap clears the airtime: W
 -- bombs --
 spawned at y 162.0, w 12.0 (shell)
-landed after 32 steps at y 526.0, w 64.0 (blast)
+landed after 61 steps at y 526.0, w 64.0 (blast)
 ground line 560.0, blast bottom 560.0
 blast gone after 34 more steps
 bomb on the player  W
 bomb well behind    L
+-- bombs: dodgeable, and still a threat --
+  fall 1.000s   need 0.635s (0.25 react + 0.385 to apex)   slack +0.365
+  a bomb can be reacted to: W
+  speed 620: croc x    760 -> bomb lands x    194 (-6 from Tung)
+  speed 690: croc x    830 -> bomb lands x    194 (-6 from Tung)
+  speed 760: croc x    900 -> bomb lands x    194 (-6 from Tung)
+  speed 830: croc x    970 -> bomb lands x    194 (-6 from Tung)
+  speed 900: croc x   1040 -> bomb lands x    194 (-6 from Tung)
+  bombs land within reach of Tung at every speed: W
+  sway spreads impacts over x 94..307 (213px wide)
 -- scripted fight --
 fight over in 1702 frames, 171 swing attempts
 boss kind 0, hearts 3, bonus 2600
@@ -52,13 +62,13 @@ boss kind 0, hearts 3, bonus 2600
 boss 1: 1702 frames, 171 open frames, body contacts 0 (must be 0)
         nose got within -198px of Tung's back (negative = in front)
         mistakes made during the fight: 2
-boss 2: 1683 frames, 152 open frames, body contacts 0 (must be 0)
-        nose got within -660px of Tung's back (negative = in front)
+boss 2: 1645 frames, 114 open frames, body contacts 0 (must be 0)
+        nose got within -515px of Tung's back (negative = in front)
         mistakes made during the fight: 2
 -- how long is an opening, really --
 boss 1: opening 117 frames, in bat reach 70 of them (1.17s)
         t_boss_open_time() is 1.00s -- reach must not be less
-boss 2: opening 105 frames, in bat reach 66 of them (1.10s)
+boss 2: opening 105 frames, in bat reach 68 of them (1.13s)
         t_boss_open_time() is 1.00s -- reach must not be less
 -- shark closing is clamped --
    0 hits -> lurk x    -30, nose    110, Tung's back 200

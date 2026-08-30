@@ -361,6 +361,27 @@ skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
 🚽 their collision box rather than aligned to it: the blast's art is 77px of
 🚽 spreading fire over a 64px box on purpose, so the outer flames are
 🚽 decoration you can stand in, and centring is what makes that symmetric.
+🚽 Where a falling bomb is going to hit, drawn on the ground line the moment
+🚽 it is dropped.
+🚽
+🚽 This is the only warning the player gets. Without it they were tracking an
+🚽 11px shell of rgb(34,34,40) against a rgb(12,14,34) sky while it crossed a
+🚽 third of the screen in half a second -- see t_bomb_fall_time().
+🚽
+🚽 It tightens as impact approaches, so "how soon" is readable at a glance
+🚽 without a number: a wide faint band is a bomb you have time for, a narrow
+🚽 bright one is a bomb you do not.
+skibidi draw_bomb_mark(chad lx, chad t_left) {
+    chad frac = clampf(t_left / t_bomb_fall_time(), 0.0, 1.0);
+    chad w    = t_bomb_mark_w() * (0.35 + 0.65 * frac);
+    chad h    = t_bomb_mark_h();
+    chad a    = 90.0 + 130.0 * (1.0 - frac);
+    rl_draw_rectangle(lx - w / 2.0, t_ground_y() - h / 2.0, w, h,
+                      255, 120, 40, a);
+    rl_draw_rectangle(lx - 2.0, t_ground_y() - h / 2.0 - 4.0, 4.0, h + 8.0,
+                      255, 200, 90, a);
+}
+
 skibidi draw_bomb(chad x, chad y, chad w, chad h, cap burning,
                   rizz tex_bomb, rizz tex_blast) {
     rizz tex = tex_bomb;
