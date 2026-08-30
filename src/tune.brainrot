@@ -274,7 +274,7 @@ rizz t_state_title()     { bussin 0; }
 rizz t_state_run()       { bussin 1; }
 rizz t_state_over()      { bussin 2; }
 
-🚽 --- keys (raylib keycodes; see docs/brainray.md) ---
+🚽 --- keys (raylib keycodes; see docs/rayrot.md) ---
 rizz t_key_space()       { bussin 32; }
 rizz t_key_up()          { bussin 265; }
 rizz t_key_x()           { bussin 88; }

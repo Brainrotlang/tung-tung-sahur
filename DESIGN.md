@@ -1,11 +1,11 @@
 # TUNG TUNG TUNG SAHUR: RUN — Design Document
 
 > An endless runner written in [Brainrot](https://github.com/Brainrotlang/brainrot),
-> rendered through [`brainray`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md).
+> rendered through [`rayrot`](https://github.com/Brainrotlang/brainrot/blob/main/docs/rayrot.md).
 >
 > **The game repository contains zero C.** Anything the game needs that raylib
 > can't reach from Brainrot today gets implemented *upstream*, in `brainrot` or
-> `brainray`. This repo is `.brainrot` files and assets, nothing else.
+> `rayrot`. This repo is `.brainrot` files and assets, nothing else.
 
 ---
 
@@ -55,7 +55,10 @@ unlock **ENDLESS SCHIZO MODE**, where the acceleration never stops.
 
 This section is not background reading. Brainrot has sharp edges that shape the
 architecture, and every claim below was verified by running the interpreter on
-`main` @ `3ce8a3a` with raylib 6.0.0 and `brainray/raylib.so` built.
+`main` @ `3ce8a3a` with raylib 6.0.0 and the raylib binding built. (That
+binding lived in `brainray/` until
+[brainrot#318](https://github.com/Brainrotlang/brainrot/pull/318) renamed the
+directory to `rayrot/`; the cooked module is `<raylib>` either way.)
 
 ### 3.1 What works, and is load-bearing
 
@@ -95,7 +98,7 @@ in one function — are gone with them.
 | **Signed overflow aborts** | The interpreter is built `-fsanitize=address,undefined`; `42 * 1103515245` kills the run | PRNG uses Schrage's method, which provably never leaves int32 |
 | **`W` and `L` are keywords** | `gang W { ... }` → parse error | Never name anything `W` or `L` |
 
-### 3.3 The `brainray` surface
+### 3.3 The `rayrot` surface
 
 Twenty-five functions total:
 
@@ -912,7 +915,7 @@ skibidi main {
 The zero-C rule means every gap below is a PR to `Brainrotlang/brainrot`. **M0
 depends on none of them.**
 
-### 15.1 `brainray` additions
+### 15.1 `rayrot` additions
 
 | ID | Ask | Unblocks | Milestone |
 | --- | --- | --- | --- |
@@ -1079,20 +1082,20 @@ definitions only — no second `skibidi main`.
 ### 17.1 Build and run
 
 The game does not vendor Brainrot. It expects a `brainrot` checkout with
-`brainray` built, as a sibling directory by default and overridable:
+`rayrot` built, as a sibling directory by default and overridable:
 
 ```bash
 # once, in the brainrot checkout
-make && make brainray
+make && make rayrot
 
 # here
 make play
-# == BRAINROT_PATH=$(BRAINROT_DIR)/brainray $(BRAINROT_DIR)/brainrot src/main.brainrot
+# == BRAINROT_PATH=$(BRAINROT_DIR)/rayrot $(BRAINROT_DIR)/brainrot src/main.brainrot
 ```
 
 `BRAINROT_PATH` must point at a directory containing `raylib.so`, or
 `#cooked <raylib>` cannot resolve. See
-[`docs/brainray.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md)
+[`docs/rayrot.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/rayrot.md)
 for raylib installation — it is the single source of truth and this repo will
 not duplicate it.
 

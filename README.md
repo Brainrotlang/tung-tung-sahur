@@ -1,7 +1,7 @@
 # TUNG TUNG TUNG SAHUR: RUN
 
 An endless runner written in [Brainrot](https://github.com/Brainrotlang/brainrot),
-rendered through [`brainray`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md).
+rendered through [`rayrot`](https://github.com/Brainrotlang/brainrot/blob/main/docs/rayrot.md).
 
 It is 03:30 AM. Tung Tung Tung Sahur runs east to wake the village for the
 pre-dawn meal. Brr Brr Patapim keeps getting in the way.
@@ -37,18 +37,18 @@ design, the verified engine constraints, and the upstream dependency list.
 ## Running it
 
 You need a [`brainrot`](https://github.com/Brainrotlang/brainrot) checkout with
-the `brainray` module built. Clone it next to this repo:
+the `rayrot` raylib binding built. Clone it next to this repo:
 
 ```bash
 git clone https://github.com/Brainrotlang/brainrot
 cd brainrot
 make            # the interpreter
-make brainray   # the raylib binding -- needs raylib installed
+make rayrot     # the raylib binding -- needs raylib installed
 cd ..
 ```
 
 raylib setup for your OS is documented once, upstream, in
-[`docs/brainray.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/brainray.md).
+[`docs/rayrot.md`](https://github.com/Brainrotlang/brainrot/blob/main/docs/rayrot.md).
 This repo will not duplicate it.
 
 **You need brainrot v0.2.0 or newer.** The game depends on four fixes it turned
@@ -174,7 +174,7 @@ no upstream dependencies at all. **M1** shipped too — the numeric HUD landed
 with B1, B2 (`rl_draw_texture_rec`) unblocked sprites, animation and parallax,
 and all of it is drawn from real art now.
 
-**M2 has shipped.** brainray got audio in
+**M2 has shipped.** The raylib binding got audio in
 [brainrot#302](https://github.com/Brainrotlang/brainrot/pull/302), so the game
 plays a title sting, a `TUNG` on every bat hit, a jump, a damage grunt, and a
 `bruh` on the run that ends. Both bosses are in: **Tralalero Tralala** at 5,000

@@ -1,14 +1,14 @@
 # TUNG TUNG TUNG SAHUR: RUN
 #
-# `make play`  runs the game   (needs raylib + brainray)
+# `make play`  runs the game   (needs raylib + the rayrot binding)
 # `make test`  runs the tests  (needs neither -- no window, no GPU)
 
 BRAINROT_DIR ?= ../brainrot
 BRAINROT     := $(BRAINROT_DIR)/brainrot
-# The raylib binding's directory. Upstream is renaming brainray/ -> rayrot/
-# (Brainrotlang/brainrot), so take whichever exists rather than breaking on
-# the day that merges. The COOKED MODULE is still `<raylib>` either way --
-# only the directory and the make target change.
+# The raylib binding's directory. Upstream renamed brainray/ -> rayrot/ in
+# Brainrotlang/brainrot#318; the fallback stays so an older checkout still
+# works. The COOKED MODULE is `<raylib>` either way -- the rename moved the
+# directory and the make target, not the module name.
 RAYMOD       := $(firstword $(wildcard $(BRAINROT_DIR)/rayrot \
                                        $(BRAINROT_DIR)/brainray) \
                             $(BRAINROT_DIR)/rayrot)
@@ -18,14 +18,14 @@ UNITS    := $(wildcard test/unit_*.brainrot)
 EXPECTED := test/expected
 PROBE    := /tmp/tts-version-probe.brainrot
 
-.PHONY: all play test units headless bless clean check-brainrot check-brainray \
+.PHONY: all play test units headless bless clean check-brainrot check-raymod \
         lint-native check-atlases
 
 all: test
 
 # ---------------------------------------------------------------- run
 
-play: check-brainray lint-native
+play: check-raymod lint-native
 	BRAINROT_PATH=$(RAYMOD) $(BRAINROT) src/main.brainrot
 
 # Every rl_* call in the game, checked without opening a window.
@@ -39,7 +39,7 @@ play: check-brainray lint-native
 # executes, so cooking the real modules into an empty `main` type-checks all
 # of them and exits immediately. No window, no GPU, no frame loop.
 LINT := /tmp/tts-native-lint.brainrot
-lint-native: check-brainray
+lint-native: check-raymod
 	@printf '#cooked <raylib>\n' > $(LINT)
 	@for m in tune math collide curve sim draw platform; do \
 	    printf '#cooked "%s/src/%s.brainrot"\n' "$$(pwd)" "$$m" >> $(LINT); \
@@ -164,17 +164,18 @@ check-brainrot:
 	        echo "    git -C $(BRAINROT_DIR) pull && make -C $(BRAINROT_DIR)"; \
 	        exit 1; }
 
-check-brainray: check-brainrot
+check-raymod: check-brainrot
 	@test -f $(RAYMOD)/raylib.so || { \
 	    echo "no raylib module at $(RAYMOD)/raylib.so"; \
-	    echo "install raylib, then run 'make rayrot (or make brainray on older checkouts)' in $(BRAINROT_DIR)"; \
-	    echo "setup instructions: $(BRAINROT_DIR)/docs/brainray.md"; \
+	    echo "install raylib, then run 'make rayrot' in $(BRAINROT_DIR)"; \
+	    echo "(older checkouts: 'make brainray')"; \
+	    echo "setup instructions: $(BRAINROT_DIR)/docs/rayrot.md"; \
 	    exit 1; }
 # The HUD needs rl_draw_text_int, which landed in Brainrotlang/brainrot#292.
-# Without this check a stale brainray fails at parse time with a bare
+# Without this check a stale binding fails at parse time with a bare
 # "Undefined function" and a line number, which says nothing about why.
 	@grep -q rl_draw_text_int $(RAYMOD)/raylib.so || { \
 	    echo "$(RAYMOD)/raylib.so predates rl_draw_text_int (brainrot#292)"; \
 	    echo "the HUD needs it. Update $(BRAINROT_DIR) and rebuild:"; \
-	    echo "    git -C $(BRAINROT_DIR) pull && make -C $(BRAINROT_DIR) brainray"; \
+	    echo "    git -C $(BRAINROT_DIR) pull && make -C $(BRAINROT_DIR) rayrot"; \
 	    exit 1; }
