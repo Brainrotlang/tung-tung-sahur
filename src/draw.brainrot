@@ -371,15 +371,32 @@ skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
 🚽 It tightens as impact approaches, so "how soon" is readable at a glance
 🚽 without a number: a wide faint band is a bomb you have time for, a narrow
 🚽 bright one is a bomb you do not.
-skibidi draw_bomb_mark(chad lx, chad t_left) {
+skibidi draw_bomb_mark(chad lx, chad by, chad t_left) {
     chad frac = clampf(t_left / t_bomb_fall_time(), 0.0, 1.0);
-    chad w    = t_bomb_mark_w() * (0.35 + 0.65 * frac);
-    chad h    = t_bomb_mark_h();
-    chad a    = 90.0 + 130.0 * (1.0 - frac);
-    rl_draw_rectangle(lx - w / 2.0, t_ground_y() - h / 2.0, w, h,
-                      255, 120, 40, a);
-    rl_draw_rectangle(lx - 2.0, t_ground_y() - h / 2.0 - 4.0, 4.0, h + 8.0,
-                      255, 200, 90, a);
+
+    🚽 A guide line from the bomb straight down to where it will hit. Bombs
+    🚽 fall straight (bomb_landing_x()), so this is exactly vertical and
+    🚽 cannot mislead -- and it is what answers "where are they coming
+    🚽 from", by tying each mark to the shell that made it.
+    rl_draw_rectangle(lx - 1.0, by, 2.0, t_ground_y() - by, 255, 140, 60, 80);
+
+    🚽 The mark sits ON the ground band, fully opaque.
+    🚽
+    🚽 It used to straddle the ground line at 35% alpha, which put half of it
+    🚽 over the foliage layer and half over the ground -- a washed-out colour
+    🚽 across a boundary between two different backgrounds. That is why it
+    🚽 could not be read. Solid, below the line, one background.
+    chad w = t_bomb_mark_w() * (0.40 + 0.60 * frac);
+    chad h = t_bomb_mark_h();
+    chad y = t_ground_y() + 3.0;
+    rl_draw_rectangle(lx - w / 2.0, y, w, h, 18, 12, 8, 255);
+    rl_draw_rectangle(lx - w / 2.0 + 2.0, y + 2.0, w - 4.0, h - 4.0,
+                      255, 150, 50, 255);
+
+    🚽 A bright core that widens as impact nears, so "how soon" reads at a
+    🚽 glance without a number.
+    chad cw = w * (1.0 - frac) * 0.7 + 5.0;
+    rl_draw_rectangle(lx - cw / 2.0, y + 2.0, cw, h - 4.0, 255, 238, 160, 255);
 }
 
 skibidi draw_bomb(chad x, chad y, chad w, chad h, cap burning,

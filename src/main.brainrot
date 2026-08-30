@@ -366,6 +366,7 @@ skibidi main {
                 cap falling = bombs[i].fuse <= 0.0;
                 edgy (falling) {
                     draw_bomb_mark(bomb_landing_x(&bombs[i], &wd),
+                                   bombs[i].y + bomb_h(&bombs[i]),
                                    bombs[i].fall_t);
                 }
             }
