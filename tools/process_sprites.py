@@ -108,6 +108,22 @@ CHARACTERS = {
     # the same split Tung already has (112px of art over a 48px box).
     "tralalero":   ("tralalero", ["tralalero1.jpg", "tralalero2.jpg"], 96),
 
+    # Bombardiro. Frame 0 is level cruise seen side-on, frame 1 the opening:
+    # pitched up and banked with the jaws open. Those are different VIEWS,
+    # not different poses, so their silhouettes have very different aspect
+    # ratios (4.22 vs 1.39) -- see ALIGN below for the consequence.
+    # ALIGN "centre", not the default "feet". Everything else in this game
+    # stands on the ground, so its bottom row is its contact row. A flying
+    # boss has no contact row, and bottom-aligning these two would be
+    # actively wrong: frame 0 is 36px of content in a 72px frame, so the
+    # plane would sit in the box's lower half and then jump 36px upward the
+    # instant the opening starts.
+    "bombardiro":  ("bombardino",
+                    ["bombardino1.jpg", "bombardino2.jpg"], 72, "centre"),
+
+    "bomb":        ("bombardino", ["bomb.jpg"], 26),
+    "blast":       ("bombardino", ["blast.jpg"], 34),
+
     "crate":       ("obstacles", ["crate.jpg"], 48),
     "post":        ("obstacles", ["post.jpg"], 96),
 }
@@ -120,6 +136,9 @@ GROUPS = {
     "tung": ["tung_run", "tung_jump", "tung_swing"],
     "patapim": ["patapim_run"],
     "tralalero": ["tralalero"],
+    "bombardiro": ["bombardiro"],
+    "bomb": ["bomb"],
+    "blast": ["blast"],
     "crate": ["crate"],
     "post": ["post"],
 }
@@ -244,12 +263,22 @@ def render_frames(src_dir, files, frame_h, assets):
     return out
 
 
-def write_atlas(name, rendered, frame_w, frame_h, anchor, out_dir):
+def write_atlas(name, rendered, frame_w, frame_h, anchor, out_dir,
+                align="feet"):
+    """Pack frames into one row.
+
+    `align` is "feet" for anything that stands on the ground -- its bottom
+    row is its contact row, and a one-pixel gap makes it hover. "centre" is
+    for things that fly, which have no contact row; bottom-aligning those
+    makes a short frame sink to the floor of its own box.
+    """
     sheet = Image.new("RGBA", (frame_w * len(rendered), frame_h), (0, 0, 0, 0))
     for i, f in enumerate(rendered):
-        sheet.alpha_composite(f["img"],
-                              (i * frame_w + anchor - f["cx"],
-                               frame_h - 1 - f["feet"]))
+        if align == "centre":
+            top = (frame_h - f["img"].height) // 2
+        else:
+            top = frame_h - 1 - f["feet"]
+        sheet.alpha_composite(f["img"], (i * frame_w + anchor - f["cx"], top))
     sheet.save(os.path.join(out_dir, name + ".png"))
 
 
@@ -295,13 +324,16 @@ def main():
         rendered = {n: render_frames(CHARACTERS[n][0], CHARACTERS[n][1],
                                      CHARACTERS[n][2], args.assets)
                     for n in names}
+        align = {n: (CHARACTERS[n][3] if len(CHARACTERS[n]) > 3 else "feet")
+                 for n in names}
         every = [f for r in rendered.values() for f in r]
         pad_l = max(f["left"] for f in every)
         pad_r = max(f["right"] for f in every)
         frame_w = pad_l + pad_r + 1
         frame_h = CHARACTERS[names[0]][2]
         for n in names:
-            write_atlas(n, rendered[n], frame_w, frame_h, pad_l, args.out)
+            write_atlas(n, rendered[n], frame_w, frame_h, pad_l, args.out,
+                        align[n])
             print(f"  {n:14s} {frame_w * len(rendered[n]):5d}x{frame_h:<4d}  "
                   f"{len(rendered[n])} frame(s) of {frame_w:3d}x{frame_h:<3d}")
         print(f"    -> group '{group}': frame {frame_w}x{frame_h}, "

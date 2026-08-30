@@ -45,6 +45,9 @@ rizz draw_load_bg_mid()  { bussin rl_load_texture("assets/bg_mid.png"); }
 rizz draw_load_bg_near() { bussin rl_load_texture("assets/bg_near.png"); }
 rizz draw_load_bg_fore() { bussin rl_load_texture("assets/bg_fore.png"); }
 rizz draw_load_shark()   { bussin rl_load_texture("assets/tralalero.png"); }
+rizz draw_load_croc()    { bussin rl_load_texture("assets/bombardiro.png"); }
+rizz draw_load_bomb()    { bussin rl_load_texture("assets/bomb.png"); }
+rizz draw_load_blast()   { bussin rl_load_texture("assets/blast.png"); }
 
 skibidi draw_unload(rizz tex) {
     edgy (tex >= 0) { rl_unload_texture(tex); }
@@ -273,20 +276,35 @@ skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
     edgy (kind == t_boss_tralalero()) { tex = tex_shark; }
 
     edgy (tex >= 0) {
-        🚽 Frame 1 is the opening. That is the whole tell -- jaws wide, and
-        🚽 the one second in three cycles where the bat connects.
+        🚽 Frame 1 is the opening in both atlases. That is the whole tell --
+        🚽 jaws wide -- and the one second in three cycles where the bat
+        🚽 connects.
+        🚽
+        🚽 Neither is mirrored, unlike Patapim. Tralalero chases from
+        🚽 behind, so the art's own right-facing IS toward the player, and
+        🚽 once he has leapt past, right-facing means his back is turned --
+        🚽 which is exactly why he is open. Positive source width also means
+        🚽 the anchor column maps straight through rather than to
+        🚽 (fw - anchor), which a mirror would require.
         chad fw = t_shark_frame_w();
+        chad fh = t_shark_frame_h();
+        chad anc = t_shark_anchor();
+        edgy (kind == t_boss_bombardiro()) {
+            fw  = t_croc_frame_w();
+            fh  = t_croc_frame_h();
+            anc = t_croc_anchor();
+        }
         chad col = 0.0;
         edgy (phase == t_boss_open()) { col = fw; }
 
-        🚽 NOT mirrored, unlike Patapim. He chases from behind, so the
-        🚽 art's own right-facing IS toward the player; and once he has
-        🚽 leapt past, right-facing means his back is turned, which is
-        🚽 exactly why he is open. Positive source width, so the anchor
-        🚽 column maps straight through rather than to (fw - anchor).
-        rl_draw_texture_rec(tex, col, 0.0, fw, t_shark_frame_h(),
-                            x + w / 2.0 - t_shark_anchor(),
-                            y + h - t_shark_frame_h(),
+        🚽 Tralalero stands on the ground, so his art is bottom-aligned to
+        🚽 the box. Bombardiro flies and his frames are centre-aligned, so
+        🚽 his box and frame share a centre instead.
+        chad dy = y + h - fh;
+        edgy (kind == t_boss_bombardiro()) { dy = y + (h - fh) / 2.0; }
+
+        rl_draw_texture_rec(tex, col, 0.0, fw, fh,
+                            x + w / 2.0 - anc, dy,
                             255, 255, 255, 255);
     }
     amogus {
@@ -342,15 +360,37 @@ skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
     }
 }
 
-skibidi draw_bomb(chad x, chad y, chad w, chad h, cap burning) {
+🚽 The shell and the blast it becomes. Both sprites are drawn CENTRED on
+🚽 their collision box rather than aligned to it: the blast's art is 77px of
+🚽 spreading fire over a 64px box on purpose, so the outer flames are
+🚽 decoration you can stand in, and centring is what makes that symmetric.
+skibidi draw_bomb(chad x, chad y, chad w, chad h, cap burning,
+                  rizz tex_bomb, rizz tex_blast) {
+    rizz tex = tex_bomb;
+    chad fw  = t_bomb_frame_w();
+    chad fh  = t_bomb_frame_h();
     edgy (burning) {
-        rl_draw_rectangle(x, y, w, h, 255, 148, 40, 255);
-        rl_draw_rectangle(x + w * 0.15, y + h * 0.25, w * 0.7, h * 0.5,
-                          255, 226, 120, 255);
+        tex = tex_blast;
+        fw  = t_blast_frame_w();
+        fh  = t_blast_frame_h();
+    }
+
+    edgy (tex >= 0) {
+        rl_draw_texture_rec(tex, 0.0, 0.0, fw, fh,
+                            x + (w - fw) / 2.0, y + (h - fh) / 2.0,
+                            255, 255, 255, 255);
     }
     amogus {
-        rl_draw_rectangle(x, y, w, h, 34, 34, 40, 255);
-        rl_draw_rectangle(x + w * 0.35, y - 6.0, w * 0.3, 6.0, 190, 140, 60, 255);
+        edgy (burning) {
+            rl_draw_rectangle(x, y, w, h, 255, 148, 40, 255);
+            rl_draw_rectangle(x + w * 0.15, y + h * 0.25, w * 0.7, h * 0.5,
+                              255, 226, 120, 255);
+        }
+        amogus {
+            rl_draw_rectangle(x, y, w, h, 34, 34, 40, 255);
+            rl_draw_rectangle(x + w * 0.35, y - 6.0, w * 0.3, 6.0,
+                              190, 140, 60, 255);
+        }
     }
 }
 

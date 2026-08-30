@@ -45,6 +45,9 @@ skibidi main {
     rizz bg_near   = draw_load_bg_near();
     rizz bg_fore   = draw_load_bg_fore();
     rizz tex_shark = draw_load_shark();
+    rizz tex_croc  = draw_load_croc();
+    rizz tex_bomb  = draw_load_bomb();
+    rizz tex_blast = draw_load_blast();
     rizz music     = plat_music_open();
     rizz sfx_tung   = plat_sfx_tung();
     rizz sfx_jump   = plat_sfx_jump();
@@ -418,13 +421,14 @@ skibidi main {
             edgy (bombs[i].alive) {
                 cap burning = bombs[i].fuse > 0.0;
                 draw_bomb(bombs[i].x, bombs[i].y,
-                          bomb_w(&bombs[i]), bomb_h(&bombs[i]), burning);
+                          bomb_w(&bombs[i]), bomb_h(&bombs[i]), burning,
+                          tex_bomb, tex_blast);
             }
         }
 
         cap boss_shown = boss_active(&bo);
         edgy (boss_shown) {
-            draw_boss(bo.x, bo.y, bo.kind, bo.phase, tex_shark, 0 - 1);
+            draw_boss(bo.x, bo.y, bo.kind, bo.phase, tex_shark, tex_croc);
         }
 
         draw_hearts(pl.hearts);
@@ -459,6 +463,9 @@ skibidi main {
     draw_unload(bg_near);
     draw_unload(bg_fore);
     draw_unload(tex_shark);
+    draw_unload(tex_croc);
+    draw_unload(tex_bomb);
+    draw_unload(tex_blast);
     plat_sfx_close(sfx_open);
     plat_sfx_close(sfx_tung);
     plat_sfx_close(sfx_jump);
