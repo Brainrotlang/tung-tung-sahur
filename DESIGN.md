@@ -785,25 +785,52 @@ depends on none of them.**
 | --- | --- | --- | --- |
 | ~~**B1**~~ | ~~`rl_draw_text_int` / `rl_measure_text_int`~~ — **landed**, [brainrot#292](https://github.com/Brainrotlang/brainrot/pull/292) | SCORE / LVL / final-score digits, i.e. all numeric HUD | ✅ |
 | ~~**B2**~~ | ~~`rl_draw_texture_rec`~~ — **landed**, [brainrot#293](https://github.com/Brainrotlang/brainrot/pull/293). Negative source width/height mirrors a sprite | Sprite atlases, animation frames, tiled parallax | ✅ |
-| **B3** | `rl_init_audio_device`, `rl_load_sound`, `rl_play_sound`, `rl_unload_sound`, `rl_close_audio_device` | The `TUNG` on every bat hit. The entire joke | M2 |
+| ~~**B3**~~ | ~~`rl_init_audio_device`, `rl_load_sound`, `rl_play_sound`, `rl_unload_sound`, `rl_close_audio_device`~~ — **landed**, [brainrot#302](https://github.com/Brainrotlang/brainrot/pull/302). Music streams too. Initialise the audio device *before* the window; see `src/platform.brainrot` | The `TUNG` on every bat hit. The entire joke | ✅ |
 | **B4** | `rl_draw_texture_pro` (scale / flip / rotate), `rl_draw_rectangle_lines`, `rl_get_time` | Facing flips, debug hitbox overlays | M3 |
 
 B1 was the smallest change with the largest payoff and went first. Formatting
 is fixed at one literal prefix plus one integer rather than a general format
 string: a Brainrot-supplied `"%s"` would make the host read an argument that
 isn't there, and nothing can check a user-supplied format against the single
-`rizz` actually passed. **B2** is next.
+`rizz` actually passed. B2 and B3 followed; **B4** is next.
+
+#### Road B does not replace this yet
+
+brainrot v0.2.0 shipped a *generated* raylib binding
+([#307](https://github.com/Brainrotlang/brainrot/pull/307)) alongside the
+hand-written one this game uses. It passes real aggregates by value —
+`rl_draw_circle_v(pos, 60.0, orb)` with a `gang Vector2` and a `gang Color`,
+rather than Road A's flattened `rl_draw_circle(640, 360, 100.0, 255, 0, 255,
+255)`. It would delete most of `draw.brainrot`'s scalar shuffling.
+
+**The game cannot move to it.** By-value structs cross the boundary as
+*arguments* only; struct *returns* are rejected outright (ownership is
+unresolved — ROADMAP Appendix B Q6). Every loader this game needs returns a
+struct: `LoadTexture` → `Texture2D`, `LoadSound` → `Sound`,
+`LoadMusicStream` → `Music`. So the generated binding has `rl_draw_texture_rec`
+but no `rl_load_texture`, and there is no way to obtain the `gang Texture` it
+wants. The two modules cannot be mixed either — same `rl_*` names, different
+signatures.
+
+Road A's integer handle tables are what make loading expressible at all, so
+they stay until struct returns land. **B5**: struct returns across the native
+ABI, which is what actually unblocks Road B for this game.
 
 ### 15.2 `brainrot` core bugs
 
 Filed with the reproductions from §3.2. C3 is the one that changes this
-document's architecture.
+document's architecture; C9 is the one that was silently wrong rather than
+loudly broken, and the reason `make` probes the interpreter's version.
+
+C4 and C5 were re-checked against v0.2.0 and are both still open, so the pool
+loops stay in `main` (§14.1).
 
 | ID | Bug | Severity |
 | --- | --- | --- |
 | ~~**C1**~~ | ~~`!` on `cap` returns the operand unchanged~~ — **fixed**, [#296](https://github.com/Brainrotlang/brainrot/pull/296). It had no lexer token at all; the catch-all discarded it | ✅ |
 | ~~**C2**~~ | ~~`rizz k = someChad;` reinterprets the float's bits~~ — **fixed**, [#299](https://github.com/Brainrotlang/brainrot/pull/299). Array elements and pointer targets were broken too, in both directions | ✅ |
 | ~~**C3**~~ | ~~Parameter list reversed for struct-pointer params~~ — **fixed**, [#294](https://github.com/Brainrotlang/brainrot/pull/294). The parser stores parameters backwards and the runtime compensated; the analyser did not | ✅ |
+| ~~**C9**~~ | ~~A user-defined call in a value position runs twice and keeps the SECOND result~~ — **fixed**, [#303](https://github.com/Brainrotlang/brainrot/pull/303). `ast_accept()`'s pre-visit executed the call, then the statement's own visitor executed it again | ✅ |
 | **C4** | A struct field cannot be an array of structs (`gang Game { gang Ent es[4]; };`) | Medium |
 | **C5** | No pointer arithmetic on struct pointers | Medium |
 | **C6** | No top-level globals | Medium |

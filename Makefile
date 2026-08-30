@@ -91,17 +91,32 @@ check-brainrot:
 	    echo "clone https://github.com/Brainrotlang/brainrot next to this repo and run 'make' in it,"; \
 	    echo "or point this one at it:  make BRAINROT_DIR=/path/to/brainrot"; \
 	    exit 1; }
-# The game needs logical NOT (brainrot#296) and float-to-int conversion
-# (#299). Neither is visible in the binary, so probe for them. An older
-# interpreter does not fail -- it discards every `!` and reinterprets every
-# float assignment, so the guards run backwards and the HUD reads plausible
-# nonsense. That is worth one probe to turn into a sentence.
-	@printf 'skibidi main{ cap off = L; chad g = 17.5; rizz k = g; yapping("%%b %%d", !off, k); bussin 0;}' > $(PROBE)
+# The game needs brainrot >= v0.2.0 for three fixes, none of which is
+# visible in the binary, and none of which FAILS on an older interpreter --
+# they all just quietly produce the wrong answer. So: probe.
+#
+#   !   logical NOT (#296)  -- discarded by the lexer, so every guard
+#                              written with `!` ran backwards
+#   17  float->int (#299)   -- reinterpreted the bit pattern instead of
+#                              converting, so the HUD read plausible nonsense
+#   1   call-once (#303)    -- `rizz x = f();` ran f TWICE and kept the
+#                              SECOND result. This game has 16 resource
+#                              loads written that way, so every texture,
+#                              sound and music track was loaded twice and
+#                              one of each leaked; and `cap launched =
+#                              player_jump(&pl)` reported the second
+#                              attempt -- the one that finds itself already
+#                              airborne -- so the jump sound never fired
+#                              while the jump itself worked.
+#
+# v0.1.8 answers this probe 'L 1099694080 2'. All three, silently.
+	@printf 'rizz p(rizz *n){ *n = *n + 1; bussin *n; } skibidi main{ cap off = L; chad g = 17.5; rizz k = g; rizz c = 0; rizz h = p(&c); yapping("%%b %%d %%d", !off, k, c); bussin 0;}' > $(PROBE)
 	@got=$$($(BRAINROT) $(PROBE) 2>/dev/null); rm -f $(PROBE); \
-	    test "$$got" = "W 17" || { \
-	        echo "$(BRAINROT) is too old: probe printed '$$got', expected 'W 17'"; \
-	        echo "the game needs logical NOT (brainrot#296) and float-to-int"; \
-	        echo "conversion (#299). Update and rebuild:"; \
+	    test "$$got" = "W 17 1" || { \
+	        echo "$(BRAINROT) is too old: probe printed '$$got', expected 'W 17 1'"; \
+	        echo "the game needs brainrot v0.2.0 or newer -- logical NOT"; \
+	        echo "(brainrot#296), float-to-int conversion (#299), and a call"; \
+	        echo "running exactly once (#303). Update and rebuild:"; \
 	        echo "    git -C $(BRAINROT_DIR) pull && make -C $(BRAINROT_DIR)"; \
 	        exit 1; }
 
