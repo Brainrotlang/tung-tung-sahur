@@ -1,0 +1,208 @@
+🚽 unit_boss.brainrot — src/sim.brainrot's boss half: the shared phase
+🚽 machine, Tralalero's closing, Bombardiro's bombs.
+🚽
+🚽 Why this is a unit file rather than golden coverage: the bosses trigger
+🚽 at score 5,000 and 10,000, and the headless input tape (test/platform_
+🚽 fake.brainrot) is a coverage instrument, not a good player -- it dies
+🚽 around 400-700. So the headless golden proves the boss code does not
+🚽 disturb an ordinary run, and this file drives the fight directly.
+🚽
+🚽 The second half runs a real frame loop over the same functions `main`
+🚽 calls, in the same order, so this is integration coverage and not just
+🚽 per-function assertions.
+
+#cooked "../src/tune.brainrot"
+#cooked "../src/math.brainrot"
+#cooked "../src/collide.brainrot"
+#cooked "../src/curve.brainrot"
+#cooked "../src/sim.brainrot"
+
+skibidi main {
+    gang World wd;
+    gang Player pl;
+    gang Boss bo;
+
+    world_reset(&wd);
+    player_reset(&pl);
+    boss_clear(&bo);
+    wd.dt = 0.016666;
+
+    🚽 --- triggering ---------------------------------------------------
+    🚽 Once per run each, and not before the score earns it.
+    yapping("-- boss_due --");
+    yapping("score 0      %d", boss_due(&wd, 0));
+    yapping("score 4999   %d", boss_due(&wd, 4999));
+    yapping("score 5000   %d", boss_due(&wd, 5000));
+    yapping("score 10000  %d", boss_due(&wd, 10000));
+
+    boss_start(&bo, &wd, t_boss_tralalero());
+    yapping("after start, shark due again %d", boss_due(&wd, 9999));
+    yapping("croc still due               %d", boss_due(&wd, 10000));
+
+    🚽 --- the shared phase machine --------------------------------------
+    yapping("-- phases --");
+    yapping("start phase %d bonks %d owns_spawner %b vulnerable %b",
+            bo.phase, bo.bonks, boss_owns_spawner(&bo), boss_vulnerable(&bo));
+
+    🚽 Survive is a fixed stretch; the opening is short. Step until the
+    🚽 phase flips rather than asserting a frame count, so retuning
+    🚽 t_boss_survive_time() does not rewrite this test.
+    rizz steps = 0;
+    goon (bo.phase == t_boss_survive() && steps < 2000) {
+        boss_tick(&bo, &wd);
+        steps = steps + 1;
+    }
+    yapping("survive -> %d after %d steps (want phase %d)",
+            bo.phase, steps, t_boss_open());
+    yapping("opening: vulnerable %b", boss_vulnerable(&bo));
+
+    🚽 He is still at the lurk position on the frame the phase flips -- the
+    🚽 move happens over the window. What matters is that he ARRIVES inside
+    🚽 it, because the whole fight is unwinnable if he does not: at
+    🚽 t_boss_move_speed() he needs 180px of the 520px the window allows.
+    yapping("  at flip   x %.1f", bo.x);
+    steps = 0;
+    goon (steps < 30) {
+        boss_tick(&bo, &wd);
+        steps = steps + 1;
+    }
+    cap reachable = boss_in_bat(&bo, &pl);
+    yapping("  0.5s in   x %.1f, in bat range %b", bo.x, reachable);
+
+    🚽 An opening that closes unpunished costs time, not health.
+    steps = 0;
+    goon (bo.phase == t_boss_open() && steps < 2000) {
+        boss_tick(&bo, &wd);
+        steps = steps + 1;
+    }
+    yapping("missed opening -> %d, bonks still %d", bo.phase, bo.bonks);
+
+    🚽 --- bonks ----------------------------------------------------------
+    🚽 Three, and the third sends him away with the reward.
+    yapping("-- bonks --");
+    bo.phase = t_boss_open();
+    boss_take_bonk(&bo, &wd);
+    yapping("bonk 1: bonks %d phase %d bonus %d", bo.bonks, bo.phase, wd.bonus);
+    bo.phase = t_boss_open();
+    boss_take_bonk(&bo, &wd);
+    yapping("bonk 2: bonks %d phase %d bonus %d", bo.bonks, bo.phase, wd.bonus);
+    bo.phase = t_boss_open();
+    boss_take_bonk(&bo, &wd);
+    yapping("bonk 3: bonks %d phase %d bonus %d", bo.bonks, bo.phase, wd.bonus);
+    yapping("leaving: owns_spawner %b vulnerable %b",
+            boss_owns_spawner(&bo), boss_vulnerable(&bo));
+
+    🚽 And the exit clears him, which is what lets the next boss start.
+    steps = 0;
+    cap still_here = boss_active(&bo);
+    goon (still_here && steps < 2000) {
+        boss_tick(&bo, &wd);
+        steps = steps + 1;
+        still_here = boss_active(&bo);
+    }
+    yapping("cleared after %d steps, kind %d phase %d",
+            steps, bo.kind, bo.phase);
+
+    🚽 --- Tralalero closes on mistakes -----------------------------------
+    🚽 The lurk position is a pure function of hits taken this fight, so a
+    🚽 clean fight keeps him at arm's length.
+    yapping("-- shark closes --");
+    boss_clear(&bo);
+    world_reset(&wd);
+    boss_start(&bo, &wd, t_boss_tralalero());
+    yapping("0 hits target x %.1f", boss_target_x(&bo, &wd));
+    boss_note_hit(&bo);
+    yapping("1 hit  target x %.1f", boss_target_x(&bo, &wd));
+    boss_note_hit(&bo);
+    boss_note_hit(&bo);
+    yapping("3 hits target x %.1f", boss_target_x(&bo, &wd));
+
+    🚽 --- Bombardiro's ordnance -------------------------------------------
+    yapping("-- bombs --");
+    boss_clear(&bo);
+    world_reset(&wd);
+    wd.dt = 0.016666;
+    boss_start(&bo, &wd, t_boss_bombardiro());
+
+    gang Bomb shell;
+    bomb_spawn(&shell, &bo);
+    yapping("spawned at y %.1f, w %.1f (shell)", shell.y, bomb_w(&shell));
+
+    🚽 Falls under the same gravity the player does, then detonates into a
+    🚽 wider, shorter box sitting on the ground line.
+    steps = 0;
+    goon (shell.fuse <= 0.0 && steps < 2000) {
+        bomb_tick(&shell, &wd);
+        steps = steps + 1;
+    }
+    yapping("landed after %d steps at y %.1f, w %.1f (blast)",
+            steps, shell.y, bomb_w(&shell));
+    yapping("ground line %.1f, blast bottom %.1f",
+            t_ground_y(), shell.y + bomb_h(&shell));
+
+    🚽 The blast is not permanent.
+    steps = 0;
+    goon (shell.alive && steps < 2000) {
+        bomb_tick(&shell, &wd);
+        steps = steps + 1;
+    }
+    yapping("blast gone after %d more steps", steps);
+
+    🚽 A bomb landing on the player's column hits; one landing behind does
+    🚽 not. The player box is t_player_x() for t_player_w().
+    gang Bomb hit;
+    bomb_spawn(&hit, &bo);
+    hit.x = t_player_x();
+    hit.y = pl.y;
+    yapping("bomb on the player  %b", bomb_hits_player(&hit, &pl));
+    hit.x = t_player_x() - 400.0;
+    yapping("bomb well behind    %b", bomb_hits_player(&hit, &pl));
+
+    🚽 --- integration: a scripted fight ------------------------------------
+    🚽 The same calls main makes, in the same order, driven by a script
+    🚽 that swings whenever the boss is open. Three openings, three bonks,
+    🚽 boss gone -- with no input tape and no window.
+    yapping("-- scripted fight --");
+    boss_clear(&bo);
+    world_reset(&wd);
+    player_reset(&pl);
+    wd.dt = 0.016666;
+    boss_start(&bo, &wd, t_boss_tralalero());
+
+    🚽 Every `cap`-returning call lands in a local before it is tested.
+    🚽 `edgy (boss_vulnerable(&bo))` is not equivalent -- it errors and
+    🚽 takes the FALSE branch, so this loop would spin to its cap having
+    🚽 done nothing (brainrot#313). The same convention holds in
+    🚽 src/main.brainrot, where it reads like style and is not.
+    rizz swings = 0;
+    rizz frames = 0;
+    cap  fighting = boss_active(&bo);
+    goon (fighting && frames < 6000) {
+        world_advance(&wd);
+        player_physics(&pl, &wd);
+        player_tick_timers(&pl, &wd);
+        boss_tick(&bo, &wd);
+
+        🚽 Swing on sight of an opening. player_swing() refuses while the
+        🚽 attack timer runs, so this cannot machine-gun the boss.
+        cap open_now = boss_vulnerable(&bo);
+        edgy (open_now) {
+            player_swing(&pl);
+            swings = swings + 1;
+        }
+
+        cap swinging = player_swinging(&pl);
+        edgy (swinging) {
+            edgy (open_now) {
+                cap bonk = boss_in_bat(&bo, &pl);
+                edgy (bonk) { boss_take_bonk(&bo, &wd); }
+            }
+        }
+        frames = frames + 1;
+        fighting = boss_active(&bo);
+    }
+    yapping("fight over in %d frames, %d swing attempts", frames, swings);
+    yapping("boss kind %d, hearts %d, bonus %d", bo.kind, pl.hearts, wd.bonus);
+
+    bussin 0;
+}

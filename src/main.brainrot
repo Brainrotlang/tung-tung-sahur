@@ -61,8 +61,10 @@ skibidi main {
     🚽 off the end of a pool if someone edits tune.brainrot alone.
     rizz MAX_OBS = 16;
     rizz MAX_EN  = 16;
+    rizz MAX_BMB = 32;
     bet(MAX_OBS == t_max_obstacles(), "MAX_OBS must match t_max_obstacles()");
     bet(MAX_EN  == t_max_enemies(),   "MAX_EN must match t_max_enemies()");
+    bet(MAX_BMB == t_max_bombs(),     "MAX_BMB must match t_max_bombs()");
 
     rizz state    = t_state_title();
     chad title_t  = 0.0;
@@ -73,6 +75,8 @@ skibidi main {
     gang Player pl;
     gang Ent obstacles[16];
     gang Ent enemies[16];
+    gang Boss bo;
+    gang Bomb bombs[32];
 
     🚽 One reset path, used by both the first run and every restart.
     cap do_reset = W;
@@ -92,6 +96,8 @@ skibidi main {
 
             flex (rizz i = 0; i < MAX_OBS; i = i + 1) { obstacles[i].alive = L; }
             flex (rizz i = 0; i < MAX_EN;  i = i + 1) { enemies[i].alive = L; }
+            flex (rizz i = 0; i < MAX_BMB; i = i + 1) { bombs[i].alive = L; }
+            boss_clear(&bo);
 
             do_reset = L;
         }
@@ -131,8 +137,60 @@ skibidi main {
         edgy (in_run) { player_tick_timers(&pl, &wd); }
         cap swinging = player_swinging(&pl);
 
-        🚽 --- 6. spawning ---------------------------------------------
+        🚽 --- 6a. boss ------------------------------------------------
+        🚽 Before spawning, because a boss that has just started must own
+        🚽 the spawner on the very frame it appears -- otherwise the curve
+        🚽 gets one more entity in while the fight is already on screen.
+        cap boss_up = L;
         edgy (in_run) {
+            cap fighting = boss_active(&bo);
+            edgy (!fighting) {
+                rizz due = boss_due(&wd, score);
+                edgy (due != t_boss_none()) {
+                    boss_start(&bo, &wd, due);
+                    plat_sfx_play(sfx_bruh);
+                    yapping("boss %d incoming at score %d", due, score);
+                }
+            }
+            boss_tick(&bo, &wd);
+            boss_up = boss_owns_spawner(&bo);
+        }
+
+        🚽 --- 6b. spawning ---------------------------------------------
+        🚽 Paused for the whole fight: the boss owns the pattern. Its own
+        🚽 cadence is denser than the curve ever gets, and that density is
+        🚽 the fight.
+        edgy (in_run && boss_up) {
+            bo.spawn_t = bo.spawn_t - wd.dt;
+            edgy (bo.spawn_t <= 0.0) {
+                bo.spawn_t = t_boss_gap();
+                edgy (bo.kind == t_boss_tralalero()) {
+                    🚽 Obstacles only. The shark's phase is pure survival,
+                    🚽 so there is nothing to bonk but the shark.
+                    wd.seed = rng_next(wd.seed);
+                    rizz k = t_kind_crate();
+                    edgy (wd.seed % 2 == 0) { k = t_kind_post(); }
+                    rizz slot = -1;
+                    flex (rizz i = 0; i < MAX_OBS; i = i + 1) {
+                        edgy (!obstacles[i].alive) {
+                            edgy (slot < 0) { slot = i; }
+                        }
+                    }
+                    edgy (slot >= 0) { ent_spawn(&obstacles[slot], k); }
+                }
+                amogus {
+                    rizz slot = -1;
+                    flex (rizz i = 0; i < MAX_BMB; i = i + 1) {
+                        edgy (!bombs[i].alive) {
+                            edgy (slot < 0) { slot = i; }
+                        }
+                    }
+                    edgy (slot >= 0) { bomb_spawn(&bombs[slot], &bo); }
+                }
+            }
+        }
+
+        edgy (in_run && !boss_up) {
             wd.spawn_t = wd.spawn_t - wd.dt;
             edgy (wd.spawn_t <= 0.0) {
                 cap is_enemy = L;
@@ -182,6 +240,7 @@ skibidi main {
                         edgy (crash) {
                             obstacles[i].alive = L;
                             player_take_hit(&pl, &wd);
+                            boss_note_hit(&bo);
                             🚽 The killing blow gets the death sting instead
                             🚽 of the grunt -- see plat_sfx_bruh().
                             edgy (pl.hearts > 0) {
@@ -218,9 +277,64 @@ skibidi main {
                         edgy (crash) {
                             enemies[i].alive = L;
                             player_take_hit(&pl, &wd);
+                            boss_note_hit(&bo);
                             edgy (pl.hearts > 0) {
                                 plat_sfx_play(sfx_damage);
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        🚽 --- 8b. bombs: fall, burn, then hurt -------------------------
+        edgy (in_run) {
+            flex (rizz i = 0; i < MAX_BMB; i = i + 1) {
+                edgy (bombs[i].alive) { bomb_tick(&bombs[i], &wd); }
+                edgy (bombs[i].alive) {
+                    cap bomb_open = player_vulnerable(&pl);
+                    edgy (bomb_open) {
+                        cap blast = bomb_hits_player(&bombs[i], &pl);
+                        edgy (blast) {
+                            🚽 The blast is NOT consumed by the hit. It is a
+                            🚽 hazard on the ground, not a projectile, and
+                            🚽 the 1.2s of iframes already stops it from
+                            🚽 draining more than one heart.
+                            player_take_hit(&pl, &wd);
+                            boss_note_hit(&bo);
+                            edgy (pl.hearts > 0) {
+                                plat_sfx_play(sfx_damage);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        🚽 --- 8c. the boss itself: bat pass, then body pass -------------
+        🚽 Bat before body, same as enemies, so a frame-perfect swing at an
+        🚽 opening always beats the collision.
+        edgy (in_run) {
+            cap boss_here = boss_active(&bo);
+            edgy (boss_here) {
+                cap can_bonk = boss_vulnerable(&bo);
+                edgy (swinging && can_bonk) {
+                    cap boss_bonk = boss_in_bat(&bo, &pl);
+                    edgy (boss_bonk) {
+                        boss_take_bonk(&bo, &wd);
+                        plat_sfx_play(sfx_tung);
+                    }
+                }
+                cap boss_open = player_vulnerable(&pl);
+                edgy (boss_open) {
+                    cap boss_crash = boss_hits_body(&bo, &pl);
+                    edgy (boss_crash) {
+                        🚽 The boss is not despawned by contact -- he is the
+                        🚽 fight. Iframes are what keep this to one heart.
+                        player_take_hit(&pl, &wd);
+                        boss_note_hit(&bo);
+                        edgy (pl.hearts > 0) {
+                            plat_sfx_play(sfx_damage);
                         }
                     }
                 }
@@ -305,9 +419,23 @@ skibidi main {
         edgy (show) { draw_player(t_player_x(), pl.y, tex, frame_i); }
         edgy (swinging) { draw_bat(t_player_x(), pl.y, tex_swing); }
 
+        flex (rizz i = 0; i < MAX_BMB; i = i + 1) {
+            edgy (bombs[i].alive) {
+                cap burning = bombs[i].fuse > 0.0;
+                draw_bomb(bombs[i].x, bombs[i].y,
+                          bomb_w(&bombs[i]), bomb_h(&bombs[i]), burning);
+            }
+        }
+
+        cap boss_shown = boss_active(&bo);
+        edgy (boss_shown) {
+            draw_boss(bo.x, bo.y, bo.kind, bo.phase, 0 - 1);
+        }
+
         draw_hearts(pl.hearts);
         draw_speedbar(lvl);
         draw_hud(score, lvl);
+        edgy (boss_shown) { draw_boss_bar(bo.kind, bo.bonks); }
 
         edgy (state == t_state_title()) { draw_title(title_t); }
         edgy (state == t_state_over())  { draw_gameover(score, run_seed); }

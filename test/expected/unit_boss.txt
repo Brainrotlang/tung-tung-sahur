@@ -1,0 +1,34 @@
+-- boss_due --
+score 0      0
+score 4999   0
+score 5000   1
+score 10000  1
+after start, shark due again 0
+croc still due               2
+-- phases --
+start phase 1 bonks 0 owns_spawner W vulnerable L
+survive -> 2 after 481 steps (want phase 2)
+opening: vulnerable W
+  at flip   x -30.0
+  0.5s in   x 150.0, in bat range W
+missed opening -> 1, bonks still 0
+-- bonks --
+bonk 1: bonks 1 phase 1 bonus 100
+bonk 2: bonks 2 phase 1 bonus 300
+bonk 3: bonks 3 phase 3 bonus 2600
+leaving: owns_spawner L vulnerable L
+cleared after 91 steps, kind 0 phase 0
+-- shark closes --
+0 hits target x -30.0
+1 hit  target x 4.0
+3 hits target x 72.0
+-- bombs --
+spawned at y 162.0, w 26.0 (shell)
+landed after 32 steps at y 526.0, w 64.0 (blast)
+ground line 560.0, blast bottom 560.0
+blast gone after 34 more steps
+bomb on the player  W
+bomb well behind    L
+-- scripted fight --
+fight over in 1618 frames, 87 swing attempts
+boss kind 0, hearts 3, bonus 2600

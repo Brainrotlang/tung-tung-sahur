@@ -12,14 +12,38 @@ UNITS    := $(wildcard test/unit_*.brainrot)
 EXPECTED := test/expected
 PROBE    := /tmp/tts-version-probe.brainrot
 
-.PHONY: all play test units headless bless clean check-brainrot check-brainray
+.PHONY: all play test units headless bless clean check-brainrot check-brainray \
+        lint-native
 
 all: test
 
 # ---------------------------------------------------------------- run
 
-play: check-brainray
+play: check-brainray lint-native
 	BRAINROT_PATH=$(BRAINRAY) $(BRAINROT) src/main.brainrot
+
+# Every rl_* call in the game, checked without opening a window.
+#
+# `make test` swaps draw.brainrot and platform.brainrot for fakes, which is
+# the point -- but it means the REAL rl_* calls are never looked at, and a
+# wrong argument count there is invisible until someone runs the game. That
+# is how `rl_draw_text_int` shipped with 9 of its 10 arguments.
+#
+# Semantic analysis runs over every cooked function body before `main`
+# executes, so cooking the real modules into an empty `main` type-checks all
+# of them and exits immediately. No window, no GPU, no frame loop.
+LINT := /tmp/tts-native-lint.brainrot
+lint-native: check-brainray
+	@printf '#cooked <raylib>\n' > $(LINT)
+	@for m in tune math collide curve sim draw platform; do \
+	    printf '#cooked "%s/src/%s.brainrot"\n' "$$(pwd)" "$$m" >> $(LINT); \
+	done
+	@printf 'skibidi main { bussin 0; }\n' >> $(LINT)
+	@out=$$(BRAINROT_PATH=$(BRAINRAY) $(BRAINROT) $(LINT) 2>&1); rm -f $(LINT); \
+	    if [ -n "$$out" ]; then \
+	        echo "native call check FAILED:"; echo "$$out"; exit 1; \
+	    fi; \
+	    echo "ok    native calls" 
 
 # --------------------------------------------------------------- test
 

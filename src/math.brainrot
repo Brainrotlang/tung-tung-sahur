@@ -55,3 +55,33 @@ chad absf(chad v) {
 chad lerpf(chad a, chad b, chad t) {
     bussin a + (b - a) * t;
 }
+
+🚽 Move `v` toward `target` by at most `step`, without overshooting. The
+🚽 bosses move this way rather than by lerp: lerp's step size depends on the
+🚽 distance left, so a boss would ease in and never quite arrive, and the
+🚽 opening window would land at a different x every cycle.
+chad approach(chad v, chad target, chad step) {
+    edgy (v < target) { bussin minf(v + step, target); }
+    bussin maxf(v - step, target);
+}
+
+🚽 Fractional part, always in 0.0 .. 1.0. `rizz i = t` truncates toward
+🚽 zero, so a negative input needs the extra turn to stay in range.
+chad fracf(chad t) {
+    rizz i = t;
+    chad f = t - i;
+    edgy (f < 0.0) { f = f + 1.0; }
+    bussin f;
+}
+
+🚽 A triangle wave in -1.0 .. 1.0 with period 1.0, peaking at t=0.25.
+🚽
+🚽 There is no sin() to call, and a triangle is all the Bombardiro's sway
+🚽 needs -- that is a movement path, not a signal. Anything smoother would
+🚽 be a bigger hand-rolled approximation for a difference nobody can see at
+🚽 180px of travel.
+chad wave(chad t) {
+    chad f = fracf(t);
+    edgy (f < 0.5) { bussin 1.0 - absf(f * 4.0 - 1.0); }
+    bussin absf((f - 0.5) * 4.0 - 1.0) - 1.0;
+}
