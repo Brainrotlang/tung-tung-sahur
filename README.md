@@ -1,5 +1,7 @@
 # TUNG TUNG TUNG SAHUR: RUN
 
+<img width="1280" height="640" alt="tungtungtung-sahur" src="https://github.com/user-attachments/assets/1b37fa6f-1687-4156-b6cf-fee3b588c6a5" />
+
 An endless runner written in [Brainrot](https://github.com/Brainrotlang/brainrot),
 rendered through [`rayrot`](https://github.com/Brainrotlang/brainrot/blob/main/docs/rayrot.md).
 
