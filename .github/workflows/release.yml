@@ -45,13 +45,9 @@ on:
         options: [patch, minor, major]
         default: patch
       brainrot_ref:
-        description: "Brainrotlang/brainrot ref for the Linux/macOS bundles (tag/branch/SHA)"
+        description: "Brainrotlang/brainrot ref to build every bundle from (tag/branch/SHA)"
         type: string
-        default: "v0.3.0"
-      brainrot_windows_ref:
-        description: "Brainrotlang/brainrot ref for the Windows bundle (needs native Windows support, #337/#342 -- unreleased, so 'main' for now)"
-        type: string
-        default: "main"
+        default: "v0.5.1"
       raylib_ref:
         description: "raysan5/raylib tag to build/vendor (Linux/macOS)"
         type: string
@@ -69,10 +65,12 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Pinned so a tag push and a manual dispatch build the same runtime. Bump
-  # deliberately; the game needs brainrot >= v0.3.0 (see the Makefile probe).
-  BRAINROT_REF: ${{ github.event.inputs.brainrot_ref || 'v0.3.0' }}
-  BRAINROT_WINDOWS_REF: ${{ github.event.inputs.brainrot_windows_ref || 'main' }}
+  # One pinned brainrot release for EVERY platform, so a tag push and a manual
+  # dispatch build the exact same runtime and a shipped bundle is traceable to
+  # one interpreter commit. v0.5.1 is the first release with native Windows
+  # (#337) and raylib.dll (#342); it also satisfies the game's Makefile probe
+  # (needs >= v0.3.0). Bump deliberately.
+  BRAINROT_REF: ${{ github.event.inputs.brainrot_ref || 'v0.5.1' }}
   RAYLIB_REF: ${{ github.event.inputs.raylib_ref || '5.5' }}
 
 jobs:
@@ -308,8 +306,8 @@ jobs:
   # module pulls from the MinGW prefix (libraylib.dll and friends), and ships a
   # .zip with a play.bat. Windows resolves a DLL from the loading binary's own
   # directory, so brainrot.exe + raylib.dll + libraylib.dll side by side in the
-  # bundle need no rpath rewriting. Requires a brainrot ref with native Windows
-  # support (BRAINROT_WINDOWS_REF, default main until brainrot releases it).
+  # bundle need no rpath rewriting. Builds from the same pinned BRAINROT_REF as
+  # every other platform (>= v0.5.1, the first release with #337 + #342).
   windows-native:
     name: Bundle windows/amd64
     needs: version
@@ -326,7 +324,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: Brainrotlang/brainrot
-          ref: ${{ env.BRAINROT_WINDOWS_REF }}
+          ref: ${{ env.BRAINROT_REF }}
           path: brainrot
 
       - name: Set up MSYS2 (MinGW-w64 + raylib)
@@ -356,7 +354,7 @@ jobs:
           echo "raylib $(pkg-config --modversion raylib)"
           make rayrot
           test -f rayrot/raylib.dll \
-            || { echo "expected rayrot/raylib.dll -- needs brainrot #342"; exit 1; }
+            || { echo "expected rayrot/raylib.dll -- needs brainrot >= v0.5.1 (#342)"; exit 1; }
 
       - name: Assemble bundle
         shell: msys2 {0}
