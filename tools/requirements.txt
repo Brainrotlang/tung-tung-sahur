@@ -1,0 +1,4 @@
+# Python deps for the sprite tooling (tools/process_sprites.py) and the
+# atlas-consistency check (tools/check_atlases.py). Pinned so Dependabot
+# tracks it; see .github/dependabot.yml.
+pillow==12.3.0

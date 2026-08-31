@@ -1,0 +1,446 @@
+# Package TUNG TUNG TUNG SAHUR: RUN as a runnable per-platform bundle.
+#
+# The game is INTERPRETED, not compiled: it is `.brainrot` source run by the
+# `brainrot` interpreter through the `rayrot` raylib module. So a "binary" here
+# is a self-contained tarball carrying the whole runtime stack:
+#
+#   src/main.brainrot
+#     -> brainrot (interpreter)  +  libstdrot.so   (core builtins, dlopen'd)
+#     -> raylib.so               (the #cooked <raylib> native module)
+#     -> libraylib.so / .dylib   (system raylib, VENDORED into the bundle)
+#     +  assets/                 (loaded via cwd-relative paths)
+#     +  play.sh                 (launcher: cd into the bundle, set BRAINROT_PATH)
+#
+# Neither the interpreter's own release nor `make rayrot` ships raylib.so, and
+# raylib.so is useless without libraylib next to it -- so this workflow builds
+# the interpreter (`make release`), builds rayrot (`make rayrot`), vendors the
+# raylib it linked against, and rewrites raylib.so's rpath so it finds that
+# vendored copy ($ORIGIN on Linux, @loader_path on macOS) instead of a path
+# that only exists on the build machine.
+#
+# WINDOWS IS ABSENT ON PURPOSE. The interpreter has no native Windows build
+# today: it dlopen's libstdrot.so (dlfcn.h) and the module loader is POSIX
+# (libgen.h, sys/stat.h, unistd.h, hardcoded ".so"). A native Windows target
+# needs upstream work in Brainrotlang/brainrot first -- see docs/windows-port.md
+# for the scoped plan. Add a windows matrix entry here once that lands.
+name: Release
+
+# Releases are cut by MANUAL DISPATCH with a semver bump (like Brainrotlang/
+# brainrot's release.yml): the version job resolves the next vX.Y.Z from the
+# latest tag, the build jobs run, and only then does publish create the tag and
+# GitHub Release -- so a run that fails to build never leaves a dangling tag.
+# Pushing a v* tag by hand still works and takes that tag as-is. dry_run builds
+# and uploads the bundles as artifacts without tagging or publishing.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver bump over the latest v*.*.* tag"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      brainrot_ref:
+        description: "Brainrotlang/brainrot ref to build the runtime from (tag/branch/SHA)"
+        type: string
+        default: "v0.3.0"
+      raylib_ref:
+        description: "raysan5/raylib tag to build/vendor"
+        type: string
+        default: "5.5"
+      dry_run:
+        description: "Build and upload bundles as artifacts without tagging or publishing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  # Pinned so a tag push and a manual dispatch build the same runtime. Bump
+  # deliberately; the game needs brainrot >= v0.3.0 (see the Makefile probe).
+  BRAINROT_REF: ${{ github.event.inputs.brainrot_ref || 'v0.3.0' }}
+  RAYLIB_REF: ${{ github.event.inputs.raylib_ref || '5.5' }}
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      checkout_ref: ${{ steps.version.outputs.checkout_ref }}
+      dry_run: ${{ steps.version.outputs.dry_run }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release tag
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_BUMP: ${{ github.event.inputs.bump }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          REF_NAME: ${{ github.ref_name }}
+          CHECKOUT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          dry_run="${INPUT_DRY_RUN:-false}"
+
+          if [ "$EVENT_NAME" != "workflow_dispatch" ]; then
+            next="$REF_NAME"          # tag push: take the tag as-is
+            checkout_ref="$REF_NAME"
+            echo "Tag push: $next"
+          else
+            BUMP="${INPUT_BUMP:-patch}"
+            git fetch --tags --force
+            checkout_ref="$CHECKOUT_SHA"
+
+            latest=""
+            while IFS= read -r t; do
+              if [[ "$t" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then latest="$t"; break; fi
+            done < <(git tag -l 'v*' --sort=-v:refname)
+
+            if [ -z "$latest" ]; then
+              case "$BUMP" in major) next="v1.0.0" ;; *) next="v0.1.0" ;; esac
+              echo "Latest stable tag: <none> -> first release ($BUMP) $next"
+            else
+              ver="${latest#v}"; major="${ver%%.*}"; rest="${ver#*.}"
+              minor="${rest%%.*}"; patch="${rest#*.}"
+              case "$BUMP" in
+                major) major=$((major + 1)); minor=0; patch=0 ;;
+                minor) minor=$((minor + 1)); patch=0 ;;
+                patch) patch=$((patch + 1)) ;;
+              esac
+              next="v${major}.${minor}.${patch}"
+              echo "Latest stable tag: $latest -> $BUMP -> $next"
+            fi
+          fi
+
+          if [[ "$next" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=$checkout_ref" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
+
+  bundle:
+    name: Bundle ${{ matrix.os }}/${{ matrix.arch }}
+    needs: version
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            os: linux
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            os: linux
+            arch: arm64
+          - runner: macos-15-intel
+            os: darwin
+            arch: amd64
+          - runner: macos-latest
+            os: darwin
+            arch: arm64
+    steps:
+      - name: Checkout game
+        uses: actions/checkout@v7
+        with:
+          path: game
+          ref: ${{ needs.version.outputs.checkout_ref }}
+
+      - name: Checkout brainrot runtime
+        uses: actions/checkout@v7
+        with:
+          repository: Brainrotlang/brainrot
+          ref: ${{ env.BRAINROT_REF }}
+          path: brainrot
+
+      # --- toolchain + raylib ------------------------------------------------
+      - name: Install build deps (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          # interpreter: gcc/flex/bison/libfl/libssl ; raylib source build needs
+          # cmake + the X11/GL/audio headers ; patchelf rewrites the rpath.
+          sudo apt-get install -y \
+            gcc flex bison libfl-dev libssl-dev pkg-config cmake patchelf \
+            libgl1-mesa-dev libx11-dev libxrandr-dev libxi-dev libxcursor-dev \
+            libxinerama-dev libxext-dev
+
+      - name: Install build deps (macOS)
+        if: matrix.os == 'darwin'
+        run: |
+          set -euo pipefail
+          brew install flex bison openssl@3 pkg-config
+          echo "$(brew --prefix bison)/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix flex)/bin" >> "$GITHUB_PATH"
+          echo "FLEX_PREFIX=$(brew --prefix flex)" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig" >> "$GITHUB_ENV"
+
+      # raylib is built from source (both OSes) so the exact library we bundle
+      # is the exact one raylib.so links against, and so raylib.pc exists for
+      # pkg-config (raylib's plain `make install` does NOT emit it; CMake does).
+      - name: Build + install raylib
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "${RAYLIB_REF}" \
+            https://github.com/raysan5/raylib raylib-src
+          cmake -S raylib-src -B raylib-src/build \
+            -DBUILD_SHARED_LIBS=ON \
+            -DBUILD_EXAMPLES=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$HOME/raylib-prefix"
+          cmake --build raylib-src/build --target install -j 3
+          echo "PKG_CONFIG_PATH=$HOME/raylib-prefix/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> "$GITHUB_ENV"
+
+      # --- runtime -----------------------------------------------------------
+      - name: Build interpreter (make release)
+        working-directory: brainrot
+        run: make release FLEX_PREFIX="${FLEX_PREFIX:-}"
+
+      - name: Build rayrot module (make rayrot)
+        working-directory: brainrot
+        run: |
+          set -euo pipefail
+          pkg-config --exists raylib
+          echo "raylib $(pkg-config --modversion raylib)"
+          make rayrot
+
+      # --- gate: the game's own tests + native raylib call check -------------
+      - name: Test game (headless units + native lint)
+        working-directory: game
+        # Point the interpreter at the libstdrot.so we built rather than relying
+        # on the cwd lookup (we run from the game dir) or the release rpath.
+        env:
+          STDROT_LIB_PATH: ${{ github.workspace }}/brainrot/libstdrot.so
+        run: |
+          set -euo pipefail
+          make test BRAINROT_DIR="$GITHUB_WORKSPACE/brainrot"
+          make lint-native BRAINROT_DIR="$GITHUB_WORKSPACE/brainrot"
+
+      # --- assemble the bundle ----------------------------------------------
+      - name: Assemble bundle
+        id: assemble
+        env:
+          VERSION: ${{ needs.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          ver="${VERSION}"
+          plat="${{ matrix.os }}-${{ matrix.arch }}"
+          name="tung-tung-sahur-${ver}-${plat}"
+          out="$GITHUB_WORKSPACE/dist/$name"
+          mkdir -p "$out"
+
+          # runtime
+          cp brainrot/brainrot brainrot/libstdrot.so "$out/"
+          cp brainrot/rayrot/raylib.so "$out/"
+          # game
+          cp -r game/src game/assets "$out/"
+
+          # vendor libraylib + point raylib.so at the local copy
+          if [ "${{ matrix.os }}" = "linux" ]; then
+            lib="$(ldd "$out/raylib.so" | awk '/libraylib/{print $3}')"
+            cp -L "$lib" "$out/"
+            patchelf --set-rpath '$ORIGIN' "$out/raylib.so"
+            patchelf --set-rpath '$ORIGIN' "$out/brainrot"
+            echo "-- ldd raylib.so after rpath fix --"; ldd "$out/raylib.so" || true
+          else
+            lib="$(otool -L "$out/raylib.so" | awk '/libraylib/{print $1}')"
+            base="$(basename "$lib")"
+            cp -L "$lib" "$out/$base"
+            install_name_tool -change "$lib" "@loader_path/$base" "$out/raylib.so"
+            chmod u+w "$out/$base"
+            install_name_tool -id "@loader_path/$base" "$out/$base"
+            echo "-- otool -L raylib.so after rewrite --"; otool -L "$out/raylib.so"
+          fi
+
+          # launcher: assets are loaded cwd-relative, and #cooked <raylib>
+          # resolves via BRAINROT_PATH -> the bundle root holds raylib.so.
+          cat > "$out/play.sh" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          cd "$here"
+          BRAINROT_PATH="$here" exec ./brainrot src/main.brainrot "$@"
+          EOF
+          chmod +x "$out/play.sh" "$out/brainrot"
+
+          cp game/README.md game/LICENSE "$out/" 2>/dev/null || true
+
+          tar -C "$GITHUB_WORKSPACE/dist" -czf "$GITHUB_WORKSPACE/dist/${name}.tar.gz" "$name"
+          echo "tarball=dist/${name}.tar.gz" >> "$GITHUB_OUTPUT"
+          ls -l "$out"
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: tung-tung-sahur-${{ matrix.os }}-${{ matrix.arch }}
+          path: ${{ steps.assemble.outputs.tarball }}
+          if-no-files-found: error
+          retention-days: 7
+
+  # Windows STOPGAP, not a native app: repackage the linux/amd64 ELF bundle as
+  # a .zip with a play.bat that runs it under WSL. Needs zero interpreter
+  # changes (see docs/windows-port.md for the real port). Caveats are baked
+  # into README-WINDOWS.txt: WSL + WSLg (Windows 11) for the window and audio,
+  # and the raylib X11/GL client libs installed inside the WSL distro.
+  windows-wsl:
+    name: Windows (WSL stopgap)
+    needs: bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download linux/amd64 bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: tung-tung-sahur-linux-amd64
+          path: incoming
+
+      - name: Repackage as WSL zip
+        run: |
+          set -euo pipefail
+          tarball="$(find incoming -name '*-linux-amd64.tar.gz' | head -n1)"
+          test -n "$tarball"
+          base="$(basename "$tarball" .tar.gz)"          # tung-tung-sahur-<ver>-linux-amd64
+          ver="${base#tung-tung-sahur-}"; ver="${ver%-linux-amd64}"
+          bundle="$base"                                  # dir name inside the tar
+          winname="tung-tung-sahur-${ver}-windows-wsl"
+
+          mkdir -p "stage/$winname"
+          tar -C "stage/$winname" -xzf "$tarball"         # -> stage/$winname/$bundle/
+
+          # Launcher: find WSL, then run the Linux bundle's play.sh inside it.
+          # CRLF line endings so cmd.exe parses it.
+          {
+            printf '@echo off\r\n'
+            printf 'setlocal\r\n'
+            printf 'where wsl >nul 2>nul\r\n'
+            printf 'if errorlevel 1 (\r\n'
+            printf '  echo WSL was not found. Install it from an elevated PowerShell:  wsl --install\r\n'
+            printf '  pause\r\n'
+            printf '  exit /b 1\r\n'
+            printf ')\r\n'
+            printf 'set "HERE=%%~dp0"\r\n'
+            printf 'wsl -e bash -lc "cd \\"$(wslpath '"'"'%%HERE%%'"'"')/%s\\" && exec ./play.sh"\r\n' "$bundle"
+            printf 'endlocal\r\n'
+          } > "stage/$winname/play.bat"
+
+          cat > "stage/$winname/README-WINDOWS.txt" <<EOF
+          TUNG TUNG TUNG SAHUR: RUN -- Windows (WSL) build
+
+          This is NOT a native Windows app. The Brainrot interpreter has no
+          native Windows build yet, so this zip runs the Linux build under WSL.
+
+          Requirements:
+            1. Windows 11 with WSL + WSLg (for the game window and audio):
+                 wsl --install        (from an elevated PowerShell, then reboot)
+            2. raylib's runtime libraries inside your WSL distro. In a WSL shell:
+                 sudo apt update && sudo apt install -y \\
+                   libgl1 libx11-6 libxrandr2 libxi6 libxcursor1 libxinerama1
+
+          To play: double-click play.bat  (or run it from a terminal).
+
+          A native Windows build is tracked in docs/windows-port.md.
+          EOF
+
+          mkdir -p out
+          (cd stage && zip -r -q "$GITHUB_WORKSPACE/out/${winname}.zip" "$winname")
+          ls -l out
+
+      - name: Upload WSL zip
+        uses: actions/upload-artifact@v7
+        with:
+          name: tung-tung-sahur-windows-wsl
+          path: out/*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish release
+    needs: [version, bundle, windows-wsl]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.checkout_ref }}
+          fetch-depth: 0
+
+      - name: Download bundles
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Collect + checksum
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          find artifacts -name '*.tar.gz' -exec cp {} dist/ \;
+          find artifacts -name '*.zip' -exec cp {} dist/ \;
+          (cd dist && sha256sum ./*.tar.gz ./*.zip | sed 's|\./||' | tee SHA256SUMS.txt)
+          ls -l dist
+
+      - name: Upload dry-run package
+        if: needs.version.outputs.dry_run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dry-run-${{ needs.version.outputs.tag }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
+
+      # Tag only now, after every bundle built -- a failed build leaves no tag.
+      - name: Create release tag
+        if: github.event_name == 'workflow_dispatch' && needs.version.outputs.dry_run != 'true'
+        env:
+          VERSION: ${{ needs.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            tag_sha="$(git rev-list -n 1 "$VERSION")"
+            head_sha="$(git rev-parse HEAD)"
+            if [ "$tag_sha" != "$head_sha" ]; then
+              echo "Tag $VERSION already exists at $tag_sha, not $head_sha" >&2
+              exit 1
+            fi
+            echo "Tag $VERSION already points at HEAD; continuing."
+          else
+            git tag -a "$VERSION" -m "$VERSION"
+            git push origin "$VERSION"
+          fi
+
+      - name: Publish GitHub Release
+        if: needs.version.outputs.dry_run != 'true'
+        # SHA-pinned (v2.0.8): runs with contents: write.
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.0.8
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: ${{ needs.version.outputs.tag }}
+          prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS.txt
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
