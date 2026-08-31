@@ -25,12 +25,23 @@
 # for the scoped plan. Add a windows matrix entry here once that lands.
 name: Release
 
+# Releases are cut by MANUAL DISPATCH with a semver bump (like Brainrotlang/
+# brainrot's release.yml): the version job resolves the next vX.Y.Z from the
+# latest tag, the build jobs run, and only then does publish create the tag and
+# GitHub Release -- so a run that fails to build never leaves a dangling tag.
+# Pushing a v* tag by hand still works and takes that tag as-is. dry_run builds
+# and uploads the bundles as artifacts without tagging or publishing.
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
     inputs:
+      bump:
+        description: "Semver bump over the latest v*.*.* tag"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
       brainrot_ref:
         description: "Brainrotlang/brainrot ref to build the runtime from (tag/branch/SHA)"
         type: string
@@ -40,9 +51,9 @@ on:
         type: string
         default: "5.5"
       dry_run:
-        description: "Build and upload bundles as artifacts without publishing a release"
+        description: "Build and upload bundles as artifacts without tagging or publishing"
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write
@@ -58,8 +69,75 @@ env:
   RAYLIB_REF: ${{ github.event.inputs.raylib_ref || '5.5' }}
 
 jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      checkout_ref: ${{ steps.version.outputs.checkout_ref }}
+      dry_run: ${{ steps.version.outputs.dry_run }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release tag
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_BUMP: ${{ github.event.inputs.bump }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          REF_NAME: ${{ github.ref_name }}
+          CHECKOUT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          dry_run="${INPUT_DRY_RUN:-false}"
+
+          if [ "$EVENT_NAME" != "workflow_dispatch" ]; then
+            next="$REF_NAME"          # tag push: take the tag as-is
+            checkout_ref="$REF_NAME"
+            echo "Tag push: $next"
+          else
+            BUMP="${INPUT_BUMP:-patch}"
+            git fetch --tags --force
+            checkout_ref="$CHECKOUT_SHA"
+
+            latest=""
+            while IFS= read -r t; do
+              if [[ "$t" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then latest="$t"; break; fi
+            done < <(git tag -l 'v*' --sort=-v:refname)
+
+            if [ -z "$latest" ]; then
+              case "$BUMP" in major) next="v1.0.0" ;; *) next="v0.1.0" ;; esac
+              echo "Latest stable tag: <none> -> first release ($BUMP) $next"
+            else
+              ver="${latest#v}"; major="${ver%%.*}"; rest="${ver#*.}"
+              minor="${rest%%.*}"; patch="${rest#*.}"
+              case "$BUMP" in
+                major) major=$((major + 1)); minor=0; patch=0 ;;
+                minor) minor=$((minor + 1)); patch=0 ;;
+                patch) patch=$((patch + 1)) ;;
+              esac
+              next="v${major}.${minor}.${patch}"
+              echo "Latest stable tag: $latest -> $BUMP -> $next"
+            fi
+          fi
+
+          if [[ "$next" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=$checkout_ref" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
+
   bundle:
     name: Bundle ${{ matrix.os }}/${{ matrix.arch }}
+    needs: version
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     strategy:
@@ -83,6 +161,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: game
+          ref: ${{ needs.version.outputs.checkout_ref }}
 
       - name: Checkout brainrot runtime
         uses: actions/checkout@v4
@@ -154,10 +233,11 @@ jobs:
       # --- assemble the bundle ----------------------------------------------
       - name: Assemble bundle
         id: assemble
+        env:
+          VERSION: ${{ needs.version.outputs.tag }}
         run: |
           set -euo pipefail
-          ver="${GITHUB_REF_NAME}"
-          case "$ver" in v*) : ;; *) ver="dev-$(git -C game rev-parse --short HEAD)";; esac
+          ver="${VERSION}"
           plat="${{ matrix.os }}-${{ matrix.arch }}"
           name="tung-tung-sahur-${ver}-${plat}"
           out="$GITHUB_WORKSPACE/dist/$name"
@@ -289,10 +369,16 @@ jobs:
 
   publish:
     name: Publish release
-    needs: [bundle, windows-wsl]
+    needs: [version, bundle, windows-wsl]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.checkout_ref }}
+          fetch-depth: 0
+
       - name: Download bundles
         uses: actions/download-artifact@v4
         with:
@@ -308,19 +394,45 @@ jobs:
           ls -l dist
 
       - name: Upload dry-run package
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+        if: needs.version.outputs.dry_run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: release-dry-run
+          name: release-dry-run-${{ needs.version.outputs.tag }}
           path: dist
           if-no-files-found: error
           retention-days: 7
 
+      # Tag only now, after every bundle built -- a failed build leaves no tag.
+      - name: Create release tag
+        if: github.event_name == 'workflow_dispatch' && needs.version.outputs.dry_run != 'true'
+        env:
+          VERSION: ${{ needs.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            tag_sha="$(git rev-list -n 1 "$VERSION")"
+            head_sha="$(git rev-parse HEAD)"
+            if [ "$tag_sha" != "$head_sha" ]; then
+              echo "Tag $VERSION already exists at $tag_sha, not $head_sha" >&2
+              exit 1
+            fi
+            echo "Tag $VERSION already points at HEAD; continuing."
+          else
+            git tag -a "$VERSION" -m "$VERSION"
+            git push origin "$VERSION"
+          fi
+
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: needs.version.outputs.dry_run != 'true'
         # SHA-pinned (v2.0.8): runs with contents: write.
         uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.0.8
         with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: ${{ needs.version.outputs.tag }}
+          prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
           files: |
             dist/*.tar.gz
             dist/*.zip
