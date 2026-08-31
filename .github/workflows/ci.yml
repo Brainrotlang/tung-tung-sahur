@@ -51,8 +51,15 @@ jobs:
         working-directory: brainrot
         run: make
 
+      # The interpreter dlopen's libstdrot.so; a plain `make` build has no
+      # rpath, and it runs from the game dir where there's no ./libstdrot.so,
+      # so point it at the one we just built (same override brainrot's own
+      # test job uses). Without this the probe runs with no builtins and
+      # prints nothing -> check-brainrot reports "too old".
       - name: Run game tests
         working-directory: game
+        env:
+          STDROT_LIB_PATH: ${{ github.workspace }}/brainrot/libstdrot.so
         run: make test BRAINROT_DIR="$GITHUB_WORKSPACE/brainrot"
 
   atlases:

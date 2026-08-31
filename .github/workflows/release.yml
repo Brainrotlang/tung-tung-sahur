@@ -225,6 +225,10 @@ jobs:
       # --- gate: the game's own tests + native raylib call check -------------
       - name: Test game (headless units + native lint)
         working-directory: game
+        # Point the interpreter at the libstdrot.so we built rather than relying
+        # on the cwd lookup (we run from the game dir) or the release rpath.
+        env:
+          STDROT_LIB_PATH: ${{ github.workspace }}/brainrot/libstdrot.so
         run: |
           set -euo pipefail
           make test BRAINROT_DIR="$GITHUB_WORKSPACE/brainrot"
