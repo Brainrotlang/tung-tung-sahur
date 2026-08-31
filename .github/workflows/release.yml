@@ -80,7 +80,7 @@ jobs:
       dry_run: ${{ steps.version.outputs.dry_run }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -158,13 +158,13 @@ jobs:
             arch: arm64
     steps:
       - name: Checkout game
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: game
           ref: ${{ needs.version.outputs.checkout_ref }}
 
       - name: Checkout brainrot runtime
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Brainrotlang/brainrot
           ref: ${{ env.BRAINROT_REF }}
@@ -288,7 +288,7 @@ jobs:
           ls -l "$out"
 
       - name: Upload bundle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tung-tung-sahur-${{ matrix.os }}-${{ matrix.arch }}
           path: ${{ steps.assemble.outputs.tarball }}
@@ -307,7 +307,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Download linux/amd64 bundle
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: tung-tung-sahur-linux-amd64
           path: incoming
@@ -364,7 +364,7 @@ jobs:
           ls -l out
 
       - name: Upload WSL zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tung-tung-sahur-windows-wsl
           path: out/*.zip
@@ -378,13 +378,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.version.outputs.checkout_ref }}
           fetch-depth: 0
 
       - name: Download bundles
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -399,7 +399,7 @@ jobs:
 
       - name: Upload dry-run package
         if: needs.version.outputs.dry_run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-dry-run-${{ needs.version.outputs.tag }}
           path: dist

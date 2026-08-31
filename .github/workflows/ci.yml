@@ -31,12 +31,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout game
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: game
 
       - name: Checkout brainrot runtime
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Brainrotlang/brainrot
           ref: ${{ env.BRAINROT_REF }}
@@ -68,15 +68,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout game
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.x"
 
       - name: Install Pillow
-        run: pip install pillow
+        run: pip install -r tools/requirements.txt
 
       - name: Check atlases match draw constants
         run: make check-atlases

@@ -1,0 +1,19 @@
+# Keep CI actions and the Python tooling deps up to date.
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates
+version: 2
+updates:
+  # GitHub Actions used by ci.yml and release.yml.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      # One PR for routine action bumps instead of one per action.
+      actions:
+        patterns: ["*"]
+
+  # Python deps for the sprite tooling (tools/requirements.txt).
+  - package-ecosystem: pip
+    directory: "/tools"
+    schedule:
+      interval: weekly
