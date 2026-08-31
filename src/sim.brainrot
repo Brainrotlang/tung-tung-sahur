@@ -465,6 +465,61 @@ cap boss_owns_spawner(gang Boss *b) {
     bussin b.kind != t_boss_none() && b.phase != t_boss_leave();
 }
 
+🚽 The lead a bomb released RIGHT NOW would give Tung: the seconds between
+🚽 the blast appearing on the ground and its leading edge reaching his front.
+🚽 Everything about a fair drop is expressed in this one number.
+🚽
+🚽 Three boxes deep, and each offset is a real one rather than a fudge. The
+🚽 shell leaves the middle of the bay (bomb_spawn), the blast is centred on
+🚽 where the shell was and is wider than it (bomb_tick), and the blast then
+🚽 scrolls left at world speed while Tung stays pinned at t_player_x().
+chad croc_bomb_lead(gang Boss *b, gang World *w) {
+    chad shell = b.x + (t_croc_w() - t_bomb_w()) * 0.5;
+    chad blast = shell - (t_blast_w() - t_bomb_w()) * 0.5;
+    bussin (blast - (t_player_x() + t_player_w())) / w.speed;
+}
+
+🚽 Where the croc holds station while bombing -- read backwards out of
+🚽 croc_bomb_lead(), so the column is a CONSEQUENCE of where the bombs have
+🚽 to land rather than a number someone liked the look of. Move t_bomb_lead()
+🚽 and he moves with it.
+chad croc_cruise_x(gang World *w, chad lead) {
+    chad blast = t_player_x() + t_player_w() + w.speed * lead;
+    chad shell = blast + (t_blast_w() - t_bomb_w()) * 0.5;
+    bussin shell - (t_croc_w() - t_bomb_w()) * 0.5;
+}
+
+🚽 May the boss release its pattern this frame?
+🚽
+🚽 Tralalero always can -- he throws obstacles, and those enter at
+🚽 t_spawn_x() off the right edge whatever he is doing. The croc is the one
+🚽 that can say no, and he says it for two different reasons.
+🚽
+🚽 ALTITUDE. bomb_gravity() is derived from ONE drop: the bay at
+🚽 t_croc_cruise_y() + t_croc_h() down to the ground. A shell released lower
+🚽 has less air to fall through -- and at the opening he is at
+🚽 t_croc_open_y(), which puts the bay at 542 while the ground trigger is
+🚽 534. The bomb was already past its own landing line on the frame it was
+🚽 created, so it detonated in one tick: no arc, no fall, no marker, a blast
+🚽 out of nothing. That is what "not following the laws of physics" was.
+🚽
+🚽 COLUMN. A bomb released short of t_bomb_lead_min() lands on or next to
+🚽 Tung, and a falling shell keeps its column while Tung cannot move -- so
+🚽 that bomb is unavoidable rather than difficult. See t_bomb_lead().
+🚽
+🚽 Both cases are the SAME moment: the dive to the opening and the climb back
+🚽 out, when he is low and near Tung's column. He holds his fire crossing
+🚽 that ground, which reads -- jaws open and diving is not a bombing run.
+🚽
+🚽 Altitude is `<=` because higher is only ever more fall time, and
+🚽 approach() lands exactly on its target so the cruise case is exact.
+cap boss_may_spawn(gang Boss *b, gang World *w) {
+    edgy (b.kind != t_boss_bombardiro()) { bussin W; }
+    edgy (b.y > t_croc_cruise_y()) { bussin L; }
+    chad lead = croc_bomb_lead(b, w);
+    bussin lead >= t_bomb_lead_min();
+}
+
 🚽 Only during the opening, and only until the third bonk lands.
 cap boss_vulnerable(gang Boss *b) {
     bussin b.phase == t_boss_open() && b.bonks < t_boss_bonks();
@@ -503,7 +558,7 @@ skibidi boss_start(gang Boss *b, gang World *w, rizz kind) {
         w.did_tralalero = W;
     }
     amogus {
-        b.x = t_croc_cruise_x();
+        b.x = croc_cruise_x(w, t_bomb_lead());
         b.y = t_croc_cruise_y();
         w.did_bombardiro = W;
     }
@@ -565,18 +620,21 @@ chad boss_target_x(gang Boss *b, gang World *w) {
         bussin boss_lurk_x(b);
     }
     edgy (b.phase == t_boss_open()) { bussin t_croc_open_x(); }
-    🚽 He hovers OVER Tung, not ahead of him.
+
+    🚽 He flies AHEAD of Tung, not over him, and the distance is whatever
+    🚽 t_bomb_lead() seconds of scroll comes to at the current speed. A bomb
+    🚽 released over Tung's own column is welded to him -- see t_bomb_lead().
     🚽
-    🚽 There was a lead here, sized speed * fall_time, because bombs used to
-    🚽 drift left the whole way down. They fall straight now
-    🚽 (bomb_landing_x()), so a bomb lands where it was dropped and the croc
-    🚽 belongs directly above the thing he is bombing -- which is also what
-    🚽 "I can't see where the bombs are coming from" wanted.
+    🚽 The sway is on the LEAD, so it wanders in seconds rather than pixels
+    🚽 and stays inside the same fairness window at every speed. That is what
+    🚽 keeps the arrivals off a metronome.
     🚽
-    🚽 The sway is so they do not all land on one column, which would make
-    🚽 the fight a single memorised jump.
-    bussin t_croc_cruise_x()
-           + wave(w.dist * 0.001 * t_croc_sway_rate()) * t_croc_sway();
+    🚽 He is still the source of his own bombs and still directly above every
+    🚽 marker he draws, which is what "I can't see where the bombs are coming
+    🚽 from" actually asked for -- the guide line goes straight down from him.
+    chad lead = t_bomb_lead()
+                + wave(w.dist * 0.001 * t_croc_sway_rate()) * t_bomb_lead_sway();
+    bussin croc_cruise_x(w, lead);
 }
 
 chad boss_target_y(gang Boss *b, gang World *w) {
@@ -730,9 +788,17 @@ skibidi boss_note_hit(gang Boss *b) {
 🚽 the fall TIME is what fairness depends on, so that is the number a human
 🚽 sets, and this follows from it. It also avoids needing a square root,
 🚽 which math.brainrot does not have.
+🚽
+🚽 The drop is measured between the two lines bomb_tick() actually uses: the
+🚽 bay at the croc's cruising height, and the y at which the shell's own
+🚽 bottom edge reaches the ground. It used to subtract t_blast_h() instead of
+🚽 t_bomb_h() -- the blast's box, which the shell does not have until after
+🚽 it has landed -- so the derived gravity was for a fall 8px shorter than
+🚽 the real one and "exactly t_bomb_fall_time()" came out at 1.72s.
 chad bomb_gravity() {
-    chad drop = t_ground_y() - t_blast_h() - (t_croc_cruise_y() + t_croc_h());
-    bussin 2.0 * drop / (t_bomb_fall_time() * t_bomb_fall_time());
+    chad from = t_croc_cruise_y() + t_croc_h();
+    chad to   = t_ground_y() - t_bomb_h();
+    bussin 2.0 * (to - from) / (t_bomb_fall_time() * t_bomb_fall_time());
 }
 
 skibidi bomb_spawn(gang Bomb *bm, gang Boss *b) {
@@ -758,6 +824,10 @@ skibidi bomb_spawn(gang Bomb *bm, gang Boss *b) {
 🚽 edge of the screen at anything over ~1.0s. Falling straight down removes
 🚽 that coupling entirely, so the fall time is free to be as generous as it
 🚽 needs to be.
+🚽
+🚽 It is also why a bomb must be released AHEAD of Tung and never over him:
+🚽 a column that never changes, against a player who cannot change his, is a
+🚽 hit with no input that avoids it. See t_bomb_lead().
 chad bomb_landing_x(gang Bomb *bm, gang World *w) {
     bussin bm.x;
 }
