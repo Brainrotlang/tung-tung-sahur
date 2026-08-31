@@ -64,7 +64,8 @@ bomb well behind    L
   18 bombs released over 30s of fight
   fall 1.70s .. 1.70s (tuned 1.70s)
   the shortest fall clears the 0.635s reaction floor: W
-  survivable jump timings per bomb: worst 32, best 34, of 181
+  survivable timings per bomb: worst 10, best 11, of 61 sampled
+  tightest dodge window: 0.50s
   EVERY bomb has a way out: W
   and none of them is free:  W
   he is still bombing:       W

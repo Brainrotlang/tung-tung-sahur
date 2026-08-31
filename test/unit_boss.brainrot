@@ -336,6 +336,8 @@ skibidi main {
     rizz longest  = 0;
     rizz worst    = 99999;
     rizz easiest  = 0;
+    rizz sampled  = 0;
+    chad tightest = 99999.0;
     flex (rizz bf = 0; bf < 1800; bf = bf + 1) {
         world_advance(&wd);
         boss_tick(&bo, &wd);
@@ -364,12 +366,21 @@ skibidi main {
                 edgy (air_f > longest)  { longest  = air_f; }
 
                 🚽 Now the same shell against every jump timing there is.
+                🚽
                 🚽 j = -1 is "never press", which is the honest baseline: a
                 🚽 bomb that lands behind Tung is survived by doing nothing,
-                🚽 and that is a light show rather than a threat.
+                🚽 and that is a light show rather than a threat. It stays in
+                🚽 the sweep whatever the step is.
+                🚽
+                🚽 Sampled every 3rd frame rather than every frame. The window
+                🚽 that survives is ~32 frames wide, so a 3-frame step samples
+                🚽 it about eleven times over and cannot step across it -- and
+                🚽 the full-resolution sweep put unit_boss at 68s on its own,
+                🚽 which is too much gate for the certainty it added.
+                rizz step  = 3;
                 rizz lived = 0;
                 rizz tries = 0;
-                flex (rizz j = 0 - 1; j < 180; j = j + 1) {
+                flex (rizz j = 0 - 1; j < 180; j = j + step) {
                     gang World wj;
                     gang Player pj;
                     gang Bomb bj;
@@ -395,8 +406,14 @@ skibidi main {
                     tries = tries + 1;
                     edgy (!stung) { lived = lived + 1; }
                 }
+                sampled = tries;
                 edgy (lived < worst)   { worst   = lived; }
                 edgy (lived > easiest) { easiest = lived; }
+                🚽 The surviving timings are contiguous, so counting them and
+                🚽 multiplying back out by the step is the width of the window
+                🚽 a player actually has to hit.
+                chad win = lived * step * wd.dt;
+                edgy (win < tightest) { tightest = win; }
             }
         }
     }
@@ -411,10 +428,11 @@ skibidi main {
     yapping("  the shortest fall clears the %.3fs reaction floor: %b",
             need, all_dodgeable);
 
-    yapping("  survivable jump timings per bomb: worst %d, best %d, of 181",
-            worst, easiest);
+    yapping("  survivable timings per bomb: worst %d, best %d, of %d sampled",
+            worst, easiest, sampled);
+    yapping("  tightest dodge window: %.2fs", tightest);
     cap always_beatable = worst > 0;
-    cap never_free      = easiest < 181;
+    cap never_free      = easiest < sampled;
     yapping("  EVERY bomb has a way out: %b", always_beatable);
     yapping("  and none of them is free:  %b", never_free);
     cap he_still_bombs = drops > 0;
