@@ -236,6 +236,14 @@ jobs:
           STDROT_LIB_PATH: ${{ github.workspace }}/brainrot/libstdrot.so
         run: |
           set -euo pipefail
+          # `make lint-native` cooks the REAL #cooked <raylib> module, so it
+          # dlopens rayrot/raylib.{so,dylib}, which links libraylib from the
+          # source-built prefix ($HOME/raylib-prefix). That prefix isn't on the
+          # loader path here (the rpath baked into the shipped bundle is added
+          # later, in Assemble), so tell the loader where to find it -- else
+          # the check fails with "libraylib... cannot open shared object file".
+          export LD_LIBRARY_PATH="$HOME/raylib-prefix/lib:${LD_LIBRARY_PATH:-}"
+          export DYLD_LIBRARY_PATH="$HOME/raylib-prefix/lib:${DYLD_LIBRARY_PATH:-}"
           make test BRAINROT_DIR="$GITHUB_WORKSPACE/brainrot"
           make lint-native BRAINROT_DIR="$GITHUB_WORKSPACE/brainrot"
 
@@ -335,6 +343,7 @@ jobs:
           install: >-
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-raylib
+            mingw-w64-x86_64-pkgconf
             make
             bison
             flex
