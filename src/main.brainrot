@@ -165,7 +165,15 @@ skibidi main {
         🚽 Paused for the whole fight: the boss owns the pattern. Its own
         🚽 cadence is denser than the curve ever gets, and that density is
         🚽 the fight.
-        edgy (in_run && boss_up) {
+        🚽 boss_may_spawn() shuts the croc's bomb bay while a release would
+        🚽 be unfair -- too low for a full fall, or too close to Tung's column
+        🚽 to be dodged -- and it wraps the CLOCK as well as the drop.
+        🚽 Skipping only the drop would leave a bomb due the whole time he is
+        🚽 diving, and he would release it the frame he got back into
+        🚽 position: the same bad drop, moved. Frozen, he finishes the
+        🚽 interval he was part-way through instead.
+        cap may_spawn = boss_may_spawn(&bo, &wd);
+        edgy (in_run && boss_up && may_spawn) {
             bo.spawn_t = bo.spawn_t - wd.dt;
             edgy (bo.spawn_t <= 0.0) {
                 edgy (bo.kind == t_boss_tralalero()) {

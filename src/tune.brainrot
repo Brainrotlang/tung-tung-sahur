@@ -161,16 +161,56 @@ chad t_croc_w()            { bussin 120.0; }
 chad t_croc_h()            { bussin 72.0; }
 chad t_croc_cruise_y()     { bussin 90.0; }
 chad t_croc_open_y()       { bussin 470.0; }
-🚽 Directly over Tung, because bombs now fall straight down and land where
-🚽 they were dropped. croc box is x..x+t_croc_w(), so 180 centres him on
-🚽 240 -- Tung's own column.
-chad t_croc_cruise_x()     { bussin 180.0; }
+🚽 BOMBS LAND AHEAD OF TUNG, NEVER ON HIM, and this is the number that says
+🚽 how far ahead -- in SECONDS of world scroll, not pixels.
+🚽
+🚽 He used to hover directly over Tung's column (cruise_x 180 centres a 120px
+🚽 croc on 240). Reported from play: "sometimes a bomb locks in with the
+🚽 player position and it becomes impossible to dodge." It was not a feeling.
+🚽 A falling shell keeps its screen column the whole way down and Tung cannot
+🚽 move horizontally, so a bomb released over his column is welded to him:
+🚽 stand and the shell lands on you, jump and you rise into it. Brute-forcing
+🚽 every jump timing there is -- press on frame 0, frame 1, ... or never --
+🚽 found ZERO that survive. Not hard: impossible. unit_boss asserts it now.
+🚽
+🚽 Landing ahead makes it a dodge the game already has a verb for. The shell
+🚽 comes down in front of Tung, becomes a ground blast, and the blast scrolls
+🚽 back into him at world speed -- so it is a jumpable obstacle with a 1.7s
+🚽 marker on it, which is the fight this always wanted to be.
+🚽
+🚽 SECONDS because the hazard closes at world speed: a fixed pixel lead is
+🚽 0.42s of warning at 620 and 0.29s at 900, and it is the TIME that has to
+🚽 stay fair. This is the lead the old code deleted, but sized by the blast's
+🚽 sweep rather than by the fall -- and that is why it fits on screen now.
+🚽 The full fall time put the croc 1530px ahead at speed 900.
+chad t_bomb_lead()         { bussin 0.38; }
+
+🚽 Both ends of the lead are pinned, and neither is a preference.
+🚽
+🚽 FLOOR: a player who does nothing until the blast appears must still clear
+🚽 it. 0.25s to react, plus 0.036s to rise t_blast_h() = 34px under
+🚽 t_jump_v()/t_gravity() -- 0.286s. 0.30 is that with room for the sway
+🚽 trough to sit on top of it rather than under it.
+🚽
+🚽 CEILING is t_bomb_fuse(): a blast that dies before it reaches Tung is a
+🚽 light show, not a threat. t_bomb_lead() + t_bomb_lead_sway() = 0.44 stays
+🚽 under the 0.55s it burns for, so every bomb arrives with fire left.
+chad t_bomb_lead_min()     { bussin 0.30; }
 
 🚽 Same rule as the shark's open_x: right of the player's body (248), left
 🚽 of the bat's far edge (296). At 200 he descended straight onto Tung's
 🚽 head for a free heart every opening.
 chad t_croc_open_x()       { bussin 258.0; }
-chad t_croc_sway()         { bussin 130.0; }
+
+🚽 How much the lead wanders, in the same seconds as t_bomb_lead(). Now that
+🚽 every bomb sweeps back through Tung, the sway varies WHEN each one arrives
+🚽 rather than which column it lands in -- so a fixed jump rhythm does not
+🚽 clear the fight.
+🚽
+🚽 It was 130 PIXELS, which at 620px/s is +-0.21s of lead: enough to push the
+🚽 near end under the reaction floor and the far end past the fuse. In
+🚽 seconds it holds at every speed the fight can happen at.
+chad t_bomb_lead_sway()    { bussin 0.06; }
 chad t_croc_sway_rate()    { bussin 1.1; }
 
 🚽 His atlas: two frames, and unlike every other animation here they are

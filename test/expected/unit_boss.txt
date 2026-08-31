@@ -40,7 +40,7 @@ airtime 0.769 s
 every boss jump->jump gap clears the airtime: W
 -- bombs --
 spawned at y 162.0, w 12.0 (shell)
-landed after 103 steps at y 526.0, w 64.0 (blast)
+landed after 102 steps at y 526.0, w 64.0 (blast)
 ground line 560.0, blast bottom 560.0
 blast gone after 34 more steps
 bomb on the player  W
@@ -48,13 +48,26 @@ bomb well behind    L
 -- bombs: dodgeable, and still a threat --
   fall 1.700s   need 0.635s (0.25 react + 0.385 to apex)   slack +1.065
   a bomb can be reacted to: W
-  speed 620: croc x    180 -> bomb lands x    234 (+34 from Tung)
-  speed 690: croc x    180 -> bomb lands x    234 (+34 from Tung)
-  speed 760: croc x    180 -> bomb lands x    234 (+34 from Tung)
-  speed 830: croc x    180 -> bomb lands x    234 (+34 from Tung)
-  speed 900: croc x    180 -> bomb lands x    234 (+34 from Tung)
-  bombs land within reach of Tung at every speed: W
-  sway spreads impacts over x 126..357 (231px wide)
+  lead must be >= 0.30s (react + clear the blast) and <= 0.55s (fuse)
+  speed 620: croc x    456 -> bomb lands x    510, lead 0.38s
+  speed 690: croc x    482 -> bomb lands x    536, lead 0.38s
+  speed 760: croc x    509 -> bomb lands x    563, lead 0.38s
+  speed 830: croc x    535 -> bomb lands x    589, lead 0.38s
+  speed 900: croc x    562 -> bomb lands x    616, lead 0.38s
+  never lands on Tung: W    always reaches him: W
+  sway wanders the lead over 0.33..0.44s, inside 0.30..0.55: W
+-- every bomb has an input that survives it --
+  ground trigger y 534, Tung's column 200..248
+  cruising: bay y 162, lead 0.38s -> may spawn W
+  opening:  bay y 542, lead 0.05s -> may spawn L
+  fight runs at lvl 6, speed 710, croc x 490
+  18 bombs released over 30s of fight
+  fall 1.70s .. 1.70s (tuned 1.70s)
+  the shortest fall clears the 0.635s reaction floor: W
+  survivable jump timings per bomb: worst 32, best 34, of 181
+  EVERY bomb has a way out: W
+  and none of them is free:  W
+  he is still bombing:       W
 -- scripted fight --
 fight over in 1702 frames, 171 swing attempts
 boss kind 0, hearts 3, bonus 2600
@@ -63,7 +76,7 @@ boss 1: 1702 frames, 171 open frames, body contacts 0 (must be 0)
         nose got within -198px of Tung's back (negative = in front)
         mistakes made during the fight: 2
 boss 2: 1645 frames, 114 open frames, body contacts 0 (must be 0)
-        nose got within -230px of Tung's back (negative = in front)
+        nose got within -288px of Tung's back (negative = in front)
         mistakes made during the fight: 2
 -- how long is an opening, really --
 boss 1: opening 117 frames, in bat reach 70 of them (1.17s)

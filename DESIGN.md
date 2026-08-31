@@ -636,15 +636,15 @@ After each survival phase he over-commits and drifts into bat range for a
 
 ### 12.2 BOMBARDIRO CROCODILO — LVL 6
 
-He does not chase. He flies overhead and bombs, so the whole vertical axis
-becomes hostile while you're still running:
+He does not chase. He flies *ahead* and bombs the ground in front of you, so the
+blast sweeps back at world speed and the whole vertical axis becomes hostile
+while you're still running:
 
 ```
-                🐊✈️
-            💣       💣
-                💣
- 🪵
- /|\       💥
+                          🐊✈️
+                       💣
+ 🪵                💣
+ /|\           💥ᐊᐊ
 _/ \____________________
 ```
 
@@ -652,15 +652,15 @@ Bombs are the `bombs[32]` pool: spawned at his `x`, exploding into a ground
 hazard on impact. Between volleys he descends to bat height for the opening.
 Three bonks.
 
-**They do not fall under the player's gravity, and he does not fly at a fixed
-column.** Both were wrong, and together they made the fight an instant kill:
+**They do not fall under the player's gravity, and he does not fly over Tung's
+column.** Both were wrong, and each on its own made the fight an instant kill:
 
 - At `t_gravity()` the drop took **0.535 s**. A jump lasts **0.769 s**, so a
   jump started the instant the bomb appeared finished *after* it had already
   detonated. The player could not react, only pre-empt — and there was nothing
   to pre-empt from, because an 11px shell of `rgb(34,34,40)` against a
   `rgb(12,14,34)` sky is invisible.
-- So **`t_bomb_fall_time()` is the tuned number** (1.0 s) and the gravity that
+- So **`t_bomb_fall_time()` is the tuned number** (1.70 s) and the gravity that
   produces it is derived. A player needs ~0.25 s to react plus ~0.385 s to reach
   jump apex; 0.635 s is the floor and `unit_boss.brainrot` asserts it.
 - **A falling bomb does not scroll.** Tung is fixed at `t_player_x()` and the
@@ -673,9 +673,37 @@ column.** Both were wrong, and together they made the fight an instant kill:
   impact point drifted by `speed × fall_time`, and a longer fall needed the croc
   further and further ahead to compensate — past the right edge of the screen at
   anything over about 1.0 s. That coupling is why the first attempt at a fix
-  could only afford 1.0 s. Falling straight removes it, so the fall time is free,
-  and the croc **hovers over** Tung rather than leading him — which is also what
-  *"I can't see where the bombs are coming from"* wanted.
+  could only afford 1.0 s. Falling straight removes it, so the fall time is free.
+- **Bombs land ahead of Tung, never on him** — `t_bomb_lead()`, and it is in
+  *seconds of scroll* rather than pixels. Reported from play: *"sometimes a bomb
+  locks in with the player position and it becomes impossible to dodge."* It was
+  literal. A falling shell keeps its screen column and Tung cannot move
+  horizontally, so a bomb released over his column is welded to him: stand and it
+  lands on you, jump and you rise into it. Brute-forcing every jump timing that
+  exists — press on frame 0, frame 1, … or never — found **zero** that survive.
+
+  Landing ahead turns it into a dodge the game already has a verb for. The shell
+  comes down in front of Tung, detonates, and the blast scrolls back into him at
+  world speed — a jumpable obstacle carrying a 1.7 s marker. Both ends of the
+  lead are pinned: at least `t_bomb_lead_min()` (0.25 s to react plus 0.036 s to
+  rise clear of `t_blast_h()`) and at most `t_bomb_fuse()`, or the fire dies
+  before it arrives and the bomb is a light show. Seconds, because the hazard
+  closes at world speed — a fixed pixel lead is 0.42 s of warning at 620 px/s and
+  0.29 s at 900. The croc's cruising column is *derived* from this in
+  `croc_cruise_x()` rather than tuned, so it follows the number that matters.
+- **`boss_may_spawn()` shuts the bomb bay** whenever a release would be unfair:
+  too low for the full fall (the dive to the opening puts the bay at 542 while
+  the shell's ground trigger is 534, so it detonated on its first tick — no arc,
+  no marker), or too close to Tung's column. Both are the same moment, the dive
+  and the climb back out, and holding fire across it reads: jaws open and diving
+  is not a bombing run. It gates the spawn *clock* too, so he does not come back
+  into position with a bomb already due and drop it on the frame he arrives.
+- The invariant `unit_boss.brainrot` asserts is not a position or a distance —
+  those are mechanisms, and mechanisms move. It runs the fight the way `main`
+  runs it, at the speed `t_bombardiro_lvl()` actually happens at, and for every
+  shell released brute-forces all 181 jump timings: **every bomb must have at
+  least one input that survives it, and none may be survivable by doing
+  nothing.**
 - Every falling bomb draws a **guide line straight down to a ground marker**,
   from the moment it is dropped. The marker sits *on* the ground band, fully
   opaque, and its bright core widens as impact nears so "how soon" reads without

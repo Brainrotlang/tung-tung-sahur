@@ -213,16 +213,19 @@ skibidi main {
     cap dodgeable = t_bomb_fall_time() > need;
     yapping("  a bomb can be reacted to: %b", dodgeable);
 
-    🚽 Dodgeable is only half of it. Slowing the fall moves every impact
-    🚽 LEFT, because a bomb drifts at world speed the whole way down -- at a
-    🚽 fixed cruise x they all landed behind Tung and the fight became a
-    🚽 light show. boss_target_x() derives the croc's lead from the speed, so
-    🚽 this must hold at every speed the fight can happen at.
+    🚽 Dodgeable is only half of it. The bomb has to land AHEAD of Tung, far
+    🚽 enough that the blast is not already on him when it appears, and near
+    🚽 enough that it still reaches him before its fuse burns out. Both ends
+    🚽 are seconds, not pixels -- the hazard closes at world speed -- so this
+    🚽 must hold at every speed the fight can happen at.
     boss_clear(&bo);
     world_reset(&wd);
     boss_start(&bo, &wd, t_boss_bombardiro());
     bo.phase = t_boss_survive();
-    cap always_threatens = W;
+    cap always_ahead = W;
+    cap always_arrives = W;
+    yapping("  lead must be >= %.2fs (react + clear the blast) and <= %.2fs (fuse)",
+            t_bomb_lead_min(), t_bomb_fuse());
     flex (rizz sp = 620; sp <= 900; sp = sp + 70) {
         wd.speed = sp;
         wd.dist  = 0.0;
@@ -230,33 +233,192 @@ skibidi main {
         bo.y = t_croc_cruise_y();
         gang Bomb probe;
         bomb_spawn(&probe, &bo);
-        chad lx = bomb_landing_x(&probe, &wd);
-        chad dx = lx - t_player_x();
-        edgy (dx < 0.0 - 200.0) { always_threatens = L; }
-        edgy (dx > 260.0) { always_threatens = L; }
-        yapping("  speed %3d: croc x %6.0f -> bomb lands x %6.0f (%+.0f from Tung)",
-                sp, bo.x, lx, dx);
+        chad lx   = bomb_landing_x(&probe, &wd);
+        chad lead = croc_bomb_lead(&bo, &wd);
+        edgy (lead < t_bomb_lead_min()) { always_ahead = L; }
+        edgy (lead > t_bomb_fuse()) { always_arrives = L; }
+        yapping("  speed %3d: croc x %6.0f -> bomb lands x %6.0f, lead %.2fs",
+                sp, bo.x, lx, lead);
     }
-    yapping("  bombs land within reach of Tung at every speed: %b",
-            always_threatens);
+    yapping("  never lands on Tung: %b    always reaches him: %b",
+            always_ahead, always_arrives);
 
-    🚽 The lead alone would drop every bomb on one column, which is a single
-    🚽 memorised jump. The sway is what spreads them, so show the spread
-    🚽 rather than asserting it exists in a comment.
+    🚽 A constant lead would put every blast on Tung at the same beat, which
+    🚽 is one memorised jump on a loop. The sway wanders the lead, so show the
+    🚽 window it actually wanders over rather than asserting it in a comment.
     wd.speed = 710.0;
     chad lo = 99999.0;
     chad hi = 0.0 - 99999.0;
     flex (rizz k = 0; k < 12; k = k + 1) {
         wd.dist = k * 120.0;
         bo.x = boss_target_x(&bo, &wd);
-        gang Bomb pr2;
-        bomb_spawn(&pr2, &bo);
-        chad lx2 = bomb_landing_x(&pr2, &wd);
-        edgy (lx2 < lo) { lo = lx2; }
-        edgy (lx2 > hi) { hi = lx2; }
+        chad ld = croc_bomb_lead(&bo, &wd);
+        edgy (ld < lo) { lo = ld; }
+        edgy (ld > hi) { hi = ld; }
     }
-    yapping("  sway spreads impacts over x %.0f..%.0f (%.0fpx wide)",
-            lo, hi, hi - lo);
+    yapping("  sway wanders the lead over %.2f..%.2fs, inside %.2f..%.2f: %b",
+            lo, hi, t_bomb_lead_min(), t_bomb_fuse(),
+            lo >= t_bomb_lead_min() && hi <= t_bomb_fuse());
+
+    🚽 --- there is an input that survives every bomb he drops ----------------
+    🚽
+    🚽 Two reports from play, one fight:
+    🚽   "the bombs fall immediately where the player is, they aren't
+    🚽    following the laws of physics"
+    🚽   "sometimes a bomb locks in with the player position and it becomes
+    🚽    impossible to dodge"
+    🚽
+    🚽 Both were true, and neither was a feeling:
+    🚽
+    🚽   - bomb_gravity() is derived from ONE drop, the bay at cruising height,
+    🚽     but bombs were released wherever the croc happened to be. At the
+    🚽     opening he is at t_croc_open_y(), which puts the bay BELOW the
+    🚽     shell's own landing line -- so bomb_tick() detonated it on its first
+    🚽     tick. No arc, and the marker that is supposed to warn you drawn for
+    🚽     one frame.
+    🚽   - He hovered over Tung's column. A falling shell keeps its column and
+    🚽     Tung cannot move, so that bomb is welded to him: stand and it lands
+    🚽     on you, jump and you rise into it.
+    🚽
+    🚽 So this does not test the mechanism -- mechanisms move. It tests the
+    🚽 PROPERTY, and it tests it the only way that cannot be fooled: run the
+    🚽 fight the way main runs it, and for every shell it lets go, brute-force
+    🚽 every input a player has. Press jump on frame 0, on frame 1, ... or
+    🚽 never press at all. At least one of them has to come out unhurt.
+    🚽
+    🚽 Run against the hovering croc, columns 200-240 scored 0 survivable
+    🚽 timings out of 181. Not hard -- impossible.
+    yapping("-- every bomb has an input that survives it --");
+    boss_clear(&bo);
+    world_reset(&wd);
+    boss_start(&bo, &wd, t_boss_bombardiro());
+    wd.dt = 0.016666;
+
+    🚽 The two halves of the gate, at the positions he actually flies. The
+    🚽 ground trigger is what bomb_tick() compares the shell against, so a bay
+    🚽 below it is a bomb that has already landed.
+    yapping("  ground trigger y %.0f, Tung's column %.0f..%.0f",
+            t_ground_y() - t_bomb_h(), t_player_x(), t_player_x() + t_player_w());
+    wd.speed = 700.0;
+    bo.x = boss_target_x(&bo, &wd);
+    bo.y = t_croc_cruise_y();
+    yapping("  cruising: bay y %.0f, lead %.2fs -> may spawn %b",
+            bo.y + t_croc_h(), croc_bomb_lead(&bo, &wd),
+            boss_may_spawn(&bo, &wd));
+    bo.y = t_croc_open_y();
+    bo.x = t_croc_open_x();
+    yapping("  opening:  bay y %.0f, lead %.2fs -> may spawn %b",
+            bo.y + t_croc_h(), croc_bomb_lead(&bo, &wd),
+            boss_may_spawn(&bo, &wd));
+
+    🚽 At the speed the fight actually happens at. world_reset() starts at
+    🚽 t_speed_start(), and running the croc there would test a fight nobody
+    🚽 plays -- he arrives at t_bombardiro_lvl(), which speed_to_lvl() puts at
+    🚽 710px/s and climbing. Everything about the lead is in seconds, so this
+    🚽 SHOULD not matter; running it at the wrong speed is how you never find
+    🚽 out that it does.
+    boss_clear(&bo);
+    world_reset(&wd);
+    wd.dt = 0.016666;
+    rizz warm = 0;
+    rizz at_lvl = speed_to_lvl(wd.speed);
+    goon (at_lvl < t_bombardiro_lvl() && warm < 200000) {
+        world_advance(&wd);
+        warm = warm + 1;
+        at_lvl = speed_to_lvl(wd.speed);
+    }
+    boss_start(&bo, &wd, t_boss_bombardiro());
+    yapping("  fight runs at lvl %d, speed %.0f, croc x %.0f",
+            at_lvl, wd.speed, bo.x);
+
+    rizz drops    = 0;
+    rizz shortest = 99999;
+    rizz longest  = 0;
+    rizz worst    = 99999;
+    rizz easiest  = 0;
+    flex (rizz bf = 0; bf < 1800; bf = bf + 1) {
+        world_advance(&wd);
+        boss_tick(&bo, &wd);
+
+        cap owns = boss_owns_spawner(&bo);
+        cap may  = boss_may_spawn(&bo, &wd);
+        edgy (owns && may) {
+            bo.spawn_t = bo.spawn_t - wd.dt;
+            edgy (bo.spawn_t <= 0.0) {
+                bo.spawn_t = t_bomb_interval();
+                drops = drops + 1;
+
+                🚽 Fly it to the ground on its own clock and count the ticks.
+                gang Bomb shot;
+                gang World wf;
+                world_reset(&wf);
+                wf.dt    = wd.dt;
+                wf.speed = wd.speed;
+                bomb_spawn(&shot, &bo);
+                rizz air_f = 0;
+                goon (shot.fuse <= 0.0 && air_f < 1000) {
+                    bomb_tick(&shot, &wf);
+                    air_f = air_f + 1;
+                }
+                edgy (air_f < shortest) { shortest = air_f; }
+                edgy (air_f > longest)  { longest  = air_f; }
+
+                🚽 Now the same shell against every jump timing there is.
+                🚽 j = -1 is "never press", which is the honest baseline: a
+                🚽 bomb that lands behind Tung is survived by doing nothing,
+                🚽 and that is a light show rather than a threat.
+                rizz lived = 0;
+                rizz tries = 0;
+                flex (rizz j = 0 - 1; j < 180; j = j + 1) {
+                    gang World wj;
+                    gang Player pj;
+                    gang Bomb bj;
+                    world_reset(&wj);
+                    player_reset(&pj);
+                    wj.dt    = wd.dt;
+                    wj.speed = wd.speed;
+                    bomb_spawn(&bj, &bo);
+
+                    cap stung = L;
+                    rizz t = 0;
+                    cap airborne = bj.alive;
+                    goon (airborne && t < 300) {
+                        edgy (t == j) { player_jump(&pj); }
+                        player_physics(&pj, &wj);
+                        player_tick_timers(&pj, &wj);
+                        bomb_tick(&bj, &wj);
+                        cap touch = bomb_hits_player(&bj, &pj);
+                        edgy (touch) { stung = W; }
+                        t = t + 1;
+                        airborne = bj.alive;
+                    }
+                    tries = tries + 1;
+                    edgy (!stung) { lived = lived + 1; }
+                }
+                edgy (lived < worst)   { worst   = lived; }
+                edgy (lived > easiest) { easiest = lived; }
+            }
+        }
+    }
+    chad short_s = shortest * 0.016666;
+    chad long_s  = longest * 0.016666;
+    yapping("  %d bombs released over 30s of fight", drops);
+    yapping("  fall %.2fs .. %.2fs (tuned %.2fs)",
+            short_s, long_s, t_bomb_fall_time());
+
+    🚽 The floor from t_bomb_fall_time()'s own note: react, then reach apex.
+    cap all_dodgeable = short_s > need;
+    yapping("  the shortest fall clears the %.3fs reaction floor: %b",
+            need, all_dodgeable);
+
+    yapping("  survivable jump timings per bomb: worst %d, best %d, of 181",
+            worst, easiest);
+    cap always_beatable = worst > 0;
+    cap never_free      = easiest < 181;
+    yapping("  EVERY bomb has a way out: %b", always_beatable);
+    yapping("  and none of them is free:  %b", never_free);
+    cap he_still_bombs = drops > 0;
+    yapping("  he is still bombing:       %b", he_still_bombs);
 
     🚽 --- integration: a scripted fight ------------------------------------
     🚽 The same calls main makes, in the same order, driven by a script
