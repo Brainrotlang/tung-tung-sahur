@@ -18,11 +18,13 @@
 # vendored copy ($ORIGIN on Linux, @loader_path on macOS) instead of a path
 # that only exists on the build machine.
 #
-# WINDOWS IS ABSENT ON PURPOSE. The interpreter has no native Windows build
-# today: it dlopen's libstdrot.so (dlfcn.h) and the module loader is POSIX
-# (libgen.h, sys/stat.h, unistd.h, hardcoded ".so"). A native Windows target
-# needs upstream work in Brainrotlang/brainrot first -- see docs/windows-port.md
-# for the scoped plan. Add a windows matrix entry here once that lands.
+# WINDOWS is a real native bundle now (Brainrotlang/brainrot#337 landed the
+# native interpreter + LoadLibraryA module loader, and #342 makes `make rayrot`
+# emit raylib.dll). The `windows-native` job builds brainrot.exe (`make windows`,
+# a self-contained static exe) + raylib.dll (`make rayrot`) under MSYS2, vendors
+# every non-system DLL the module pulls from the MinGW prefix (libraylib.dll and
+# friends), and ships a .zip with a play.bat. Windows finds a DLL next to the
+# loading binary, so no rpath rewriting is needed there. See docs/windows-port.md.
 name: Release
 
 # Releases are cut by MANUAL DISPATCH with a semver bump (like Brainrotlang/
@@ -43,11 +45,11 @@ on:
         options: [patch, minor, major]
         default: patch
       brainrot_ref:
-        description: "Brainrotlang/brainrot ref to build the runtime from (tag/branch/SHA)"
+        description: "Brainrotlang/brainrot ref to build every bundle from (tag/branch/SHA)"
         type: string
-        default: "v0.3.0"
+        default: "v0.5.1"
       raylib_ref:
-        description: "raysan5/raylib tag to build/vendor"
+        description: "raysan5/raylib tag to build/vendor (Linux/macOS)"
         type: string
         default: "5.5"
       dry_run:
@@ -63,9 +65,12 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Pinned so a tag push and a manual dispatch build the same runtime. Bump
-  # deliberately; the game needs brainrot >= v0.3.0 (see the Makefile probe).
-  BRAINROT_REF: ${{ github.event.inputs.brainrot_ref || 'v0.3.0' }}
+  # One pinned brainrot release for EVERY platform, so a tag push and a manual
+  # dispatch build the exact same runtime and a shipped bundle is traceable to
+  # one interpreter commit. v0.5.1 is the first release with native Windows
+  # (#337) and raylib.dll (#342); it also satisfies the game's Makefile probe
+  # (needs >= v0.3.0). Bump deliberately.
+  BRAINROT_REF: ${{ github.event.inputs.brainrot_ref || 'v0.5.1' }}
   RAYLIB_REF: ${{ github.event.inputs.raylib_ref || '5.5' }}
 
 jobs:
@@ -295,85 +300,124 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # Windows STOPGAP, not a native app: repackage the linux/amd64 ELF bundle as
-  # a .zip with a play.bat that runs it under WSL. Needs zero interpreter
-  # changes (see docs/windows-port.md for the real port). Caveats are baked
-  # into README-WINDOWS.txt: WSL + WSLg (Windows 11) for the window and audio,
-  # and the raylib X11/GL client libs installed inside the WSL distro.
-  windows-wsl:
-    name: Windows (WSL stopgap)
-    needs: bundle
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+  # Native Windows bundle (Brainrotlang/brainrot#337 + #342). Builds a
+  # self-contained brainrot.exe (`make windows`) and the raylib.dll module
+  # (`make rayrot`) under MSYS2/MinGW-w64, vendors every non-system DLL the
+  # module pulls from the MinGW prefix (libraylib.dll and friends), and ships a
+  # .zip with a play.bat. Windows resolves a DLL from the loading binary's own
+  # directory, so brainrot.exe + raylib.dll + libraylib.dll side by side in the
+  # bundle need no rpath rewriting. Builds from the same pinned BRAINROT_REF as
+  # every other platform (>= v0.5.1, the first release with #337 + #342).
+  windows-native:
+    name: Bundle windows/amd64
+    needs: version
+    runs-on: windows-latest
+    timeout-minutes: 30
     steps:
-      - name: Download linux/amd64 bundle
-        uses: actions/download-artifact@v8
+      - name: Checkout game
+        uses: actions/checkout@v7
         with:
-          name: tung-tung-sahur-linux-amd64
-          path: incoming
+          path: game
+          ref: ${{ needs.version.outputs.checkout_ref }}
 
-      - name: Repackage as WSL zip
+      - name: Checkout brainrot runtime
+        uses: actions/checkout@v7
+        with:
+          repository: Brainrotlang/brainrot
+          ref: ${{ env.BRAINROT_REF }}
+          path: brainrot
+
+      - name: Set up MSYS2 (MinGW-w64 + raylib)
+        # SHA-pinned (v2.32.0): this builds a published release artifact.
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2.32.0
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-raylib
+            make
+            bison
+            flex
+            zip
+
+      - name: Build interpreter (make windows)
+        shell: msys2 {0}
+        working-directory: brainrot
+        run: make windows
+
+      - name: Build rayrot module (make rayrot -> raylib.dll)
+        shell: msys2 {0}
+        working-directory: brainrot
         run: |
           set -euo pipefail
-          tarball="$(find incoming -name '*-linux-amd64.tar.gz' | head -n1)"
-          test -n "$tarball"
-          base="$(basename "$tarball" .tar.gz)"          # tung-tung-sahur-<ver>-linux-amd64
-          ver="${base#tung-tung-sahur-}"; ver="${ver%-linux-amd64}"
-          bundle="$base"                                  # dir name inside the tar
-          winname="tung-tung-sahur-${ver}-windows-wsl"
+          pkg-config --exists raylib
+          echo "raylib $(pkg-config --modversion raylib)"
+          make rayrot
+          test -f rayrot/raylib.dll \
+            || { echo "expected rayrot/raylib.dll -- needs brainrot >= v0.5.1 (#342)"; exit 1; }
 
-          mkdir -p "stage/$winname"
-          tar -C "stage/$winname" -xzf "$tarball"         # -> stage/$winname/$bundle/
+      - name: Assemble bundle
+        shell: msys2 {0}
+        env:
+          VERSION: ${{ needs.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          root="$(pwd)"
+          name="tung-tung-sahur-${VERSION}-windows-amd64"
+          out="$root/dist/$name"
+          mkdir -p "$out" "$root/out"
 
-          # Launcher: find WSL, then run the Linux bundle's play.sh inside it.
-          # CRLF line endings so cmd.exe parses it.
+          # runtime: static brainrot.exe + the rayrot module
+          cp brainrot/brainrot.exe brainrot/rayrot/raylib.dll "$out/"
+          # game
+          cp -r game/src game/assets "$out/"
+          cp game/README.md game/LICENSE "$out/" 2>/dev/null || true
+
+          # Vendor every non-system DLL the module needs (libraylib.dll and any
+          # MinGW runtime it pulls in). Windows loads a DLL's dependencies from
+          # the loading binary's own directory, so copying them beside
+          # raylib.dll makes the bundle self-contained. brainrot.exe is
+          # statically linked, so it contributes none.
+          ldd "$out/raylib.dll" | awk '/\/mingw64\//{print $3}' | sort -u \
+          | while read -r dll; do
+              [ -f "$dll" ] && cp -n "$dll" "$out/" || true
+            done
+          echo "-- bundle contents --"; ls "$out"
+
+          # Launcher (CRLF for cmd.exe). Assets load cwd-relative, and
+          # #cooked <raylib> resolves via %BRAINROT_PATH% -> the bundle root
+          # (with the trailing backslash trimmed).
           {
             printf '@echo off\r\n'
             printf 'setlocal\r\n'
-            printf 'where wsl >nul 2>nul\r\n'
-            printf 'if errorlevel 1 (\r\n'
-            printf '  echo WSL was not found. Install it from an elevated PowerShell:  wsl --install\r\n'
-            printf '  pause\r\n'
-            printf '  exit /b 1\r\n'
-            printf ')\r\n'
-            printf 'set "HERE=%%~dp0"\r\n'
-            printf 'wsl -e bash -lc "cd \\"$(wslpath '"'"'%%HERE%%'"'"')/%s\\" && exec ./play.sh"\r\n' "$bundle"
-            printf 'endlocal\r\n'
-          } > "stage/$winname/play.bat"
+            printf 'cd /d "%%~dp0"\r\n'
+            printf 'set "BRAINROT_PATH=%%~dp0"\r\n'
+            printf 'if "%%BRAINROT_PATH:~-1%%"=="\\" set "BRAINROT_PATH=%%BRAINROT_PATH:~0,-1%%"\r\n'
+            printf 'brainrot.exe src\\main.brainrot %%*\r\n'
+          } > "$out/play.bat"
 
-          cat > "stage/$winname/README-WINDOWS.txt" <<EOF
-          TUNG TUNG TUNG SAHUR: RUN -- Windows (WSL) build
+          # Smoke test: prove the native module chain loads (no window needed --
+          # cooking <raylib> alone LoadLibraryA's raylib.dll and, transitively,
+          # the vendored libraylib.dll next to it).
+          printf '#cooked <raylib>\nskibidi main { bussin 0; }\n' > "$out/.probe.brainrot"
+          ( cd "$out" && BRAINROT_PATH=. ./brainrot.exe .probe.brainrot )
+          rm -f "$out/.probe.brainrot"
+          echo "ok: raylib.dll loads natively on Windows"
 
-          This is NOT a native Windows app. The Brainrot interpreter has no
-          native Windows build yet, so this zip runs the Linux build under WSL.
+          (cd "$root/dist" && zip -r -q "$root/out/$name.zip" "$name")
+          ls -l "$root/out"
 
-          Requirements:
-            1. Windows 11 with WSL + WSLg (for the game window and audio):
-                 wsl --install        (from an elevated PowerShell, then reboot)
-            2. raylib's runtime libraries inside your WSL distro. In a WSL shell:
-                 sudo apt update && sudo apt install -y \\
-                   libgl1 libx11-6 libxrandr2 libxi6 libxcursor1 libxinerama1
-
-          To play: double-click play.bat  (or run it from a terminal).
-
-          A native Windows build is tracked in docs/windows-port.md.
-          EOF
-
-          mkdir -p out
-          (cd stage && zip -r -q "$GITHUB_WORKSPACE/out/${winname}.zip" "$winname")
-          ls -l out
-
-      - name: Upload WSL zip
+      - name: Upload bundle artifact
         uses: actions/upload-artifact@v7
         with:
-          name: tung-tung-sahur-windows-wsl
+          name: tung-tung-sahur-windows-amd64
           path: out/*.zip
           if-no-files-found: error
           retention-days: 7
 
   publish:
     name: Publish release
-    needs: [version, bundle, windows-wsl]
+    needs: [version, bundle, windows-native]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

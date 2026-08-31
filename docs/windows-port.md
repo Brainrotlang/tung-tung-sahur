@@ -1,13 +1,19 @@
 # Native Windows port — investigation
 
+> **Status: DONE.** All three stages below landed upstream in
+> `Brainrotlang/brainrot` (#337 stages 1–3, plus #342 for the raylib module),
+> and `release.yml`'s `windows-native` job now ships a real
+> `tung-tung-sahur-<tag>-windows-amd64.zip`. The WSL stopgap has been removed.
+> The rest of this doc is kept as the record of what the port took and why.
+
 **Question:** can we ship a native Windows bundle of the game the way
 `release.yml` ships Linux/macOS bundles?
 
-**Answer today:** no. The blocker is not the game (it is portable `.brainrot`
-and PNG/OGG assets) — it is the **`brainrot` interpreter**, which has no native
-Windows build. This is why `release.yml` has no `windows` matrix entry and why
-`Brainrotlang/brainrot`'s own `release.yml` explicitly omits Windows. This doc
-scopes what the port actually takes, based on reading the interpreter source.
+**Answer (now yes; originally no).** The blocker was never the game (it is
+portable `.brainrot` and PNG/OGG assets) — it was the **`brainrot` interpreter**,
+which had no native Windows build. That has since been implemented upstream
+(see the status note above), so `release.yml` now has a `windows-native` job.
+This doc scopes what the port took, based on reading the interpreter source.
 
 ## The POSIX surface (what actually blocks Windows)
 
@@ -67,20 +73,23 @@ platform branch for that and for the `-rpath` flags (Windows resolves DLLs from
 the executable's directory, so a bundle with everything side-by-side needs no
 rpath fixup at all — simpler than Linux/macOS).
 
-## Staged plan
+## Staged plan — as executed
 
-1. **Upstream, interpreter core (`Brainrotlang/brainrot`).** Add a Windows/
-   MinGW branch to the Makefile; fix `lib/module_path.c` path helpers (#3) and
-   the `ragequit` `sleep` shim (#4); get a `STDROT_STATIC` `brainrot.exe`
-   passing the test suite on a `windows-latest` runner. *Deliverable: pure
-   Brainrot runs natively on Windows.*
-2. **Upstream, native modules (#2).** Add `LoadLibraryW`/`GetProcAddress` +
-   `.dll` resolution behind the existing `registry.c`/`module_path.c` seam.
-   Build `raylib.dll` in CI. *Deliverable: `#cooked <raylib>` works on Windows.*
-3. **Here (game).** Add a `windows/amd64` entry to `release.yml`'s matrix,
-   swap `.so`→`.dll` and drop the rpath step for that leg, ship a `play.bat`
-   (or keep `play.sh` for the MSYS2 shell). *Deliverable: Windows bundle.*
+1. **Upstream, interpreter core (`Brainrotlang/brainrot` #337 Stage 1).** ✅
+   A Windows/MinGW branch in the Makefile (`make windows`), portable
+   `lib/module_path.c` path helpers and the `ragequit` `sleep` shim, and a
+   `STDROT_STATIC` `brainrot.exe` smoke-tested on a `windows-latest` runner.
+   *Pure Brainrot runs natively on Windows.*
+2. **Upstream, native modules (`brainrot` #337 Stage 2, + #342).** ✅
+   `LoadLibraryA`/`GetProcAddress` + `.dll` resolution behind the existing
+   `stdrot.c`/`lib/module_path.c` seam (guarded by `MODULE_NATIVE_LOADER`), and
+   `make rayrot` now emits `raylib.dll` on Windows (#342). *`#cooked <raylib>`
+   works on Windows.*
+3. **Here (game).** ✅ `release.yml`'s `windows-native` job builds
+   `brainrot.exe` + `raylib.dll` under MSYS2, vendors `libraylib.dll` (+ any
+   MinGW runtime DLLs), and ships a `.zip` with a `play.bat`. No rpath step is
+   needed — Windows resolves a DLL from the loading binary's own directory.
 
-Steps 1–2 are upstream and gate everything; step 3 here is small once they land.
-Until then, the honest Windows story is **WSL** (run the Linux bundle), which
-needs no code changes but is not a native app.
+The self-contained `brainrot.exe` (`-static`) also means, unlike the Linux/macOS
+bundles, there is no `libstdrot.so` to carry — the core standard library is
+compiled in; only the raylib module and its `libraylib.dll` are separate files.
