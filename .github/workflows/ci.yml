@@ -1,0 +1,75 @@
+# Lightweight PR gate for the game.
+#
+# `make test` (headless units + the generated headless harness) needs NEITHER
+# raylib NOR a display -- it swaps the raylib platform/draw layers for fakes on
+# the way in (see the game Makefile). So CI only has to build the `brainrot`
+# interpreter and run the golden-file suite. The real `rl_*` calls are checked
+# by `make lint-native` in release.yml, which does need rayrot/raylib built.
+#
+# The atlas job additionally needs Python + Pillow (no raylib, no display) to
+# prove the generated sprite atlases still match the constants the game draws
+# with (`tools/check_atlases.py`).
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths-ignore: ["**/*.md"]
+  pull_request:
+    branches: ["main"]
+    paths-ignore: ["**/*.md"]
+
+env:
+  # Keep in lockstep with release.yml. The game needs brainrot >= v0.3.0.
+  BRAINROT_REF: "v0.3.0"
+
+jobs:
+  test:
+    name: Headless tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout game
+        uses: actions/checkout@v4
+        with:
+          path: game
+
+      - name: Checkout brainrot runtime
+        uses: actions/checkout@v4
+        with:
+          repository: Brainrotlang/brainrot
+          ref: ${{ env.BRAINROT_REF }}
+          path: brainrot
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc flex bison libfl-dev libssl-dev
+
+      - name: Build interpreter
+        working-directory: brainrot
+        run: make
+
+      - name: Run game tests
+        working-directory: game
+        run: make test BRAINROT_DIR="$GITHUB_WORKSPACE/brainrot"
+
+  atlases:
+    name: Atlas consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout game
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Pillow
+        run: pip install pillow
+
+      - name: Check atlases match draw constants
+        run: make check-atlases
