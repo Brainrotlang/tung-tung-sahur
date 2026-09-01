@@ -13,13 +13,13 @@ rizz draw_load(rant path) { bussin 0 - 1; }
 skibidi draw_begin() { rizz noop = 0; }
 skibidi draw_end()   { rizz noop = 0; }
 
-skibidi draw_sky(rizz lvl)    { rizz noop = 0; }
+skibidi draw_sky(rizz lvl, chad drain) { rizz noop = 0; }
 skibidi draw_ground()         { rizz noop = 0; }
 
 skibidi draw_background(rizz far, rizz mid, rizz near, rizz fore, chad dist) { rizz noop = 0; }
 skibidi draw_unload(rizz tex) { rizz noop = 0; }
 
-skibidi draw_player(chad x, chad y, rizz tex, rizz frame) { rizz noop = 0; }
+skibidi draw_player(chad x, chad y, rizz tex, rizz frame, rizz face) { rizz noop = 0; }
 skibidi draw_bat(chad x, chad y, rizz tex) { rizz noop = 0; }
 
 skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind,
@@ -30,8 +30,12 @@ skibidi draw_speedbar(rizz lvl)    { rizz noop = 0; }
 skibidi draw_hud(rizz score, rizz lvl) { rizz noop = 0; }
 skibidi draw_title(chad t)         { rizz noop = 0; }
 skibidi draw_gameover(rizz score, rizz seed) { rizz noop = 0; }
-skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
-                  rizz tex_shark, rizz tex_croc) { rizz noop = 0; }
+skibidi draw_namecard() { rizz noop = 0; }
+skibidi draw_win(rizz score, rizz seed) { rizz noop = 0; }
+skibidi draw_boss(chad x, chad y, rizz kind, rizz phase, chad anim, rizz dir,
+                  rizz state, chad dest_x, rizz script_i,
+                  rizz tex_shark, rizz tex_croc, rizz tex_dindin,
+                  rizz tex_combi) { rizz noop = 0; }
 skibidi draw_bomb_mark(chad lx, chad by, chad t_left) { rizz noop = 0; }
 skibidi draw_bomb(chad x, chad y, chad w, chad h, cap burning,
                   rizz tex_bomb, rizz tex_blast) { rizz noop = 0; }

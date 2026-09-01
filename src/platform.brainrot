@@ -58,9 +58,37 @@ rizz plat_music_open(rant path) {
 
 🚽 Refills the decode buffer. This MUST be called every frame: raylib says
 🚽 nothing if it is not, the track plays for a fraction of a second and
-🚽 stops, and it looks exactly like a broken file.
+🚽 stops, and it looks exactly like a broken file. Safe on a loaded stream
+🚽 that has not been played yet -- it just keeps the buffer warm.
 skibidi plat_music_tick(rizz music) {
     edgy (music >= 0) { rl_update_music(music); }
+}
+
+🚽 Load a stream WITHOUT starting it -- for the boss track, which must stay
+🚽 silent until the reveal detonates it (12.6.1). Same handle/-1 contract.
+rizz plat_music_load(rant path) {
+    cap ready = rl_is_audio_device_ready();
+    edgy (!ready) { bussin 0 - 1; }
+    rizz m = rl_load_music(path);
+    edgy (m < 0) { bussin 0 - 1; }
+    rl_set_music_looping(m, W);
+    rl_set_music_volume(m, t_music_volume());
+    bussin m;
+}
+
+skibidi plat_music_play(rizz music) {
+    edgy (music >= 0) { rl_play_music(music); }
+}
+
+🚽 The mid-stream cut: stop on any frame, not a loop boundary (12.6.1).
+skibidi plat_music_stop(rizz music) {
+    edgy (music >= 0) { rl_stop_music(music); }
+}
+
+🚽 Unload a stream WITHOUT closing the device (plat_music_close does both,
+🚽 and there are two streams now -- only the last may close the device).
+skibidi plat_music_unload(rizz music) {
+    edgy (music >= 0) { rl_unload_music(music); }
 }
 
 🚽 --- sound effects -------------------------------------------------------
@@ -120,6 +148,23 @@ cap plat_bat_pressed(rizz frame) {
     cap a = rl_is_key_pressed(t_key_x());
     edgy (a) { bussin W; }
     cap b = rl_is_key_pressed(t_key_z());
+    edgy (b) { bussin W; }
+    cap c = rl_is_key_pressed(t_key_w());
+    bussin c;
+}
+
+🚽 Held horizontal movement, read only during the Combinasion fight.
+cap plat_left_down(rizz frame) {
+    cap a = rl_is_key_down(t_key_left());
+    edgy (a) { bussin W; }
+    cap b = rl_is_key_down(t_key_a());
+    bussin b;
+}
+
+cap plat_right_down(rizz frame) {
+    cap a = rl_is_key_down(t_key_right());
+    edgy (a) { bussin W; }
+    cap b = rl_is_key_down(t_key_d());
     bussin b;
 }
 

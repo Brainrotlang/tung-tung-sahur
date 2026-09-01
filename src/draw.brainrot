@@ -20,8 +20,16 @@ skibidi draw_end() {
     rl_end_drawing();
 }
 
-skibidi draw_sky(rizz lvl) {
-    rl_clear_background(sky_r(lvl), sky_g(lvl), sky_b(lvl), 255);
+🚽 `drain` 0 is the normal per-level sky; 1 lerps it toward a dead grey-black.
+🚽 The Combinasion reveal (12.6.1) ramps it: the saturation draining out of the
+🚽 world is the cue that the joke game is over. Grey-lerp, not a true
+🚽 desaturation -- it stays inside this one call with no new colour maths.
+skibidi draw_sky(rizz lvl, chad drain) {
+    chad d = clampf(drain, 0.0, 1.0);
+    chad r = lerpf(sky_r(lvl), 6.0, d);
+    chad g = lerpf(sky_g(lvl), 5.0, d);
+    chad b = lerpf(sky_b(lvl), 8.0, d);
+    rl_clear_background(r, g, b, 255);
 }
 
 skibidi draw_ground() {
@@ -60,7 +68,12 @@ skibidi draw_unload(rizz tex) {
 🚽 The sprite is wider than the collision box, so it is drawn offset by the
 🚽 torso anchor. Its bottom row is the contact row, so y needs no offset at
 🚽 all: the feet land exactly where the physics puts them.
-skibidi draw_player(chad x, chad y, rizz tex, rizz frame) {
+🚽 `face` is +1 right (the art's native direction) or -1 left. Tung only ever
+🚽 faces left in the Combinasion fight, where he can walk backwards across the
+🚽 arena; every other mode passes +1 and draws unmirrored as before. A left
+🚽 face flips the source width negative and mirrors the anchor column, same as
+🚽 U Din Din.
+skibidi draw_player(chad x, chad y, rizz tex, rizz frame, rizz face) {
     edgy (tex < 0) {
         rl_draw_rectangle(x, y, t_player_w(), t_player_h(), 196, 148, 92, 255);
         rl_draw_rectangle(x + 8.0, y + 18.0, 10.0, 10.0, 30, 22, 16, 255);
@@ -68,9 +81,15 @@ skibidi draw_player(chad x, chad y, rizz tex, rizz frame) {
         rl_draw_rectangle(x + 12.0, y + 46.0, 24.0, 6.0, 30, 22, 16, 255);
     }
     amogus {
-        chad sw = t_sprite_w();
-        rl_draw_texture_rec(tex, frame * sw, 0.0, sw, t_sprite_h(),
-                            x + t_player_w() / 2.0 - t_sprite_anchor(), y,
+        chad sw   = t_sprite_w();
+        chad anc  = t_sprite_anchor();
+        chad srcw = sw;
+        edgy (face < 0) {
+            srcw = 0.0 - sw;
+            anc  = sw - anc;
+        }
+        rl_draw_texture_rec(tex, frame * sw, 0.0, srcw, t_sprite_h(),
+                            x + t_player_w() / 2.0 - anc, y,
                             255, 255, 255, 255);
     }
 }
@@ -260,6 +279,38 @@ skibidi draw_gameover(rizz score, rizz seed) {
                  245, 200, 90, 255);
 }
 
+🚽 The reveal's name card (12.6.1): only when his full silhouette is in, and
+🚽 the prog track detonates with it. No subtitle -- the sprite has already
+🚽 said everything.
+skibidi draw_namecard() {
+    rizz cx = t_screen_w() / 2;
+    rizz w1 = rl_measure_text("LA GRANDE", 88);
+    rl_draw_text("LA GRANDE", cx - w1 / 2, 120, 88, 214, 64, 64, 255);
+    rizz w2 = rl_measure_text("COMBINASION", 88);
+    rl_draw_text("COMBINASION", cx - w2 / 2, 210, 88, 214, 64, 64, 255);
+}
+
+🚽 Beating the developer ends the run in a win, not a game over (12.6.11).
+skibidi draw_win(rizz score, rizz seed) {
+    rizz cx = t_screen_w() / 2;
+    rl_draw_rectangle(0, 200, t_screen_w(), 280, 0, 0, 0, 200);
+
+    rizz w1 = rl_measure_text("YOU BEAT THE DEVELOPER", 64);
+    rl_draw_text("YOU BEAT THE DEVELOPER", cx - w1 / 2, 226, 64,
+                 245, 200, 90, 255);
+
+    rizz w2 = rl_measure_text("SAHUR SAVED", 44);
+    rl_draw_text("SAHUR SAVED", cx - w2 / 2, 306, 44, 210, 180, 130, 255);
+
+    rizz w3 = rl_measure_text_int("SCORE ", score, 0, 36);
+    rl_draw_text_int("SCORE ", score, 0, cx - w3 / 2, 368, 36,
+                     245, 200, 90, 255);
+
+    rizz w4 = rl_measure_text("ENTER to play again", 28);
+    rl_draw_text("ENTER to play again", cx - w4 / 2, 424, 28,
+                 245, 200, 90, 255);
+}
+
 🚽 --- bosses ---------------------------------------------------------------
 🚽
 🚽 Primitives, deliberately. There is no shark or crocodile art yet, and M0
@@ -267,10 +318,73 @@ skibidi draw_gameover(rizz score, rizz seed) {
 🚽 and the atlases drop in later behind the same `tex >= 0` fallback every
 🚽 other draw here already uses. Nothing in the simulation knows or cares.
 
+🚽 La Grande Combinasion (12.6). He teleports, so most states draw nothing
+🚽 (OUT) or only a ground marker (TELL); once materialised he is a 5-frame
+🚽 windup->swing strip, bat-low (0) to bat-overhead (4), faced by dir. The
+🚽 marker is truthful -- he lands exactly on it -- which is what keeps the
+🚽 teleport fair (12.6.6).
+skibidi draw_combinasion(chad x, chad y, chad w, chad h, rizz state, rizz dir,
+                         chad dest_x, chad anim, rizz tex) {
+    edgy (state == t_cs_out()) { bussin; }   🚽 vanished: no body
+
+    edgy (state == t_cs_tell()) {
+        🚽 A faint column where he will appear plus a bright ground bar --
+        🚽 read "here, now" without a number.
+        rl_draw_rectangle(dest_x, t_ground_y() - t_combi_h(),
+                          t_combi_w(), t_combi_h(), 210, 50, 70, 45);
+        rl_draw_rectangle(dest_x - 6.0, t_ground_y() - 10.0,
+                          t_combi_w() + 12.0, 12.0, 240, 70, 90, 230);
+        bussin;
+    }
+
+    🚽 Materialised: pick the frame from the sub-state. Wind holds the raised
+    🚽 bat; the swing sweeps it down; recovery rests low (and is the opening).
+    rizz fi = 4;
+    edgy (state == t_cs_swing()) {
+        chad prog = clampf(anim / t_combi_swing_t(), 0.0, 1.0);
+        fi = 4.0 - prog * 4.0;
+    }
+    edgy (state == t_cs_recover()) { fi = 0; }
+
+    edgy (tex >= 0) {
+        🚽 Faces RIGHT natively, so facing left (dir < 0) mirrors -- negative
+        🚽 source width, anchor to (fw - anchor). Same path as U Din Din.
+        chad fw  = t_combi_frame_w();
+        chad fh  = t_combi_frame_h();
+        chad anc = t_combi_anchor();
+        chad col = fi * fw;
+        chad srcw = fw;
+        edgy (dir < 0) {
+            srcw = 0.0 - fw;
+            anc  = fw - anc;
+        }
+        rl_draw_texture_rec(tex, col, 0.0, srcw, fh,
+                            x + w / 2.0 - anc, y + h - fh,
+                            255, 255, 255, 255);
+    }
+    amogus {
+        🚽 Fallback: a tall dark figure with a raised bat, so the fight is
+        🚽 playable with no atlas (same tex >= 0 rule as every other boss).
+        rl_draw_rectangle(x, y, w, h, 40, 40, 52, 255);
+        rl_draw_rectangle(x + w * 0.3, y + 12.0, 12.0, 12.0, 250, 250, 250, 255);
+        rl_draw_rectangle(x + w * 0.32, y + 15.0, 6.0, 6.0, 20, 20, 20, 255);
+        chad bx = x + w;
+        edgy (dir < 0) { bx = x - 44.0; }
+        rl_draw_rectangle(bx, y + 24.0, 44.0, 10.0, 150, 110, 60, 255);
+    }
+}
+
 skibidi draw_boss(chad x, chad y, rizz kind, rizz phase, chad anim, rizz dir,
-                  rizz tex_shark, rizz tex_croc, rizz tex_dindin) {
+                  rizz state, chad dest_x, rizz script_i,
+                  rizz tex_shark, rizz tex_croc, rizz tex_dindin,
+                  rizz tex_combi) {
     chad w = boss_w(kind);
     chad h = boss_h(kind);
+
+    edgy (kind == t_boss_combinasion()) {
+        draw_combinasion(x, y, w, h, state, dir, dest_x, anim, tex_combi);
+        bussin;
+    }
 
     rizz tex = tex_croc;
     edgy (kind == t_boss_tralalero()) { tex = tex_shark; }
@@ -489,6 +603,10 @@ skibidi draw_boss_bar(rizz kind, rizz bonks, cap ready) {
     }
     amogus edgy (kind == t_boss_dimdim()) {
         rl_draw_text_int("U DIN DIN x", bonks, 0, x0 - 8.0, 50.0, 18,
+                         255, 214, 64, 255);
+    }
+    amogus edgy (kind == t_boss_combinasion()) {
+        rl_draw_text_int("LA GRANDE COMBINASION x", bonks, 0, x0 - 8.0, 50.0, 18,
                          255, 214, 64, 255);
     }
     amogus {

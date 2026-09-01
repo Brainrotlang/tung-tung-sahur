@@ -63,11 +63,21 @@ rizz t_boss_none()         { bussin 0; }
 rizz t_boss_tralalero()    { bussin 1; }
 rizz t_boss_bombardiro()   { bussin 2; }
 rizz t_boss_dimdim()       { bussin 3; }
+rizz t_boss_combinasion()  { bussin 4; }   🚽 the true final boss (section 12.6)
 
 rizz t_boss_off()          { bussin 0; }
 rizz t_boss_survive()      { bussin 1; }
 rizz t_boss_open()         { bussin 2; }
 rizz t_boss_leave()        { bussin 3; }
+
+🚽 La Grande Combinasion's own sub-states, held in Boss.state. He runs his
+🚽 own machine (like U Din Din), so these are not the shared phase values --
+🚽 boss_tick() routes him to combi_move() before the survive/open timer.
+rizz t_cs_out()            { bussin 0; }   🚽 vanished, blank
+rizz t_cs_tell()           { bussin 1; }   🚽 truthful destination marker up
+rizz t_cs_wind()           { bussin 2; }   🚽 materialised, bat raised, facing Tung
+rizz t_cs_swing()          { bussin 3; }   🚽 the horizontal sweep
+rizz t_cs_recover()        { bussin 4; }   🚽 whiffed -- the ONLY vulnerable window
 
 🚽 Bosses trigger on LEVEL, not score, and that is a correctness fix rather
 🚽 than a preference.
@@ -338,6 +348,74 @@ chad t_dindin_anim_rate()    { bussin 15.0; }  🚽 run-cycle frames per second
 🚽 How much of the sprite pokes onto the screen while trembling at an edge.
 chad t_dindin_peek()         { bussin 70.0; }
 
+🚽 LA GRANDE COMBINASION -- the true final boss (DESIGN.md 12.6,
+🚽 docs/combinasion-design.md). He wears every other boss and swings the same
+🚽 bat Tung does. One moveset: TELEPORT -> WINDUP -> SWING -> RECOVERY, and he
+🚽 is invulnerable except during RECOVERY (a whiffed swing). Three bonks.
+🚽
+🚽 This is the ONE fight that unpins Tung horizontally (Player.x, clamped to
+🚽 the arena). The swing is a low band a jump always clears -- the same
+🚽 fairness shape as U Din Din's low charge (airborne is always safe), so the
+🚽 12.4 invariant holds by construction. Horizontal movement is the OFFENSIVE
+🚽 tool: reach bat range to punish the whiff before RECOVERY closes.
+🚽
+🚽 Collision box off the man's BODY, not the menagerie hanging off him (the
+🚽 shark/cactus/elephant overhang it, like Tralalero's snout over its box).
+chad t_combi_w()           { bussin 96.0; }
+chad t_combi_h()           { bussin 168.0; }
+
+🚽 The arena Tung roams, and how fast he crosses it. Wide enough that
+🚽 "get behind him" is real; run speed sets the reaction/punish geometry.
+chad t_combi_arena_l()     { bussin 140.0; }
+chad t_combi_arena_r()     { bussin 1040.0; }
+chad t_combi_run_speed()   { bussin 620.0; }
+
+🚽 TELEPORT tell -- the truthful destination marker, up this long BEFORE he
+🚽 materialises. THIS is the reaction window; the windup is follow-through
+🚽 (12.6.5). Both tighten per phase (bonks 0/1/2 -> a/b/c).
+chad t_combi_out_t()       { bussin 0.12; }   🚽 blank between vanish and tell
+chad t_combi_tell_a()      { bussin 0.26; }
+chad t_combi_tell_b()      { bussin 0.22; }
+chad t_combi_tell_c()      { bussin 0.20; }
+
+🚽 WINDUP -- materialised, bat up, facing Tung. The commit window.
+chad t_combi_wind_a()      { bussin 0.34; }
+chad t_combi_wind_b()      { bussin 0.26; }
+chad t_combi_wind_c()      { bussin 0.20; }
+
+🚽 SWING -- a low sweep IN FRONT of him, live for swing_t. A jump clears it
+🚽 (band height swing_h < jump apex ~192px, same as t_shark_charge_h). Reach
+🚽 is how far the arc extends from his body on the side he faces.
+chad t_combi_swing_t()     { bussin 0.14; }
+chad t_combi_swing_h()     { bussin 60.0; }
+chad t_combi_swing_reach() { bussin 150.0; }
+
+🚽 RECOVERY -- the whiff lockout, and the ONLY window boss_vulnerable() is
+🚽 true. Long enough to reach bat range and punish at run speed; tightens.
+chad t_combi_recover_a()   { bussin 0.55; }
+chad t_combi_recover_b()   { bussin 0.44; }
+chad t_combi_recover_c()   { bussin 0.36; }
+
+🚽 Swings chained before a RECOVERY opens, per phase: survive 1, then 2,
+🚽 then 3 for one opening. "Survive a sequence for the opening" (12.6.6).
+rizz t_combi_chain_a()     { bussin 1; }
+rizz t_combi_chain_b()     { bussin 2; }
+rizz t_combi_chain_c()     { bussin 3; }
+
+🚽 Teleport step-in distances from Tung, near / far. Near lands inside
+🚽 bat-punish range once he whiffs; far makes the player close the gap.
+chad t_combi_near()        { bussin 150.0; }
+chad t_combi_far()         { bussin 420.0; }
+
+🚽 Atlas: a 5-frame windup->swing strip, authored facing RIGHT (mirrored
+🚽 when he faces left, like U Din Din). Bottom-aligned -- he stands. frame_w/
+🚽 frame_h/anchor are printed by tools/process_sprites.py and checked by
+🚽 tools/check_atlases.py; a missing atlas falls back to primitives.
+rizz t_combi_frames()      { bussin 5; }
+chad t_combi_frame_w()     { bussin 122.0; }
+chad t_combi_frame_h()     { bussin 168.0; }
+chad t_combi_anchor()      { bussin 56.0; }
+
 🚽 --- audio ---
 🚽 Effects sit above the music so a bat connecting still reads over the
 🚽 track rather than under it.
@@ -355,6 +433,11 @@ rizz t_sprite_h()        { bussin 96; }
 rizz t_sprite_anchor()   { bussin 54; }
 rizz t_run_frames()      { bussin 6; }
 rizz t_swing_frames()    { bussin 3; }
+🚽 The neutral standing pose used when Tung is grounded and NOT moving in the
+🚽 Combinasion arena (no world scroll to drive the run cycle). Index 4 is the
+🚽 passing frame (running2) -- feet gathered under him, the closest the run
+🚽 atlas has to a stand.
+rizz t_walk_idle()       { bussin 4; }
 
 🚽 Patapim's atlas is its own group -- a different frame size and anchor
 🚽 from Tung's three, because nothing draws them with the same call. These
@@ -425,11 +508,33 @@ rizz t_kind_patapim()    { bussin 2; }
 rizz t_state_title()     { bussin 0; }
 rizz t_state_run()       { bussin 1; }
 rizz t_state_over()      { bussin 2; }
+rizz t_state_win()       { bussin 3; }   🚽 the developer is beaten (12.6.11)
+
+🚽 The La Grande Combinasion reveal (12.6.1), as cumulative seconds from the
+🚽 frame U Din Din dies. The scene freezes; the normal song plays on so the
+🚽 run seems to continue, then it cuts mid-stream, the sky drains to grey, the
+🚽 HUD flickers, and after several seconds of near-silence he walks in and the
+🚽 prog track detonates. The SILENCE is the mechanic -- do not shorten the gap
+🚽 between the cut and the walk-in.
+chad t_reveal_cut()    { bussin 2.2; }  🚽 normal music keeps playing until here
+chad t_reveal_drain()  { bussin 3.2; }  🚽 then a beat of ambient, then the drain
+chad t_reveal_dark()   { bussin 5.2; }  🚽 sky fully drained; parallax stopped
+chad t_reveal_walk()   { bussin 7.0; }  🚽 the dark, silent gap; then first cue
+chad t_reveal_done()   { bussin 8.8; }  🚽 he has walked fully in
+chad t_reveal_boom()   { bussin 9.0; }  🚽 name card; track detonates; fight LIVE
+🚽 Where he stops after walking in from the right edge.
+chad t_reveal_walk_x() { bussin 880.0; }
 
 🚽 --- keys (raylib keycodes; see docs/rayrot.md) ---
 rizz t_key_space()       { bussin 32; }
 rizz t_key_up()          { bussin 265; }
 rizz t_key_x()           { bussin 88; }
 rizz t_key_z()           { bussin 90; }
+rizz t_key_w()           { bussin 87; }   🚽 also TUNG (besides X/Z)
 rizz t_key_r()           { bussin 82; }
 rizz t_key_enter()       { bussin 257; }
+🚽 Horizontal move, live only in the La Grande Combinasion fight (12.6.2).
+rizz t_key_left()        { bussin 263; }
+rizz t_key_right()       { bussin 262; }
+rizz t_key_a()           { bussin 65; }
+rizz t_key_d()           { bussin 68; }

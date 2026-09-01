@@ -32,6 +32,12 @@ gang World {
     cap  did_tralalero;
     cap  did_bombardiro;
     cap  did_dimdim;
+    cap  did_combinasion;
+    🚽 Tung's live horizontal position, mirrored here each frame so a boss
+    🚽 that runs its own machine (combi_move) can teleport relative to him
+    🚽 without threading a Player pointer through boss_tick(). Equals
+    🚽 t_player_x() in every mode except the Combinasion fight.
+    chad tung_x;
 };
 
 gang Player {
@@ -41,6 +47,15 @@ gang Player {
     chad atk_t;
     chad iframe_t;
     rizz hearts;
+    🚽 Horizontal position. Pinned at t_player_x() for the whole game EXCEPT
+    🚽 the La Grande Combinasion fight, which unpins it (12.6.2). Only the
+    🚽 combi_* functions and the player draw read it; everything else uses the
+    🚽 t_player_x() constant, so it equals the constant in every other mode.
+    chad x;
+    🚽 Distance walked HORIZONTALLY, accumulated by player_move_x. In the still
+    🚽 Combinasion arena the world does not scroll, so the run cycle is driven
+    🚽 by this instead of world distance (walk_frame). Unused elsewhere.
+    chad walk_t;
 };
 
 gang Ent {
@@ -73,8 +88,16 @@ gang Boss {
     chad phase_t;
     chad spawn_t;
     🚽 U Din Din's charge direction: +1 = left-to-right, -1 = right-to-left.
-    🚽 Unused by the other bosses.
+    🚽 La Grande Combinasion reuses it as facing (+1 faces right, -1 left).
+    🚽 Unused by the other two bosses.
     rizz dir;
+    🚽 La Grande Combinasion only (12.6). His sub-state (t_cs_*), the exact x
+    🚽 his teleport tell promised (materialise lands here), and how many swings
+    🚽 into the current chain he is. prev_kind doubles as his teleport counter
+    🚽 (he spawns nothing, so its fair_clamp meaning is free). Unused by others.
+    rizz state;
+    chad dest_x;
+    rizz script_i;
 };
 
 🚽 Bombardiro's ordnance. Falls under the same gravity the player does,
@@ -105,6 +128,8 @@ skibidi world_reset(gang World *w) {
     w.did_tralalero  = L;
     w.did_bombardiro = L;
     w.did_dimdim     = L;
+    w.did_combinasion = L;
+    w.tung_x         = t_player_x();
 }
 
 🚽 One variable drives the whole game (DESIGN.md section 7). The cap is
@@ -134,6 +159,8 @@ skibidi player_reset(gang Player *p) {
     p.atk_t    = 0.0;
     p.iframe_t = 0.0;
     p.hearts   = t_hearts_max();
+    p.x        = t_player_x();
+    p.walk_t   = 0.0;
 }
 
 🚽 Refused in mid-air, so holding the key cannot autohop.
@@ -231,6 +258,14 @@ cap player_visible(gang Player *p) {
 🚽 difficulty curve without a second variable to tune.
 rizz run_frame(gang World *w) {
     rizz i = w.dist / t_run_stride();
+    bussin i % t_run_frames();
+}
+
+🚽 The same cycle, but driven by HORIZONTAL walk distance rather than world
+🚽 scroll -- for the Combinasion fight, where the arena is frozen (12.6.2) so
+🚽 w.dist does not move but Tung does. Same stride, so the cadence matches.
+rizz walk_frame(gang Player *p) {
+    rizz i = p.walk_t / t_run_stride();
     bussin i % t_run_frames();
 }
 
@@ -399,10 +434,17 @@ rizz bombs_free_slot(gang Bomb *pool, rizz n) {
     bussin 0 - 1;
 }
 
-skibidi bombs_step(gang Bomb *pool, rizz n, gang World *w) {
+🚽 Returns how many bombs hit the ground THIS frame, so main can sound the
+🚽 impact (the blast landing, distinct from the player being hit by it).
+rizz bombs_step(gang Bomb *pool, rizz n, gang World *w) {
+    rizz landed = 0;
     flex (rizz i = 0; i < n; i = i + 1) {
-        edgy (pool[i].alive) { bomb_tick(&pool[i], w); }
+        edgy (pool[i].alive) {
+            cap hit = bomb_tick(&pool[i], w);
+            edgy (hit) { landed = landed + 1; }
+        }
     }
+    bussin landed;
 }
 
 🚽 The blast is NOT consumed by the hit. It is a hazard sitting on the
@@ -440,12 +482,14 @@ cap bombs_body_pass(gang Bomb *pool, rizz n, gang Player *p, gang World *w) {
 chad boss_w(rizz kind) {
     edgy (kind == t_boss_tralalero()) { bussin t_shark_w(); }
     edgy (kind == t_boss_dimdim()) { bussin t_dindin_w(); }
+    edgy (kind == t_boss_combinasion()) { bussin t_combi_w(); }
     bussin t_croc_w();
 }
 
 chad boss_h(rizz kind) {
     edgy (kind == t_boss_tralalero()) { bussin t_shark_h(); }
     edgy (kind == t_boss_dimdim()) { bussin t_dindin_h(); }
+    edgy (kind == t_boss_combinasion()) { bussin t_combi_h(); }
     bussin t_croc_h();
 }
 
@@ -460,6 +504,9 @@ skibidi boss_clear(gang Boss *b) {
     b.spawn_t = 0.0;
     b.prev_kind = t_kind_crate();
     b.dir     = 0;
+    b.state   = t_cs_out();
+    b.dest_x  = 0.0;
+    b.script_i = 0;
 }
 
 cap boss_active(gang Boss *b) {
@@ -529,7 +576,13 @@ cap boss_may_spawn(gang Boss *b, gang World *w) {
 }
 
 🚽 Only during the opening, and only until the third bonk lands.
+🚽
+🚽 La Grande Combinasion has no `open` phase -- his opening is the RECOVERY
+🚽 after a whiffed swing, and it is the only window he can be damaged in.
 cap boss_vulnerable(gang Boss *b) {
+    edgy (b.kind == t_boss_combinasion()) {
+        bussin b.state == t_cs_recover() && b.bonks < t_boss_bonks();
+    }
     bussin b.phase == t_boss_open() && b.bonks < t_boss_bonks();
 }
 
@@ -548,6 +601,13 @@ rizz boss_due(gang World *w, rizz lvl) {
     }
     edgy (!w.did_dimdim && lvl >= t_dindin_lvl()) {
         bussin t_boss_dimdim();
+    }
+    🚽 The true final boss: only once U Din Din is beaten (did_dimdim set), so
+    🚽 he arrives the moment the story cap dies -- the run the player thought
+    🚽 they had won just keeps going (12.6). Same LVL 9 gate; no higher level
+    🚽 exists (t_speed_max caps at LVL 9), so this reads off did_dimdim.
+    edgy (!w.did_combinasion && w.did_dimdim && lvl >= t_dindin_lvl()) {
+        bussin t_boss_combinasion();
     }
     bussin t_boss_none();
 }
@@ -584,9 +644,27 @@ skibidi boss_start(gang Boss *b, gang World *w, rizz kind) {
             w.did_dimdim = W;
         }
         amogus {
-            b.x = croc_cruise_x(w, t_bomb_lead());
-            b.y = t_croc_cruise_y();
-            w.did_bombardiro = W;
+            edgy (kind == t_boss_combinasion()) {
+                🚽 Enters by teleporting in: start OUT (invisible) at centre,
+                🚽 off the top so the primitive fallback is not parked mid-arena
+                🚽 during the blank. The first tell places him near Tung. He
+                🚽 runs his own machine (combi_move); phase stays `survive` so he
+                🚽 owns the spawner (and never spawns), flipping to `leave` only
+                🚽 when the third bonk lands.
+                b.state    = t_cs_out();
+                b.script_i = 0;
+                b.prev_kind = 0;   🚽 teleport counter (see combi_pick_dest)
+                b.dir      = 1;
+                b.x        = t_screen_w() / 2.0;
+                b.y        = t_ground_y() - t_combi_h();
+                b.dest_x   = b.x;
+                w.did_combinasion = W;
+            }
+            amogus {
+                b.x = croc_cruise_x(w, t_bomb_lead());
+                b.y = t_croc_cruise_y();
+                w.did_bombardiro = W;
+            }
         }
     }
 }
@@ -730,6 +808,13 @@ skibidi boss_tick(gang Boss *b, gang World *w) {
     edgy (b.kind == t_boss_dimdim()) {
         b.phase_t = b.phase_t + w.dt;
         dindin_move(b, w);
+        bussin;
+    }
+
+    🚽 La Grande Combinasion likewise runs his own machine (TELEPORT -> WINDUP
+    🚽 -> SWING -> RECOVERY) in combi_move(), not the shared survive/open timer.
+    edgy (b.kind == t_boss_combinasion()) {
+        combi_move(b, w);
         bussin;
     }
 
@@ -931,6 +1016,166 @@ cap dindin_contact_hit(gang Boss *b, gang Player *p) {
                 t_dindin_w(), t_dindin_charge_h());
 }
 
+🚽 --- La Grande Combinasion (the true final boss, 12.6) -----------------
+🚽
+🚽 One moveset, run as a small state machine: vanish (OUT) -> a truthful
+🚽 destination marker (TELL) -> materialise with the bat up (WIND) -> a low
+🚽 forward SWING -> and, once a chain of swings is up, a RECOVERY he can be
+🚽 bonked in. The three "phases" are HP-gated: b.bonks 0/1/2 pick tighter
+🚽 timings and a longer swing chain before each opening.
+
+🚽 Which phase (0/1/2) the fight is in, by bonks landed.
+rizz combi_phase(gang Boss *b) {
+    edgy (b.bonks >= 2) { bussin 2; }
+    bussin b.bonks;
+}
+
+chad combi_tell_time(gang Boss *b) {
+    rizz ph = combi_phase(b);
+    edgy (ph == 0) { bussin t_combi_tell_a(); }
+    edgy (ph == 1) { bussin t_combi_tell_b(); }
+    bussin t_combi_tell_c();
+}
+
+chad combi_wind_time(gang Boss *b) {
+    rizz ph = combi_phase(b);
+    edgy (ph == 0) { bussin t_combi_wind_a(); }
+    edgy (ph == 1) { bussin t_combi_wind_b(); }
+    bussin t_combi_wind_c();
+}
+
+chad combi_recover_time(gang Boss *b) {
+    rizz ph = combi_phase(b);
+    edgy (ph == 0) { bussin t_combi_recover_a(); }
+    edgy (ph == 1) { bussin t_combi_recover_b(); }
+    bussin t_combi_recover_c();
+}
+
+rizz combi_chain(gang Boss *b) {
+    rizz ph = combi_phase(b);
+    edgy (ph == 0) { bussin t_combi_chain_a(); }
+    edgy (ph == 1) { bussin t_combi_chain_b(); }
+    bussin t_combi_chain_c();
+}
+
+🚽 Choreographed, not random: a deterministic pattern of teleport
+🚽 destinations relative to Tung (alternating sides, alternating near/far),
+🚽 counted by prev_kind. Clamped so his box lands fully on screen.
+skibidi combi_pick_dest(gang Boss *b, gang World *w) {
+    rizz n = b.prev_kind;
+    b.prev_kind = n + 1;
+    rizz side = 1;
+    edgy (n % 2 == 0) { side = 0 - 1; }
+    chad dist = t_combi_near();
+    edgy (n % 4 >= 2) { dist = t_combi_far(); }
+    chad want = w.tung_x + side * dist;
+    b.dest_x = clampf(want, 40.0, t_screen_w() - t_combi_w() - 40.0);
+}
+
+🚽 Lock facing toward Tung. Called ONCE, at materialise: from then the swing
+🚽 direction is committed, so a player who runs behind him during the windup
+🚽 makes the swing whiff (12.6.3's "get behind him" dodge).
+skibidi combi_face(gang Boss *b, gang World *w) {
+    edgy (w.tung_x < b.x) { b.dir = 0 - 1; }
+    amogus { b.dir = 1; }
+}
+
+skibidi combi_move(gang Boss *b, gang World *w) {
+    🚽 Beaten: vanish for good, then clear so the win can follow.
+    edgy (b.phase == t_boss_leave()) {
+        b.state   = t_cs_out();
+        b.phase_t = b.phase_t + w.dt;
+        edgy (b.phase_t >= 0.6) { boss_clear(b); }
+        bussin;
+    }
+
+    b.phase_t = b.phase_t + w.dt;
+
+    edgy (b.state == t_cs_out()) {
+        edgy (b.phase_t >= t_combi_out_t()) {
+            combi_pick_dest(b, w);
+            b.state   = t_cs_tell();
+            b.phase_t = 0.0;
+        }
+        bussin;
+    }
+
+    edgy (b.state == t_cs_tell()) {
+        edgy (b.phase_t >= combi_tell_time(b)) {
+            🚽 Materialise EXACTLY on the promised marker, and lock facing.
+            b.x       = b.dest_x;
+            b.y       = t_ground_y() - t_combi_h();
+            combi_face(b, w);
+            b.state   = t_cs_wind();
+            b.phase_t = 0.0;
+        }
+        bussin;
+    }
+
+    edgy (b.state == t_cs_wind()) {
+        edgy (b.phase_t >= combi_wind_time(b)) {
+            b.state   = t_cs_swing();
+            b.phase_t = 0.0;
+        }
+        bussin;
+    }
+
+    edgy (b.state == t_cs_swing()) {
+        edgy (b.phase_t >= t_combi_swing_t()) {
+            b.script_i = b.script_i + 1;
+            edgy (b.script_i >= combi_chain(b)) {
+                🚽 Open the punish window.
+                b.script_i = 0;
+                b.state    = t_cs_recover();
+                b.phase_t  = 0.0;
+            }
+            amogus {
+                🚽 Chain straight into the next teleport -- no opening.
+                b.state   = t_cs_out();
+                b.phase_t = 0.0;
+            }
+        }
+        bussin;
+    }
+
+    🚽 state == recover: hold the opening, then vanish and chain again. A
+    🚽 missed opening costs time, not health -- the fight is long, not unfair.
+    edgy (b.phase_t >= combi_recover_time(b)) {
+        b.state   = t_cs_out();
+        b.phase_t = 0.0;
+    }
+}
+
+🚽 The swing's live hazard: a low band in FRONT of him (the side he faces),
+🚽 only while swinging. A jump always clears it -- airborne returns L -- so a
+🚽 safe input always exists (the 12.4 invariant, same shape as U Din Din's
+🚽 low charge). Reads Tung's real x (p.x), which this fight unpins.
+cap combi_contact_hit(gang Boss *b, gang Player *p) {
+    edgy (b.state != t_cs_swing()) { bussin L; }
+    edgy (!p.grounded) { bussin L; }
+    chad hx = b.x;
+    chad hw = t_combi_w() + t_combi_swing_reach();
+    edgy (b.dir < 0) { hx = b.x - t_combi_swing_reach(); }
+    bussin aabb(p.x, p.y, t_player_w(), t_player_h(),
+                hx, t_ground_y() - t_combi_swing_h(), hw, t_combi_swing_h());
+}
+
+🚽 Bat range for the punish, off Tung's live x (not the pinned constant).
+cap combi_in_bat(gang Boss *b, gang Player *p) {
+    bussin aabb(p.x + t_hitbox_dx(), p.y + t_hitbox_dy(),
+                t_hitbox_w(), t_hitbox_h(),
+                b.x, b.y, t_combi_w(), t_combi_h());
+}
+
+🚽 Move Tung horizontally, clamped to the arena. Only the Combinasion fight
+🚽 calls this; everywhere else his x stays pinned at t_player_x().
+skibidi player_move_x(gang Player *p, rizz dir, gang World *w) {
+    p.x = p.x + dir * t_combi_run_speed() * w.dt;
+    p.x = clampf(p.x, t_combi_arena_l(), t_combi_arena_r() - t_player_w());
+    🚽 Ground covered this frame, for the walk cycle (walk_frame).
+    p.walk_t = p.walk_t + t_combi_run_speed() * w.dt;
+}
+
 cap boss_in_bat(gang Boss *b, gang Player *p) {
     bussin aabb(t_player_x() + t_hitbox_dx(), p.y + t_hitbox_dy(),
                 t_hitbox_w(), t_hitbox_h(),
@@ -982,6 +1227,15 @@ skibidi boss_take_bonk(gang Boss *b, gang World *w) {
             b.phase = t_boss_open();
             edgy (b.dir > 0) { b.x = t_screen_w() + t_dindin_w(); }
             amogus            { b.x = 0.0 - 2.0 * t_dindin_w(); }
+        }
+        🚽 La Grande Combinasion: the bonk lands during RECOVERY, so send him
+        🚽 straight back out (teleport away) and start the next chain fresh.
+        🚽 phase stays `survive` (he keeps owning the spawner) -- combi_move
+        🚽 drives everything off b.state.
+        edgy (b.kind == t_boss_combinasion()) {
+            b.state    = t_cs_out();
+            b.phase_t  = 0.0;
+            b.script_i = 0;
         }
     }
 }
@@ -1067,7 +1321,10 @@ chad bomb_h(gang Bomb *bm) {
 
 🚽 Falling, then burning. Both states scroll with the world -- a bomb is in
 🚽 world space like everything else, so standing still is not a dodge.
-skibidi bomb_tick(gang Bomb *bm, gang World *w) {
+🚽 Returns W on the frame the shell detonates (hits the ground), so the
+🚽 impact can be heard. False every other frame.
+cap bomb_tick(gang Bomb *bm, gang World *w) {
+    cap landed = L;
     edgy (bm.fuse > 0.0) {
         🚽 A blast IS part of the world, so it scrolls. A falling bomb is
         🚽 not -- see bomb_landing_x().
@@ -1088,10 +1345,12 @@ skibidi bomb_tick(gang Bomb *bm, gang World *w) {
             bm.vy     = 0.0;
             bm.fall_t = 0.0;
             bm.fuse   = t_bomb_fuse();
+            landed    = W;
         }
     }
 
     edgy (bm.x < 0.0 - t_blast_w()) { bm.alive = L; }
+    bussin landed;
 }
 
 cap bomb_hits_player(gang Bomb *bm, gang Player *p) {

@@ -24,10 +24,14 @@ skibidi plat_close() {
 🚽 seam reports when there is no audio device, so the game takes the same
 🚽 path here as it does over SSH.
 rizz plat_music_open(rant path)     { bussin 0 - 1; }
+rizz plat_music_load(rant path)     { bussin 0 - 1; }
 rizz plat_sfx_load(rant path)      { bussin 0 - 1; }
 skibidi plat_sfx_play(rizz snd)    { rizz noop = 0; }
 skibidi plat_sfx_close(rizz snd)   { rizz noop = 0; }
 skibidi plat_music_tick(rizz music) { rizz noop = 0; }
+skibidi plat_music_play(rizz music) { rizz noop = 0; }
+skibidi plat_music_stop(rizz music) { rizz noop = 0; }
+skibidi plat_music_unload(rizz music) { rizz noop = 0; }
 skibidi plat_music_close(rizz music) { rizz noop = 0; }
 
 🚽 Fixed timestep. Real time is the one thing a golden file cannot have.
@@ -54,6 +58,16 @@ cap plat_jump_down(rizz frame) {
 🚽 the swings bounce off the cooldown.
 cap plat_bat_pressed(rizz frame) {
     edgy (frame % 26 == 0) { bussin W; }
+    bussin L;
+}
+
+🚽 The tape never reaches the Combinasion fight (it dies around LVL 0-2),
+🚽 so it never moves horizontally -- keeps the golden run byte-identical.
+cap plat_left_down(rizz frame) {
+    bussin L;
+}
+
+cap plat_right_down(rizz frame) {
     bussin L;
 }
 

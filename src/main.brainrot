@@ -47,13 +47,25 @@ skibidi main {
     rizz tex_shark = draw_load("assets/tralalero.png");
     rizz tex_croc  = draw_load("assets/bombardiro.png");
     rizz tex_dindin = draw_load("assets/dindin.png");
+    rizz tex_combi  = draw_load("assets/combinacion.png");
     rizz tex_bomb  = draw_load("assets/bomb.png");
     rizz tex_blast = draw_load("assets/blast.png");
-    rizz music     = plat_music_open("assets/music/tung-tung.ogg");
+    🚽 Both tracks are LOADED but not played. The main track starts only when
+    🚽 a run begins (ENTER) and stops on game over; the boss track detonates at
+    🚽 the end of the Combinasion reveal (12.6.1) and loops under the fight.
+    rizz music     = plat_music_load("assets/music/tung-tung.ogg");
+    rizz music_boss = plat_music_load("assets/music/finalboss.ogg");
     rizz sfx_tung   = plat_sfx_load("assets/sfx/tung.ogg");
     rizz sfx_jump   = plat_sfx_load("assets/sfx/jump.ogg");
     rizz sfx_damage = plat_sfx_load("assets/sfx/damage.ogg");
     rizz sfx_bruh   = plat_sfx_load("assets/sfx/bruh.ogg");
+    rizz sfx_pop    = plat_sfx_load("assets/sfx/pop.ogg");
+    rizz sfx_ugh    = plat_sfx_load("assets/sfx/ugh.ogg");
+    rizz sfx_bark   = plat_sfx_load("assets/sfx/bark.ogg");
+    rizz sfx_fart   = plat_sfx_load("assets/sfx/fart.ogg");
+    rizz sfx_nonono = plat_sfx_load("assets/sfx/nonono.ogg");
+    rizz sfx_susp   = plat_sfx_load("assets/sfx/suspense.ogg");
+    rizz sfx_wow    = plat_sfx_load("assets/sfx/wow.ogg");
 
     🚽 The opening sting, played once here and never again. It belongs to
     🚽 the title card, and the title is only ever seen at startup -- a
@@ -87,6 +99,27 @@ skibidi main {
     cap do_reset = W;
     cap running  = W;
 
+    🚽 Rising edge of the bat's live window, so a Combinasion parry (12.6.4)
+    🚽 rings its CLANG once per swing rather than every frame the bat is out.
+    cap was_swinging = L;
+
+    🚽 Which way Tung faces (+1 right, -1 left). Only ever -1 in the Combinasion
+    🚽 fight, where he walks both ways; the runner always faces +1. Persists
+    🚽 between frames so an idle Tung keeps facing the way he last walked.
+    rizz tung_face = 1;
+
+    🚽 The La Grande Combinasion reveal (12.6.1): a timed cinematic between U
+    🚽 Din Din's death and the fight going live. reveal_t counts up from 0; the
+    🚽 flags fire its one-shots (music cut, first cue, the detonation) once.
+    chad reveal_t   = 0.0;
+    cap  in_reveal  = L;
+    cap  rv_cut     = L;
+    cap  rv_boom    = L;
+    chad namecard_t = 0.0;
+    🚽 True while his fight is actually live, so its end reads as a WIN rather
+    🚽 than a death (the run continued past U Din Din, and the player won it).
+    cap  combi_live_prev = L;
+
     goon (running) {
         edgy (do_reset) {
             player_reset(&pl);
@@ -104,10 +137,26 @@ skibidi main {
             bombs_clear(&bombs[0], MAX_BMB);
             boss_clear(&bo);
 
+            🚽 Silence the boss track and clear the reveal. The main track
+            🚽 plays only for a RUN, from the top -- do_reset also fires once at
+            🚽 the title (state still title), where it must stay silent.
+            plat_music_stop(music_boss);
+            edgy (state == t_state_run()) { plat_music_play(music); }
+            amogus { plat_music_stop(music); }
+            reveal_t   = 0.0;
+            in_reveal  = L;
+            rv_cut     = L;
+            rv_boom    = L;
+            namecard_t = 0.0;
+            combi_live_prev = L;
+            tung_face  = 1;
+
             do_reset = L;
         }
 
         plat_music_tick(music);
+        🚽 Both streams pump every frame; the boss one is silent until played.
+        plat_music_tick(music_boss);
 
         🚽 --- 1. frame time -------------------------------------------
         🚽 The clamp is not optional. rl_get_frame_time after a window
@@ -119,28 +168,74 @@ skibidi main {
         cap in_run = L;
         edgy (state == t_state_run()) { in_run = W; }
 
+        🚽 The simulation runs only when the run is LIVE -- during the
+        🚽 Combinasion reveal (12.6.1) the scene freezes and the player is a
+        🚽 spectator, so world/input/physics/fight all pause on `live`, not
+        🚽 `in_run`. `live == in_run` in every other situation.
+        cap live = L;
+        edgy (in_run) { live = !in_reveal; }
+
+        🚽 The Combinasion set piece -- the reveal AND the fight -- is a still,
+        🚽 drained arena, not the runner. The world stops scrolling and the sky
+        🚽 stays black for as long as he is up: no running, the scene holds dead
+        🚽 while Tung moves. (12.6.1 / 12.6.2.)
+        cap combi_scene = L;
+        edgy (boss_active(&bo)) { combi_scene = bo.kind == t_boss_combinasion(); }
+
         🚽 --- 2. speed curve ------------------------------------------
-        edgy (in_run) { world_advance(&wd); }
+        edgy (live && !combi_scene) { world_advance(&wd); }
         rizz lvl   = speed_to_lvl(wd.speed);
         rizz score = world_score(&wd);
 
         🚽 --- 3. input ------------------------------------------------
-        edgy (in_run) {
+        🚽 Whether Tung walked horizontally this frame, so the draw picks the
+        🚽 walk cycle vs. the standing idle in the frozen arena.
+        cap moving_now = L;
+        edgy (live) {
             cap jump = plat_jump_down(frame);
             edgy (jump) {
                 cap launched = player_jump(&pl);
                 edgy (launched) { plat_sfx_play(sfx_jump); }
             }
             cap bat = plat_bat_pressed(frame);
-            edgy (bat) { player_swing(&pl); }
+            edgy (bat) {
+                🚽 tung.ogg is the swing sound now, on every real swing (not the
+                🚽 ones refused mid-cooldown). Bonks have their own sounds.
+                cap fresh_swing = pl.atk_t <= 0.0;
+                player_swing(&pl);
+                edgy (fresh_swing) { plat_sfx_play(sfx_tung); }
+            }
+
+            🚽 Horizontal movement is live ONLY in the Combinasion fight
+            🚽 (12.6.2) -- the one boss that unpins Tung. Everywhere else his
+            🚽 x stays at t_player_x(), so nothing else changes.
+            cap combi_fight = boss_active(&bo);
+            edgy (combi_fight) { combi_fight = bo.kind == t_boss_combinasion(); }
+            edgy (combi_fight) {
+                cap goleft = plat_left_down(frame);
+                edgy (goleft) {
+                    player_move_x(&pl, 0 - 1, &wd);
+                    moving_now = W;
+                    tung_face  = 0 - 1;
+                }
+                cap goright = plat_right_down(frame);
+                edgy (goright) {
+                    player_move_x(&pl, 1, &wd);
+                    moving_now = W;
+                    tung_face  = 1;
+                }
+            }
         }
 
         🚽 --- 4. player physics ---------------------------------------
-        edgy (in_run) { player_physics(&pl, &wd); }
+        edgy (live) { player_physics(&pl, &wd); }
 
         🚽 --- 5. timers -----------------------------------------------
-        edgy (in_run) { player_tick_timers(&pl, &wd); }
+        edgy (live) { player_tick_timers(&pl, &wd); }
         cap swinging = player_swinging(&pl);
+        🚽 The bat only reaches forward (+x), so a swing always faces right --
+        🚽 otherwise Tung would bonk behind where the sprite points.
+        edgy (combi_scene && swinging) { tung_face = 1; }
 
         🚽 --- 6a. boss ------------------------------------------------
         🚽 Before spawning, because a boss that has just started must own
@@ -148,8 +243,12 @@ skibidi main {
         🚽 gets one more entity in while the fight is already on screen.
         cap boss_up = L;
         edgy (in_run) {
+            🚽 Mirror Tung's live column so combi_move() can teleport relative
+            🚽 to him without a Player pointer through boss_tick(). Equals
+            🚽 t_player_x() in every mode but the Combinasion fight.
+            wd.tung_x = pl.x;
             cap fighting = boss_active(&bo);
-            edgy (!fighting) {
+            edgy (!fighting && !in_reveal) {
                 rizz due = boss_due(&wd, lvl);
                 edgy (due != t_boss_none()) {
                     boss_start(&bo, &wd, due);
@@ -159,14 +258,71 @@ skibidi main {
                     pool_clear(&obstacles[0], MAX_OBS);
                     pool_clear(&enemies[0], MAX_EN);
                     bombs_clear(&bombs[0], MAX_BMB);
-                    plat_sfx_play(sfx_bruh);
-                    yapping("boss %d incoming at lvl %d (score %d)",
-                            due, lvl, score);
+                    🚽 The final boss does not just appear -- U Din Din's death
+                    🚽 runs the reveal first (12.6.1). The fight is frozen until
+                    🚽 it finishes; every other boss starts fighting at once.
+                    edgy (due == t_boss_combinasion()) {
+                        in_reveal = W;
+                        reveal_t  = 0.0;
+                        rv_cut = L;
+                        rv_boom = L;
+                        yapping("the run did not end. lvl %d, score %d.",
+                                lvl, score);
+                    }
+                    amogus {
+                        plat_sfx_play(sfx_bark);
+                        yapping("boss %d incoming at lvl %d (score %d)",
+                                due, lvl, score);
+                    }
                 }
             }
-            boss_tick(&bo, &wd);
+            🚽 Advance the fight only when live -- frozen during the reveal.
+            edgy (live) { boss_tick(&bo, &wd); }
             boss_up = boss_owns_spawner(&bo);
         }
+
+        🚽 --- 6c. the reveal ------------------------------------------
+        🚽 A frozen, timed cinematic (12.6.1). The scene holds; the normal
+        🚽 track plays on so the run seems to continue, then cuts mid-stream;
+        🚽 the sky drains and the HUD flickers (both in the draw section off
+        🚽 reveal_t); after a silent gap he walks in from the right and the
+        🚽 prog track detonates as the fight goes live.
+        edgy (in_reveal) {
+            reveal_t = reveal_t + wd.dt;
+
+            edgy (!rv_cut && reveal_t >= t_reveal_cut()) {
+                🚽 The mid-stream cut -- not at a loop boundary. Then, out of the
+                🚽 silence, the suspense creeps in: the developer is coming.
+                plat_music_stop(music);
+                plat_sfx_play(sfx_susp);
+                rv_cut = W;
+            }
+            edgy (reveal_t >= t_reveal_walk()) {
+                🚽 Walk in from the right edge to his mark. Draw a standing
+                🚽 pose (recover = frame 0), facing left toward Tung.
+                chad wspan = t_reveal_done() - t_reveal_walk();
+                chad wprog = clampf((reveal_t - t_reveal_walk()) / wspan,
+                                    0.0, 1.0);
+                bo.x     = lerpf(t_screen_w(), t_reveal_walk_x(), wprog);
+                bo.y     = t_ground_y() - t_combi_h();
+                bo.state = t_cs_recover();
+                bo.dir   = 0 - 1;
+            }
+            edgy (!rv_boom && reveal_t >= t_reveal_boom()) {
+                🚽 Full silhouette in: the name card, and the track detonates.
+                plat_music_play(music_boss);
+                namecard_t = 1.6;
+                rv_boom = W;
+            }
+            edgy (reveal_t >= t_reveal_boom()) {
+                🚽 Fight LIVE: hand him back to his own machine, fresh.
+                in_reveal  = L;
+                bo.state   = t_cs_out();
+                bo.phase_t = 0.0;
+                bo.script_i = 0;
+            }
+        }
+        edgy (namecard_t > 0.0) { namecard_t = namecard_t - wd.dt; }
 
         🚽 --- 6b. spawning ---------------------------------------------
         🚽 Paused for the whole fight: the boss owns the pattern. Its own
@@ -222,53 +378,78 @@ skibidi main {
         }
 
         🚽 --- 7. obstacles: scroll, then body collision ----------------
-        edgy (in_run) {
+        edgy (live) {
             pool_scroll(&obstacles[0], MAX_OBS, &wd, 0.0);
             cap obs_hurt = pool_body_pass(&obstacles[0], MAX_OBS, &pl, &wd);
             edgy (obs_hurt) {
                 boss_note_hit(&bo);
                 🚽 The killing blow gets the death sting instead of the
                 🚽 grunt -- see the sfx_bruh play in step 9.
-                edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
+                edgy (pl.hearts > 0) { plat_sfx_play(sfx_ugh); }
             }
         }
 
         🚽 --- 8. enemies: scroll, bat pass, then body pass -------------
         🚽 Bat before body, so a frame-perfect swing always beats the
         🚽 collision.
-        edgy (in_run) {
+        edgy (live) {
             pool_scroll(&enemies[0], MAX_EN, &wd, t_enemy_close());
             edgy (swinging) {
                 rizz bonks = pool_bat_pass(&enemies[0], MAX_EN, &pl, &wd);
-                edgy (bonks > 0) { plat_sfx_play(sfx_tung); }
+                edgy (bonks > 0) { plat_sfx_play(sfx_pop); }
             }
             cap en_hurt = pool_body_pass(&enemies[0], MAX_EN, &pl, &wd);
             edgy (en_hurt) {
                 boss_note_hit(&bo);
-                edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
+                edgy (pl.hearts > 0) { plat_sfx_play(sfx_ugh); }
             }
         }
 
         🚽 --- 8b. bombs: fall, burn, then hurt -------------------------
-        edgy (in_run) {
-            bombs_step(&bombs[0], MAX_BMB, &wd);
+        edgy (live) {
+            🚽 A bomb hitting the ground sounds its impact, separately from the
+            🚽 blast then catching the player (which grunts below).
+            rizz bmb_landed = bombs_step(&bombs[0], MAX_BMB, &wd);
+            edgy (bmb_landed > 0) { plat_sfx_play(sfx_damage); }
             cap bmb_hurt = bombs_body_pass(&bombs[0], MAX_BMB, &pl, &wd);
             edgy (bmb_hurt) {
                 boss_note_hit(&bo);
-                edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
+                edgy (pl.hearts > 0) { plat_sfx_play(sfx_ugh); }
             }
         }
 
         🚽 --- 8c. the boss itself: bat pass, then body pass -------------
         🚽 Bat before body, same as enemies, so a frame-perfect swing at an
-        🚽 opening always beats the collision.
-        edgy (in_run) {
+        🚽 opening always beats the collision. Frozen during the reveal (live).
+        edgy (live) {
             edgy (boss_active(&bo)) {
                 cap can_bonk = boss_vulnerable(&bo);
+                🚽 Combinasion's bat reach is off Tung's LIVE column (he moves);
+                🚽 every other boss is fought from the pinned t_player_x().
+                cap in_reach = boss_in_bat(&bo, &pl);
+                edgy (bo.kind == t_boss_combinasion()) {
+                    in_reach = combi_in_bat(&bo, &pl);
+                }
+                cap swing_start = swinging;
+                edgy (was_swinging) { swing_start = L; }
                 edgy (swinging && can_bonk) {
-                    edgy (boss_in_bat(&bo, &pl)) {
+                    edgy (in_reach) {
                         boss_take_bonk(&bo, &wd);
-                        plat_sfx_play(sfx_tung);
+                        🚽 The final boss's hits land as damage.ogg; the other
+                        🚽 three take a fart.ogg.
+                        edgy (bo.kind == t_boss_combinasion()) {
+                            plat_sfx_play(sfx_damage);
+                        }
+                        amogus { plat_sfx_play(sfx_fart); }
+                    }
+                }
+                🚽 Parry (Combinasion only): a swing that connects while he is
+                🚽 NOT recovering is blocked -- CLANG, no damage. It only says
+                🚽 "you cannot unga-bunga this boss"; the cost is the wasted
+                🚽 swing, nothing more (12.6.4). Once per swing, on the edge.
+                edgy (bo.kind == t_boss_combinasion()) {
+                    edgy (swing_start && !can_bonk && in_reach) {
+                        plat_sfx_play(sfx_bruh);
                     }
                 }
                 🚽 The croc still has no body-contact pass -- it never
@@ -281,7 +462,7 @@ skibidi main {
                     edgy (shark_contact_hit(&bo, &pl)) {
                         player_take_hit(&pl, &wd);
                         boss_note_hit(&bo);
-                        edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
+                        edgy (pl.hearts > 0) { plat_sfx_play(sfx_ugh); }
                     }
                 }
                 🚽 U Din Din's charging body: a low sweep. Grounded contact
@@ -290,11 +471,40 @@ skibidi main {
                     edgy (dindin_contact_hit(&bo, &pl)) {
                         player_take_hit(&pl, &wd);
                         boss_note_hit(&bo);
-                        edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
+                        edgy (pl.hearts > 0) { plat_sfx_play(sfx_ugh); }
+                    }
+                }
+                🚽 La Grande Combinasion's swing: a low forward sweep. Grounded
+                🚽 contact in the arc hurts; a jump is always safe (12.6).
+                edgy (bo.kind == t_boss_combinasion() && player_vulnerable(&pl)) {
+                    edgy (combi_contact_hit(&bo, &pl)) {
+                        player_take_hit(&pl, &wd);
+                        boss_note_hit(&bo);
+                        edgy (pl.hearts > 0) { plat_sfx_play(sfx_ugh); }
                     }
                 }
             }
         }
+        was_swinging = swinging;
+
+        🚽 Beating the developer is a WIN, not a death (12.6.11). combi_live is
+        🚽 true only while his fight actually runs; when it ends with the player
+        🚽 still alive -- he was cleared by the third bonk -- the run is won.
+        cap combi_live = L;
+        edgy (boss_active(&bo)) {
+            edgy (bo.kind == t_boss_combinasion()) { combi_live = !in_reveal; }
+        }
+        edgy (combi_live_prev && !combi_live && pl.hearts > 0) {
+            edgy (!boss_active(&bo)) {
+                state = t_state_win();
+                🚽 Beat the game: the boss track stops and wow.ogg celebrates.
+                plat_music_stop(music_boss);
+                plat_sfx_play(sfx_wow);
+                yapping("SAHUR SAVED -- the developer is beaten. score %d",
+                        score);
+            }
+        }
+        combi_live_prev = combi_live;
 
         🚽 --- 9. state transitions -------------------------------------
         edgy (state == t_state_title()) {
@@ -314,7 +524,13 @@ skibidi main {
         edgy (in_run) {
             edgy (pl.hearts <= 0) {
                 state = t_state_over();
+                🚽 Game over: both tracks stop -- the main one, or the boss one
+                🚽 if you died to the final boss -- and the death sting plays:
+                🚽 bruh.ogg, then nonono.ogg right on top of it.
+                plat_music_stop(music);
+                plat_music_stop(music_boss);
                 plat_sfx_play(sfx_bruh);
+                plat_sfx_play(sfx_nonono);
                 yapping("run over -- score %d, seed %d, frames %d",
                         score, run_seed, frame);
             }
@@ -328,12 +544,45 @@ skibidi main {
             }
         }
 
+        edgy (state == t_state_win()) {
+            cap again = plat_enter_pressed(frame);
+            edgy (again) {
+                state    = t_state_run();
+                do_reset = W;
+            }
+        }
+
         plat_trace(frame, score, lvl, pl.hearts, wd.combo, wd.speed, pl.y,
                    wd.dist);
 
         🚽 --- 10. draw --------------------------------------------------
+        🚽 The reveal drains the sky to grey (12.6.1) -- a ramp on reveal_t --
+        🚽 and flickers the HUD once the drain begins, then holds it off.
+        chad drain = 0.0;
+        cap  hud_on = W;
+        edgy (combi_scene) {
+            edgy (in_reveal) {
+                🚽 During the reveal: normal sky until the drain stage, then a
+                🚽 ramp to black, and the HUD flickers while it drains.
+                edgy (reveal_t >= t_reveal_dark()) { drain = 1.0; }
+                amogus edgy (reveal_t >= t_reveal_drain()) {
+                    chad dspan = t_reveal_dark() - t_reveal_drain();
+                    drain = clampf((reveal_t - t_reveal_drain()) / dspan,
+                                   0.0, 1.0);
+                }
+                edgy (reveal_t >= t_reveal_drain()) {
+                    rizz tick = reveal_t * 8.0;
+                    edgy (tick % 2 == 0) { hud_on = L; }
+                }
+            }
+            amogus {
+                🚽 The live fight: the sky stays fully drained.
+                drain = 1.0;
+            }
+        }
+
         draw_begin();
-        draw_sky(lvl);
+        draw_sky(lvl, drain);
         draw_background(bg_far, bg_mid, bg_near, bg_fore, wd.dist);
         draw_ground();
 
@@ -358,6 +607,13 @@ skibidi main {
         🚽 when the hitbox is live.
         rizz tex   = tex_run;
         rizz frame_i = run_frame(&wd);
+        🚽 In the frozen Combinasion arena the world does not scroll, so the run
+        🚽 cycle comes from Tung's own horizontal walking, and a neutral pose
+        🚽 stands him still when he is not moving. Swing/jump still override.
+        edgy (combi_scene) {
+            edgy (moving_now) { frame_i = walk_frame(&pl); }
+            amogus { frame_i = t_walk_idle(); }
+        }
         edgy (pl.atk_t > 0.0) {
             tex     = tex_swing;
             frame_i = swing_frame(&pl);
@@ -369,10 +625,12 @@ skibidi main {
             }
         }
 
+        🚽 Drawn at pl.x, which is t_player_x() everywhere except the
+        🚽 Combinasion fight (the one place Tung moves horizontally, 12.6.2).
         edgy (player_visible(&pl)) {
-            draw_player(t_player_x(), pl.y, tex, frame_i);
+            draw_player(pl.x, pl.y, tex, frame_i, tung_face);
         }
-        edgy (swinging) { draw_bat(t_player_x(), pl.y, tex_swing); }
+        edgy (swinging) { draw_bat(pl.x, pl.y, tex_swing); }
 
         🚽 Markers first, so a bomb never hides its own warning.
         flex (rizz i = 0; i < MAX_BMB; i = i + 1) {
@@ -397,20 +655,34 @@ skibidi main {
         cap boss_shown = boss_active(&bo);
         edgy (boss_shown) {
             draw_boss(bo.x, bo.y, bo.kind, bo.phase, bo.phase_t, bo.dir,
-                      tex_shark, tex_croc, tex_dindin);
+                      bo.state, bo.dest_x, bo.script_i,
+                      tex_shark, tex_croc, tex_dindin, tex_combi);
         }
 
-        draw_hearts(pl.hearts);
-        draw_speedbar(lvl);
-        draw_hud(score, lvl);
-        edgy (boss_shown) {
-            cap boss_ready = boss_vulnerable(&bo);
-            edgy (boss_ready) { boss_ready = boss_in_position(&bo, &wd); }
-            draw_boss_bar(bo.kind, bo.bonks, boss_ready);
+        🚽 HUD flickers during the reveal, then holds off entirely (hud_on).
+        edgy (hud_on) {
+            draw_hearts(pl.hearts);
+            draw_speedbar(lvl);
+            draw_hud(score, lvl);
+            edgy (boss_shown && !in_reveal) {
+                cap boss_ready = boss_vulnerable(&bo);
+                🚽 Combinasion's opening is the recovery itself -- he never
+                🚽 parks, so gate the prompt on vulnerability alone (like U Din
+                🚽 Din, whose charge is the window). Parking bosses gate on
+                🚽 arrival too.
+                edgy (boss_ready && bo.kind != t_boss_combinasion()) {
+                    boss_ready = boss_in_position(&bo, &wd);
+                }
+                draw_boss_bar(bo.kind, bo.bonks, boss_ready);
+            }
         }
+
+        🚽 The reveal's name card, at the detonation and briefly after.
+        edgy (namecard_t > 0.0) { draw_namecard(); }
 
         edgy (state == t_state_title()) { draw_title(title_t); }
         edgy (state == t_state_over())  { draw_gameover(score, run_seed); }
+        edgy (state == t_state_win())   { draw_win(score, run_seed); }
 
         draw_end();
 
@@ -432,6 +704,8 @@ skibidi main {
     draw_unload(bg_fore);
     draw_unload(tex_shark);
     draw_unload(tex_croc);
+    draw_unload(tex_dindin);
+    draw_unload(tex_combi);
     draw_unload(tex_bomb);
     draw_unload(tex_blast);
     plat_sfx_close(sfx_open);
@@ -439,6 +713,14 @@ skibidi main {
     plat_sfx_close(sfx_jump);
     plat_sfx_close(sfx_damage);
     plat_sfx_close(sfx_bruh);
+    plat_sfx_close(sfx_pop);
+    plat_sfx_close(sfx_ugh);
+    plat_sfx_close(sfx_bark);
+    plat_sfx_close(sfx_fart);
+    plat_sfx_close(sfx_nonono);
+    plat_sfx_close(sfx_susp);
+    plat_sfx_close(sfx_wow);
+    plat_music_unload(music_boss);
     plat_music_close(music);
     plat_close();
     bussin 0;
