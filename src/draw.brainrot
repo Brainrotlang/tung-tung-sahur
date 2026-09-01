@@ -189,7 +189,7 @@ skibidi draw_hearts(rizz hearts) {
 🚽 Eight segments, one per level, matching speed_to_lvl's range.
 skibidi draw_speedbar(rizz lvl) {
     rl_draw_text("SPEED", 1064, 18, 20, 220, 220, 220, 255);
-    flex (rizz i = 0; i < 8; i = i + 1) {
+    flex (rizz i = 0; i < 9; i = i + 1) {
         edgy (i < lvl) {
             rl_draw_rectangle(1136 + i * 16, 18, 12, 20, 240, 150, 40, 255);
         }

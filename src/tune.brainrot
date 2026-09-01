@@ -33,7 +33,9 @@ chad t_hitbox_h()        { bussin 56.0; }
 🚽 --- world ---
 chad t_speed_start()     { bussin 260.0; }
 chad t_speed_accel()     { bussin 3.0; }
-chad t_speed_max()       { bussin 900.0; }
+🚽 One level per +90 speed (see speed_to_lvl). LVL 9 tops out at 260 + 8*90 =
+🚽 980, so that is the cap -- reaching it is LVL 9, the final tier.
+chad t_speed_max()       { bussin 980.0; }
 chad t_enemy_close()     { bussin 40.0; }
 chad t_dt_max()          { bussin 0.05; }
 chad t_sahur_distance()  { bussin 200000.0; }   🚽 M3
@@ -82,7 +84,7 @@ rizz t_boss_leave()        { bussin 3; }
 🚽 table those come from; move either number and it re-prints.
 rizz t_tralalero_lvl()     { bussin 3; }
 rizz t_bombardiro_lvl()    { bussin 6; }
-rizz t_dindin_lvl()        { bussin 8; }   🚽 the final-level boss
+rizz t_dindin_lvl()        { bussin 9; }   🚽 the final-level boss (LVL 9)
 rizz t_boss_bonks()        { bussin 3; }
 
 chad t_boss_survive_time() { bussin 8.0; }
@@ -310,7 +312,7 @@ chad t_bomb_interval()     { bussin 1.30; }
 🚽 Clearing a boss is worth more than the three bonks that did it.
 rizz t_boss_reward()       { bussin 2000; }
 
-🚽 U DIN DIN -- the final-level boss (LVL 8). A buff orange sprinter who
+🚽 U DIN DIN -- the final-level boss (LVL 9). A buff orange sprinter who
 🚽 CHARGES across the whole screen, alternating sides: he trembles briefly at
 🚽 one edge (the tell), then sweeps across; the player JUMPS the low pass or
 🚽 SWINGS to bonk him as he crosses the bat zone. Off the far edge he trembles

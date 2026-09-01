@@ -4,8 +4,9 @@ at start    1
 349         1
 350         2
 620         5
-at cap      8
-above cap   8
+900         8
+at cap 980  9
+above cap   9
 -- spawn_gap --
 monotonic=W above_floor=W
 at 260 1.264   at 620 0.868   at 900 0.560   at 1200 0.550
@@ -28,9 +29,9 @@ lvl 5 over 10000: crate 2985 post 2464 patapim 4551
 1:00  speed  439.96  lvl 2  dist     21000  gap 1.066
 2:00  speed  619.91  lvl 4  dist     52798  gap 0.868
 3:00  speed  799.87  lvl 6  dist     95393  gap 0.670
-4:00  speed  900.00  lvl 8  dist    147722  gap 0.560
-5:00  speed  900.00  lvl 8  dist    201722  gap 0.560
-sahur at 200000 px reached after 17885 frames (4:58)
+4:00  speed  979.82  lvl 8  dist    148785  gap 0.550
+5:00  speed  980.00  lvl 9  dist    207566  gap 0.550
+sahur at 200000 px reached after 17536 frames (4:52)
 -- jump airtime vs every gap the game can produce --
 airtime 0.769 s (jump_v -1000, gravity 2600)
 world jump->jump floor 0.950  slack +0.181
@@ -48,6 +49,7 @@ every jump->jump gap clears the airtime: W
         ^ BOMBARDIRO CROCODILO arrives here
   lvl 7 at 3:00  speed  800.0  dist    95429
   lvl 8 at 3:30  speed  890.0  dist   120794
+  lvl 9 at 4:00  speed  980.0  dist   148844
 -- sky --
 lvl 1: 12 14 34
 lvl 2: 12 14 34

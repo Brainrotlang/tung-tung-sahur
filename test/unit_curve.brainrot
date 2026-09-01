@@ -7,14 +7,15 @@
 
 skibidi main {
     🚽 --- speed_to_lvl -----------------------------------------------
-    🚽 Eight segments, matching the eight the HUD draws.
+    🚽 Nine segments, matching the nine the HUD draws.
     yapping("-- speed_to_lvl --");
     yapping("below start %d", speed_to_lvl(0.0));
     yapping("at start    %d", speed_to_lvl(260.0));
     yapping("349         %d", speed_to_lvl(349.0));
     yapping("350         %d", speed_to_lvl(350.0));
     yapping("620         %d", speed_to_lvl(620.0));
-    yapping("at cap      %d", speed_to_lvl(900.0));
+    yapping("900         %d", speed_to_lvl(900.0));
+    yapping("at cap 980  %d", speed_to_lvl(980.0));
     yapping("above cap   %d", speed_to_lvl(5000.0));
 
     🚽 --- spawn_gap ---------------------------------------------------
