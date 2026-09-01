@@ -127,6 +127,11 @@ cap plat_start_pressed(rizz frame) {
     bussin rl_is_key_pressed(t_key_space());
 }
 
+🚽 ENTER begins a run, from the title and from game over.
+cap plat_enter_pressed(rizz frame) {
+    bussin rl_is_key_pressed(t_key_enter());
+}
+
 cap plat_restart_pressed(rizz frame) {
     cap a = rl_is_key_pressed(t_key_r());
     edgy (a) { bussin W; }

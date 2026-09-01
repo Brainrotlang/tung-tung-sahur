@@ -430,3 +430,4 @@ rizz t_key_up()          { bussin 265; }
 rizz t_key_x()           { bussin 88; }
 rizz t_key_z()           { bussin 90; }
 rizz t_key_r()           { bussin 82; }
+rizz t_key_enter()       { bussin 257; }

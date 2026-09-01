@@ -228,9 +228,12 @@ skibidi draw_title(chad t) {
         rl_draw_text("SAHUR", cx - w4 / 2, 360, 96, 245, 200, 90, 255);
     }
     edgy (t > 2.2) {
-        rizz w5 = rl_measure_text("SPACE to run   X to TUNG   ESC to quit", 24);
-        rl_draw_text("SPACE to run   X to TUNG   ESC to quit",
+        rizz w5 = rl_measure_text("SPACE to jump, X to TUNG, ESC to quit", 24);
+        rl_draw_text("SPACE to jump, X to TUNG, ESC to quit",
                      cx - w5 / 2, 480, 24, 190, 190, 190, 255);
+        rizz w6 = rl_measure_text("ENTER to start playing", 28);
+        rl_draw_text("ENTER to start playing",
+                     cx - w6 / 2, 516, 28, 245, 200, 90, 255);
     }
 }
 
@@ -252,9 +255,9 @@ skibidi draw_gameover(rizz score, rizz seed) {
     rl_draw_text_int("seed ", seed, 0, cx - w3 / 2, 396, 18,
                      140, 140, 140, 255);
 
-    rizz w4 = rl_measure_text("R or SPACE to run again", 24);
-    rl_draw_text("R or SPACE to run again", cx - w4 / 2, 420, 24,
-                 210, 210, 210, 255);
+    rizz w4 = rl_measure_text("ENTER to play again", 28);
+    rl_draw_text("ENTER to play again", cx - w4 / 2, 420, 28,
+                 245, 200, 90, 255);
 }
 
 🚽 --- bosses ---------------------------------------------------------------

@@ -300,7 +300,7 @@ skibidi main {
         edgy (state == t_state_title()) {
             title_t = title_t + wd.dt;
             edgy (title_t > 2.2) {
-                edgy (plat_start_pressed(frame)) {
+                edgy (plat_enter_pressed(frame)) {
                     state    = t_state_run();
                     do_reset = W;
                 }
@@ -321,7 +321,7 @@ skibidi main {
         }
 
         edgy (state == t_state_over()) {
-            cap again = plat_restart_pressed(frame);
+            cap again = plat_enter_pressed(frame);
             edgy (again) {
                 state    = t_state_run();
                 do_reset = W;

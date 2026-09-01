@@ -67,6 +67,11 @@ cap plat_restart_pressed(rizz frame) {
     bussin W;
 }
 
+🚽 ENTER now begins a run (title and game over); the tape always presses it.
+cap plat_enter_pressed(rizz frame) {
+    bussin W;
+}
+
 cap plat_should_close(rizz frame) {
     edgy (frame >= fake_frame_budget()) { bussin W; }
     bussin L;
