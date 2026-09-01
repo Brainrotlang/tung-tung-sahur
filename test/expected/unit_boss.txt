@@ -13,8 +13,8 @@ croc still due               2
 start phase 1 bonks 0 owns_spawner W vulnerable L
 survive -> 2 after 481 steps (want phase 2)
 opening: vulnerable W
-  at flip   x -30.0
-  0.5s in   x 134.7, in bat range L
+  at flip   x 240.0
+  0.5s in   x 258.0, in bat range W
 missed opening -> 1, bonks still 0
 -- bonks --
 bonk 1: bonks 1 phase 1 bonus 100
@@ -70,17 +70,17 @@ bomb well behind    L
   and none of them is free:  W
   he is still bombing:       W
 -- scripted fight --
-fight over in 1702 frames, 171 swing attempts
+fight over in 1618 frames, 87 swing attempts
 boss kind 0, hearts 3, bonus 2600
 -- no unavoidable contact --
-boss 1: 1702 frames, 171 open frames, body contacts 0 (must be 0)
-        nose got within -198px of Tung's back (negative = in front)
+boss 1: 1618 frames, 87 open frames, un-dodgeable frames 0 (must be 0)
+        nose got within -1213px of Tung's back (negative = in front)
         mistakes made during the fight: 2
 boss 2: 1645 frames, 114 open frames, body contacts 0 (must be 0)
         nose got within -288px of Tung's back (negative = in front)
         mistakes made during the fight: 2
 -- how long is an opening, really --
-boss 1: opening 117 frames, in bat reach 70 of them (1.17s)
+boss 1: opening 85 frames, in bat reach 80 of them (1.33s)
         t_boss_open_time() is 1.00s -- reach must not be less
 boss 2: opening 105 frames, in bat reach 68 of them (1.13s)
         t_boss_open_time() is 1.00s -- reach must not be less
