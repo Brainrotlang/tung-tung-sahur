@@ -138,7 +138,7 @@ resolution; native it is.
 ```
  (0,0)
    ┌────────────────────────────────────────────────────────────────┐
-   │ ♥♥♥                                        SPEED ▓▓▓▓▓░░░       │  HUD band, y 0..80
+   │ ♥♥♥                                        SPEED ▓▓▓░░░░░░      │  HUD band, y 0..80
    │ SCORE ──────                                     LVL ─          │
    │                                                                 │
    │        sky (colour is a function of LVL)                        │
@@ -188,7 +188,7 @@ HITBOX_H          56.0
 🚽 --- world ---
 SPEED_START       260.0      🚽 px/s
 SPEED_ACCEL       3.0        🚽 px/s^2
-SPEED_MAX_STORY   900.0      🚽 uncapped in endless mode
+SPEED_MAX_STORY   980.0      🚽 LVL 9 cap (260 + 8*90); uncapped in endless
 SAHUR_DISTANCE    200000.0   🚽 px  (~5 min)
 
 🚽 --- spawning ---
@@ -298,8 +298,8 @@ edgy (speed > SPEED_MAX_STORY) { speed = SPEED_MAX_STORY; }   🚽 story mode on
 dist  = dist + speed * dt;
 ```
 
-`SPEED_ACCEL = 3.0` takes `speed` from 260 to the 900 cap in about 213 seconds,
-which is *after* both bosses. Endless mode simply removes the clamp.
+`SPEED_ACCEL = 3.0` takes `speed` from 260 to the 980 cap in **240 seconds**
+(4:00), which is when U Din Din arrives. Endless mode simply removes the clamp.
 
 ### 7.1 LVL is a display, not a state
 
@@ -309,13 +309,15 @@ quantises it:**
 
 ```c
 rizz lvl = 1 + (speed - SPEED_START) / 90.0;
-edgy (lvl > 8) { lvl = 8; }
+edgy (lvl > 9) { lvl = 9; }
 ```
 
-Eight segments, eight levels, matching the eight-segment bar. Nothing in the
-simulation ever branches on `lvl` except the sky palette (§10.2) and the
-enemy-variant gate (§9.3) — and both of those are cosmetic-tier decisions that
-*want* to be steppy.
+Nine segments, nine levels, matching the nine-segment bar. The simulation
+does not *branch on difficulty* via `lvl` — sky palette (§10.2) and the
+enemy-variant gate (§9.3) are cosmetic-tier decisions that *want* to be
+steppy. Bosses trigger on `lvl` too (§12), but that is a pacing choice: a
+level threshold is the same moment for every player, which a score
+threshold is not.
 
 ### 7.2 The feel target
 
@@ -328,15 +330,17 @@ Measured, not estimated — `test/unit_curve.brainrot` integrates the curve at
 | 1:00 | 440 | 2 | 1.07 s | okay |
 | 2:00 | 620 | 4 | 0.87 s | concentration required |
 | 3:00 | 800 | 6 | 0.67 s | TUNGTUNGTUNGTUNGTUNG |
-| 3:30 | 890 | 8 | 0.56 s | last tier |
-| 3:33 | 900 | 8 | 0.56 s | story cap |
-| 4:58 | 900 | 8 | 0.56 s | **SAHUR** — 200,000 px |
-| endless | ∞ | 8 | 0.55 s | humanly questionable |
+| 3:30 | 890 | 8 | 0.56 s | last-but-one |
+| 4:00 | 980 | 9 | 0.55 s | story cap — **U Din Din** |
+| 4:52 | 980 | 9 | 0.55 s | **SAHUR** — 200,000 px |
+| endless | ∞ | 9 | 0.55 s | humanly questionable |
 
-A clean run reaches Sahur at 4:58. Note that the LVL boundaries land a hair
+A clean run reaches Sahur at 4:52. Note that the LVL boundaries land a hair
 *after* the round speed numbers — at 1:00 the integrated speed is 439.96, just
-under the 440 needed for tier 3 — which is why the column reads 2 rather than 3.
-That is the code being precise, not the table being wrong.
+under the 440 needed for tier 3 — which is why the minute sample reads 2
+rather than 3. Same at 4:00: the minute sample is 979.82 / LVL 8, and LVL 9
+ticks in on the next frame as speed hits the 980 cap. That is the code being
+precise, not the table being wrong.
 
 ---
 
@@ -380,7 +384,7 @@ important rule in the document. Spacing is **never** a pixel constant, because a
 pixel gap that is generous at 260 px/s is lethal at 900 px/s.
 
 ```c
-chad gap = GAP_BASE - speed * GAP_SLOPE;      🚽 1.26s at LVL1 -> 0.56s at LVL8
+chad gap = GAP_BASE - speed * GAP_SLOPE;      🚽 1.26s at LVL1 -> 0.55s floor by LVL 9
 edgy (gap < GAP_MIN) { gap = GAP_MIN; }
 gap = gap + jitter;                            🚽 +/- GAP_JITTER, from the PRNG
 ```
@@ -516,7 +520,7 @@ ships in `rl_draw_rectangle`:
 | Patapim | 64 × 64 rectangle |
 | Crate / post | grey rectangles |
 | Hearts | 20 × 20 red rectangles |
-| Speed bar | 8 segment rectangles |
+| Speed bar | 9 segment rectangles |
 
 This is not a placeholder to be ashamed of — it is a playable game that proves
 the loop before a single asset exists, and it keeps M0 free of upstream blockers.
@@ -536,14 +540,14 @@ player *notice* they survived another tier.
 | 3–4 | 04:00 | `18, 20, 48` |
 | 5–6 | 04:30 | `38, 30, 64` pre-dawn purple |
 | 7 | 04:50 | `78, 44, 66` |
-| 8 | 05:00 | `140, 74, 60` dawn |
+| 8–9 | 05:00 | `140, 74, 60` dawn |
 
 ### 10.3 HUD
 
 Numbers arrived with **B1**, so the HUD is complete:
 
 ```
-♥♥♥                                    SPEED ▓▓▓▓▓░░░
+♥♥♥                                    SPEED ▓▓▓░░░░░░
 SCORE 000450                           LVL 3
 ```
 
@@ -558,7 +562,7 @@ because a run is reproducible from it (§8.3): a bug report is a seed and a
 frame number, and nobody ever went to read their console for it.
 
 - Hearts: `hearts` red rectangles at `(20 + i*28, 20)`.
-- Speed bar: 8 segments at `(1130 + i*14, 30)`; filled while `i < lvl`.
+- Speed bar: 9 segments at `(1136 + i*16, 18)`; filled while `i < lvl`.
 - `rl_draw_fps` bottom-right, debug builds only.
 
 ---
@@ -570,7 +574,7 @@ frame number, and nobody ever went to read their console for it.
 | Jump | `SPACE`, `UP` | 32, 265 | `is_key_down`, gated on `grounded` |
 | Bat | `X`, `Z` | 88, 90 | `is_key_pressed`, gated on `atk_t <= 0` |
 | Duck (M1) | `DOWN` | 264 | `is_key_down` |
-| Restart | `R`, `SPACE` | 82, 32 | `is_key_pressed`, game-over screen only |
+| Start / restart | `ENTER` | 257 | `is_key_pressed`; title (after the beat) and game-over |
 | Quit | `ESC` | 256 | raylib default + `rl_window_should_close` |
 
 No pause. It's an arcade runner.
@@ -579,12 +583,16 @@ No pause. It's an arcade runner.
 
 ## 12. Bosses (M2)
 
-Tralalero and Bombardiro are too good to spend as generic enemies. They are set
-pieces. When a boss is active **the normal spawner pauses** — the boss owns the
-pattern — and **you can still die**, hearts and all.
+Tralalero, Bombardiro, and U Din Din are too good to spend as generic enemies.
+They are set pieces. When a boss is active **the normal spawner pauses** — the
+boss owns the pattern — and **you can still die**, hearts and all. `main`
+clears the obstacle, enemy, and bomb pools on `boss_start`: a boss is a duel,
+not chaos on chaos.
 
-Both use the same three-cycle shape: *survive a phase → an opening appears →
-one bonk → repeat ×3*.
+Tralalero and Bombardiro share the same three-cycle shape: *survive a phase →
+an opening appears → one bonk → repeat ×3*. U Din Din does not: `boss_tick()`
+routes him to his own tremble/charge/leave loop in `dindin_move()`. Three
+bonks still win, but for him the charge *is* the opening.
 
 **They trigger on LEVEL, not score**, and that is a correctness fix rather than
 a preference. Level is `speed_to_lvl()`, and speed is a pure function of elapsed
@@ -595,17 +603,18 @@ got. Tralalero was set at score 5,000: LVL 5 for a player who never bonks, LVL 2
 for one who does. The better you played, the sooner the boss arrived and the
 slower the world was when it did.
 
-Tralalero at **LVL 3** (1:00) and Bombardiro at **LVL 6** (2:30).
-`unit_curve.brainrot` prints the level timeline with both marked, so the pacing
-is a table rather than a claim.
+Tralalero at **LVL 3** (1:00), Bombardiro at **LVL 6** (2:30), U Din Din at
+**LVL 9** (4:00). Evenly spaced. `unit_curve.brainrot` prints the level
+timeline, so the pacing is a table rather than a claim.
 
 ### 12.1 TRALALERO TRALALA — LVL 3
 
 The three-legged shark, characterised by speed. When he arrives the **field is
 cleared** — no obstacles, no Patapim (`main` clears the pools on `boss_start`).
-It is a duel, and the shark's **own body is the threat**. That is the one place
-the game breaks the §12.3 rule below (a boss body never touches Tung), and it
-earns the exception by being *dodgeable*: every contact has a safe input.
+It is a duel, and the shark's **own body is the threat**. That is one of the
+two places the game lets a boss body touch Tung (U Din Din is the other,
+§12.3), and it earns it by being *dodgeable*: every contact has a safe input
+(§12.4).
 
 The fight is a three-beat loop:
 
@@ -740,11 +749,75 @@ column.** Both were wrong, and each on its own made the fight an instant kill:
   the foliage layer, half over the ground — which is a washed-out colour across
   a boundary between two backgrounds, and could not be read.
 
-### 12.3 Contact damage must always be dodgeable
+### 12.3 U DIN DIN — LVL 9
+
+The final-level boss: a buff orange sprinter who **charges across the whole
+screen**, alternating sides. When he arrives the field is cleared, same as the
+others. His **own body is the threat**, and it is always low.
+
+The loop is:
+
+1. **Tremble (tell).** He peeks onto the screen at one edge and shakes, the
+   shake growing as the launch nears (`t_dindin_tremble()` 0.85 s,
+   `t_dindin_tremble_shake/rate`, `t_dindin_peek()` 70 px). The first charge
+   comes from the right.
+2. **Charge.** He sweeps **low** across at `t_dindin_charge_speed()` (720 px/s).
+   You **JUMP** the pass, or **SWING** as he crosses the bat zone.
+3. Off the far edge he trembles on *that* side and charges back.
+
+Three bonks and he's launched. He does **not** use the shared
+survive-for-8 s / open-for-1 s timing: `boss_tick()` routes him straight to
+`dindin_move()`. For him, `survive` is the tremble and `open` is the charge —
+the charge *is* the opening. `boss_vulnerable()` is `phase == open`, so the
+bat connects during the sweep as he crosses the box. There is no park-in-front
+window, and no `TUNG HIM` prompt: you read the body, not a HUD cue.
+
+```
+   tremble (tell)                      charge (jump it, or swing)
+      🏃~~~                              🏃━━━━━━━━━━►
+     🪵                                 🪵
+     /|\                                /|\     💥
+   _/ \____________________           _/ \____________________
+```
+
+**A jump is always safe.** Unlike Tralalero there is no "don't jump" beat:
+he never crosses high. Standing to swing is the risk — greed vs survival,
+the same bet as Patapim, at boss scale. It is only fair because
+`dindin_contact_hit()` hurts a *grounded* player only, and only while he is
+charging. An airborne player is always clear. `unit_boss.brainrot` asserts
+**un-dodgeable frames == 0** over the whole fight, the same probe as the
+shark's.
+
+**The charge is jumpable by construction**, same arithmetic as Tralalero's
+low pass: jump apex ≈ 192 px, Tung is 96 px tall, so a full-height (96 px)
+charge would be a coin flip. `t_dindin_charge_h()` is therefore **56 px** — a
+low hit-band under the sprite.
+
+**A bonk does not teleport him.** The first version of the hit-reaction set
+`phase = survive` and `spawn_t = 0`, whose fresh-tremble relocated him to an
+edge *in view* — it read as a respawn, and `boss_in_bat` could re-bonk him
+on the next frame. Instead he keeps charging and is knocked off the edge he
+was heading for; `dindin_move()`'s charge-exit then trembles on the far side
+and he comes back. Off-screen, so no in-view pop and no re-bonk.
+
+He is drawn from a **6-frame run cycle** (`assets/dindin.png`, built from
+`assets/dimdim/` by `process_sprites.py`), bottom-aligned, animated off
+`phase_t` at `t_dindin_anim_rate()` (15 fps). The art faces **right**
+natively, so `draw_boss()` mirrors it when he charges left (`dir < 0`) —
+negative source width, anchor flipped to `fw - anchor`. Collision is 84×96
+against a 73×96 frame / anchor 43; `tools/check_atlases.py` checks the
+split independently, same as the shark. The boss-bar label is **U DIN DIN**
+(it used to fall through to "BOMBARDIRO CROCODILO").
+
+One tell, one shape, because there is only one answer. That is the contrast
+with Tralalero's two differently-shaped tells: here jump is never wrong, so
+the tremble only has to say "he's coming", not "which way to stand".
+
+### 12.4 Contact damage must always be dodgeable
 
 The player is pinned at `t_player_x()` and can only jump. So the rule is not
 "a boss never touches Tung" — it is "**every** contact leaves a safe input".
-The two bosses satisfy it in opposite ways.
+The three bosses satisfy it in three shapes.
 
 Both fights *shipped* violating it, and it made them unwinnable. The openings
 have to be in **front** of the player, because the bat only reaches forward
@@ -757,25 +830,30 @@ hearts. Unwinnable, unavoidable, and green.
   through its bombs, which are dodgeable and readable. `boss_hits_body()`
   survives as an **invariant for the croc**: `test/unit_boss.brainrot` replays
   its fight and asserts the body is never in contact, on any frame. This is
-  what forces the movement rule in §12.4.
+  what forces the movement rule in §12.5.
 - **Tralalero's body *is* the threat** (§12.1), so for the shark the invariant
   is not "no contact" but "no *un-dodgeable* contact". Contact is phase-split
   by `shark_contact_hit()` — grounded-only during the low charge, airborne-only
   during the high cross — so a safe vertical position always exists. The test
   asserts **un-dodgeable frames == 0** over the shark's fight: never a frame on
   which both a grounded and an airborne player would be hit.
+- **U Din Din's body is also the threat** (§12.3), but only one way: a low
+  charge. `dindin_contact_hit()` is grounded-only, and he never crosses high,
+  so a jump is always the safe input. Same un-dodgeable-frames probe, same
+  required zero.
 
-Same principle, two shapes: nothing hurts you that a correct input could not
+Same principle, three shapes: nothing hurts you that a correct input could not
 have avoided.
 
-### 12.4 How it is built
+### 12.5 How it is built
 
 `gang Boss` is a single value in `skibidi main`, not a slot in `enemies[]`. It
 has phases, a bonk count and scripted movement that no generic `Ent` wants, and
 putting it in the pool would drag all of that through the shared collision
-passes. `gang Bomb` is its own pool for the same reason — it needs `vy` and a
-fuse, and a landed bomb is the same slot with a wider box rather than a second
-pool.
+passes. U Din Din adds `dir` (+1 right / −1 left) on that same struct; the
+other two ignore it. `gang Bomb` is its own pool for the same reason — it
+needs `vy` and a fuse, and a landed bomb is the same slot with a wider box
+rather than a second pool.
 
 Movement is a pure function of `(kind, phase, hits, dist)` fed through
 `approach()`, not a lerp. Lerp's step depends on the distance left, so a boss
@@ -810,6 +888,11 @@ approach-to-target logic — the low sweep and its horizontal tell. `boss_move()
 carries only his opening lunge and his exit. The old lurk-and-close design —
 `boss_lurk_x()`, `t_shark_close_*` — is no longer part of the fight.)
 
+U Din Din bypasses this movement and this clock entirely. `boss_tick()`
+returns into `dindin_move()` before the shared survive/open timer runs; his
+`phase_t` is only the run-cycle clock. `World.did_dimdim` is the once-per-run
+flag, next to `did_tralalero` / `did_bombardiro`.
+
 A missed opening costs time, not health: the phase returns to `survive` and the
 cycle repeats. The fight is long rather than unfair.
 
@@ -827,12 +910,14 @@ whether the bat *could* reach the boss at all, which is why it passed on a
 fight nobody could win.
 
 **And the game says so.** `draw_boss_bar()` puts `TUNG HIM — X` on screen while
-the boss is open *and has arrived*. Those two conditions differ by exactly the
-leap, and prompting during it would teach the same too-early swing.
+the boss is open *and has arrived* — Tralalero and Bombardiro, who park. Those
+two conditions differ by exactly the leap, and prompting during it would teach
+the same too-early swing. U Din Din never parks, so the prompt does not fire
+for him; the charge itself is the window.
 
-**Both bosses are drawn from art**, as are the bomb and its blast. They go
-through the same `tex >= 0` fallback every other draw uses, so a missing file
-degrades one asset at a time and the simulation does not know either way.
+**All three bosses are drawn from art**, as are the bomb and its blast. They
+go through the same `tex >= 0` fallback every other draw uses, so a missing
+file degrades one asset at a time and the simulation does not know either way.
 
 Tralalero's atlas is two frames — survive and opening — and `draw_boss()` picks
 the column from the phase. His art frame is 168px wide against a 140×96
@@ -853,6 +938,11 @@ bottom-aligned: he flies, so he has no contact row, and bottom-aligning a 36px
 frame inside a 72px box would sink him to its floor and then jump him 36px when
 the opening starts.
 
+U Din Din's atlas is a six-frame run cycle, always bottom-aligned (he is on
+the ground). The art faces right natively, so charging left draws it mirrored;
+charging right uses the frame as-is. Details and the hit-reaction live in
+§12.3.
+
 The **bomb's hitbox follows its art**: `t_bomb_w()` went 26 → 12 because the
 shell keys out 11px wide, and a 26px box around an 11px sprite is empty air that
 still takes a heart. The blast is deliberately the reverse — 77px of art over a
@@ -863,22 +953,25 @@ narrow box, is the forgiving direction.
 reaches LVL 3 — the golden file proves the boss code does not disturb an
 ordinary run (it is byte-identical), and `test/unit_boss.brainrot` drives the
 fights directly, including a scripted frame loop that calls what `main` calls in
-the order `main` calls it. Both bosses were additionally verified in the real
-frame loop by temporarily lowering the thresholds.
+the order `main` calls it. All three bosses were additionally verified in the
+real frame loop by temporarily lowering the thresholds. The higher LVL 9
+ceiling does not touch the headless tape either.
 
 ---
 
 ## 13. Run structure
 
 ```
-TITLE ──SPACE──► RUN ──dist >= SAHUR_DISTANCE──► SAHUR (win) ──► unlocks ENDLESS
+TITLE ──ENTER──► RUN ──dist >= SAHUR_DISTANCE──► SAHUR (win) ──► unlocks ENDLESS
                   │
-                  └──hearts == 0──► GAME OVER ──R/SPACE──► RUN
+                  └──hearts == 0──► GAME OVER ──ENTER──► RUN
 ```
 
 - **Title.** Literal text, so it's M0. The `TUNG... TUNG... TUNG... SAHUR` beat
-  plays out on a timer — four words, then he starts running. It's the best joke
-  in the concept and it costs four `rl_draw_text` calls.
+  plays out on a timer — four words — then a controls line ("SPACE to jump, X
+  to TUNG, ESC to quit") and a highlighted **ENTER to start playing**. ENTER
+  begins the run from both the title and game over, so the jump key is not
+  also the start key. Game-over is **ENTER to play again**.
 - **Sahur.** At `SAHUR_DISTANCE`, the sky finishes its turn and the run ends on
   `SAHUR SAVED / NEIGHBOURHOOD WOKEN / W`.
 - **Endless Schizo Mode.** Unlocked by a Sahur clear, selectable from the title
@@ -1184,7 +1277,7 @@ not the game state.
 
 So the curve is covered at unit level instead: `unit_curve.brainrot` integrates
 `speed` and `dist` at the same 60 Hz the game steps at and prints the feel table
-in §7.2 directly, including the measured 4:58 to Sahur. That table is generated
+in §7.2 directly, including the measured 4:52 to Sahur. That table is generated
 from the code, so the two cannot disagree.
 
 The fairness invariant gets the treatment it deserves — a sweep over every speed
@@ -1258,7 +1351,7 @@ Playable core, primitives only. Title card, run, game over, restart.
 - [x] 3 hearts, i-frames
 - [x] Score + combo multiplier
 - [x] Seeded PRNG; seed shown on game over
-- [x] HUD: hearts, 8-segment speed bar, literal labels
+- [x] HUD: hearts, 9-segment speed bar, literal labels
 - [x] Sky palette stepping with LVL
 - [x] Title screen with the `TUNG... TUNG... TUNG... SAHUR` beat
 - [x] Headless test harness + golden files
@@ -1275,8 +1368,9 @@ Playable core, primitives only. Title card, run, game over, restart.
 
 - [x] Tralalero Tralala at LVL 3
 - [x] Bombardiro Crocodilo at LVL 6, projectile pool
+- [x] U Din Din at LVL 9, screen-wide charge
 - [x] Audio: the `TUNG`, the jump, damage, the opening sting, and a `bruh`
-- [ ] Boss art — both fights ship in primitives, like M0 did
+- [x] Boss art — Tralalero (2-frame), Bombardiro (2-view), U Din Din (6-frame run)
 
 ### M3 — "Sahur"
 
