@@ -38,6 +38,26 @@ design, the verified engine constraints, and the upstream dependency list.
 
 ## Running it
 
+### Download a prebuilt bundle (easiest)
+
+Every [release](https://github.com/Brainrotlang/tung-tung-sahur/releases) ships
+a self-contained bundle per platform — the `brainrot` interpreter, the `rayrot`
+raylib module, its `libraylib`, and all the assets, no toolchain required:
+
+| Platform | Asset | Launch |
+| --- | --- | --- |
+| Linux (x86-64 / ARM64) | `tung-tung-sahur-<tag>-linux-amd64.tar.gz` / `-linux-arm64.tar.gz` | `./play.sh` |
+| macOS (Intel / Apple Silicon) | `tung-tung-sahur-<tag>-darwin-amd64.tar.gz` / `-darwin-arm64.tar.gz` | `./play.sh` |
+| Windows (x86-64) | `tung-tung-sahur-<tag>-windows-amd64.zip` | `play.bat` |
+
+Extract the archive and run the launcher — `play.sh` on Linux/macOS,
+`play.bat` (double-click, or run it) on Windows. `SHA256SUMS.txt` verifies the
+download. The bundles are built against a pinned **brainrot v0.5.1** — the first
+release with a native Windows interpreter and native `#cooked` modules
+([brainrot#337](https://github.com/Brainrotlang/brainrot/issues/337)).
+
+### Build from source
+
 You need a [`brainrot`](https://github.com/Brainrotlang/brainrot) checkout with
 the `rayrot` module built. Clone it next to this repo:
 
