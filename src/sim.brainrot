@@ -743,7 +743,14 @@ skibidi shark_charge_move(gang Boss *b, gang World *w) {
     b.y = t_ground_y() - t_shark_h();
     edgy (b.spawn_t > 0.0) {
         b.spawn_t = b.spawn_t - w.dt;
-        b.x = t_shark_charge_x0();
+        🚽 Anticipation tell: rear back + shudder, both harder as the launch
+        🚽 nears (grow runs 0 -> 1 across the telegraph). He is off the left
+        🚽 edge, far from Tung, so this x wobble is cosmetic wind-up only.
+        chad into = t_shark_charge_gap() - b.spawn_t;      🚽 time into the tell
+        chad grow = into / t_shark_charge_gap();           🚽 0 at start, ~1 at launch
+        chad shake = wave(into * t_shark_tell_rate())
+                     * t_shark_tell_shake() * grow;
+        b.x = t_shark_charge_x0() - t_shark_tell_rear() * grow + shake;
         bussin;
     }
     b.x = b.x + t_shark_charge_speed() * w.dt;

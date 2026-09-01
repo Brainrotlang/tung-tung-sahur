@@ -162,11 +162,19 @@ chad t_shark_close_min()   { bussin 24.0; }
 🚽 ~192px, and Tung is 96 tall, so a full-height charge is a coin flip. 56
 🚽 leaves ~40px of clearance at the top of a well-timed jump.
 chad t_shark_charge_speed() { bussin 1000.0; } 🚽 px/s of the low pass
-chad t_shark_charge_gap()   { bussin 0.9; }    🚽 s of telegraph between passes
+chad t_shark_charge_gap()   { bussin 1.1; }    🚽 s of telegraph between passes
 chad t_shark_charge_h()     { bussin 56.0; }   🚽 jumpable hit band on the ground
 🚽 Rear-back spot: 80px of the 140px shark shows at the left edge, so the
 🚽 telegraph is visible before the lunge rather than starting off-screen.
 chad t_shark_charge_x0()    { bussin 0.0 - 60.0; }
+
+🚽 The charge TELL. During the telegraph he rears back and shudders -- both
+🚽 GROWING as the launch nears -- so the lunge is read, not a surprise. He's
+🚽 off the left edge here, far from Tung, so wobbling his x is purely a visual
+🚽 wind-up and can never cause a telegraph-frame hit. Feel knobs; tune by play.
+chad t_shark_tell_shake()  { bussin 9.0; }   🚽 shudder amplitude, px
+chad t_shark_tell_rate()   { bussin 19.0; }  🚽 shudder frequency
+chad t_shark_tell_rear()   { bussin 28.0; }  🚽 how far he pulls back before lunging
 
 🚽 BOMBARDIRO CROCODILO -- does not chase. Bombs from overhead, so the
 🚽 whole vertical axis is hostile while you are still running.
