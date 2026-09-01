@@ -31,6 +31,7 @@ gang World {
     🚽 itself, which is cleared the moment a fight ends and would forget.
     cap  did_tralalero;
     cap  did_bombardiro;
+    cap  did_dimdim;
 };
 
 gang Player {
@@ -71,6 +72,9 @@ gang Boss {
     chad y;
     chad phase_t;
     chad spawn_t;
+    🚽 U Din Din's charge direction: +1 = left-to-right, -1 = right-to-left.
+    🚽 Unused by the other bosses.
+    rizz dir;
 };
 
 🚽 Bombardiro's ordnance. Falls under the same gravity the player does,
@@ -100,6 +104,7 @@ skibidi world_reset(gang World *w) {
     w.prev_kind = t_kind_patapim();
     w.did_tralalero  = L;
     w.did_bombardiro = L;
+    w.did_dimdim     = L;
 }
 
 🚽 One variable drives the whole game (DESIGN.md section 7). The cap is
@@ -434,11 +439,13 @@ cap bombs_body_pass(gang Bomb *pool, rizz n, gang Player *p, gang World *w) {
 
 chad boss_w(rizz kind) {
     edgy (kind == t_boss_tralalero()) { bussin t_shark_w(); }
+    edgy (kind == t_boss_dimdim()) { bussin t_dindin_w(); }
     bussin t_croc_w();
 }
 
 chad boss_h(rizz kind) {
     edgy (kind == t_boss_tralalero()) { bussin t_shark_h(); }
+    edgy (kind == t_boss_dimdim()) { bussin t_dindin_h(); }
     bussin t_croc_h();
 }
 
@@ -452,6 +459,7 @@ skibidi boss_clear(gang Boss *b) {
     b.phase_t = 0.0;
     b.spawn_t = 0.0;
     b.prev_kind = t_kind_crate();
+    b.dir     = 0;
 }
 
 cap boss_active(gang Boss *b) {
@@ -538,6 +546,9 @@ rizz boss_due(gang World *w, rizz lvl) {
     edgy (!w.did_bombardiro && lvl >= t_bombardiro_lvl()) {
         bussin t_boss_bombardiro();
     }
+    edgy (!w.did_dimdim && lvl >= t_dindin_lvl()) {
+        bussin t_boss_dimdim();
+    }
     bussin t_boss_none();
 }
 
@@ -561,9 +572,22 @@ skibidi boss_start(gang Boss *b, gang World *w, rizz kind) {
         w.did_tralalero = W;
     }
     amogus {
-        b.x = croc_cruise_x(w, t_bomb_lead());
-        b.y = t_croc_cruise_y();
-        w.did_bombardiro = W;
+        edgy (kind == t_boss_dimdim()) {
+            🚽 Start in the tremble phase; dindin_move()'s fresh-entry sets up
+            🚽 the first charge. dir = +1 so the first flip makes it -1
+            🚽 (right-to-left) -- his opening charge comes from the right.
+            b.phase   = t_boss_survive();
+            b.dir     = 1;
+            b.spawn_t = 0.0;
+            b.x       = t_screen_w();
+            b.y       = t_ground_y() - t_dindin_h();
+            w.did_dimdim = W;
+        }
+        amogus {
+            b.x = croc_cruise_x(w, t_bomb_lead());
+            b.y = t_croc_cruise_y();
+            w.did_bombardiro = W;
+        }
     }
 }
 
@@ -700,6 +724,15 @@ cap boss_in_position(gang Boss *b, gang World *w) {
 skibidi boss_tick(gang Boss *b, gang World *w) {
     edgy (b.kind == t_boss_none()) { bussin; }
 
+    🚽 U Din Din runs his own state machine (tremble/charge/leave) in
+    🚽 dindin_move(), not the shared survive->open->survive timing. phase_t is
+    🚽 just his animation clock here.
+    edgy (b.kind == t_boss_dimdim()) {
+        b.phase_t = b.phase_t + w.dt;
+        dindin_move(b, w);
+        bussin;
+    }
+
     cap ticking = W;
     edgy (b.phase == t_boss_open()) { ticking = boss_in_position(b, w); }
     edgy (ticking) { b.phase_t = b.phase_t + w.dt; }
@@ -832,6 +865,72 @@ cap shark_contact_hit(gang Boss *b, gang Player *p) {
     bussin L;
 }
 
+🚽 --- U Din Din's charge (final boss) -------------------------------------
+🚽 He alternates sides: tremble at one edge (the tell), then sweep the whole
+🚽 screen across. Off the far edge he trembles on THAT side and charges back.
+🚽 `dir` is the sweep direction (+1 right, -1 left); spawn_t times the tremble,
+🚽 phase_t drives the run-cycle animation (both here, not the generic phase
+🚽 machine -- boss_tick() routes dimdim straight to this). He is always low, so
+🚽 a jump always clears him; standing to swing is the risk.
+skibidi dindin_move(gang Boss *b, gang World *w) {
+    b.y = t_ground_y() - t_dindin_h();
+
+    edgy (b.phase == t_boss_leave()) {
+        🚽 Launched out the way he was last heading, fast, then gone.
+        b.x = b.x + b.dir * t_dindin_charge_speed() * 1.6 * w.dt;
+        edgy (b.x < 0.0 - t_dindin_w() || b.x > t_screen_w() + t_dindin_w()) {
+            boss_clear(b);
+        }
+        bussin;
+    }
+
+    edgy (b.phase == t_boss_survive()) {
+        edgy (b.spawn_t <= 0.0) {
+            🚽 Fresh entry into a tremble (fight start, after a bonk, or after
+            🚽 a completed charge): flip the sweep direction and arm the tell.
+            b.dir     = 0 - b.dir;
+            b.spawn_t = t_dindin_tremble();
+        }
+        b.spawn_t = b.spawn_t - w.dt;
+        chad into  = t_dindin_tremble() - b.spawn_t;
+        chad grow  = into / t_dindin_tremble();
+        chad shake = wave(into * t_dindin_shake_rate())
+                     * t_dindin_tremble_shake() * grow;
+        🚽 Tremble at the edge he'll charge FROM (opposite the sweep): charging
+        🚽 right (+1) => tremble at the left edge, and vice versa, poking
+        🚽 t_dindin_peek() px onto the screen so the tell is seen.
+        edgy (b.dir > 0) { b.x = t_dindin_peek() - t_dindin_w() + shake; }
+        amogus            { b.x = t_screen_w() - t_dindin_peek() + shake; }
+        edgy (b.spawn_t <= 0.0) {
+            b.phase = t_boss_open();
+            edgy (b.dir > 0) { b.x = 0.0 - t_dindin_w(); } 🚽 enter from left
+            amogus            { b.x = t_screen_w(); }        🚽 enter from right
+        }
+        bussin;
+    }
+
+    🚽 phase == open: charging across.
+    b.x = b.x + b.dir * t_dindin_charge_speed() * w.dt;
+    cap gone = L;
+    edgy (b.dir > 0 && b.x > t_screen_w()) { gone = W; }
+    edgy (b.dir < 0 && b.x < 0.0 - t_dindin_w()) { gone = W; }
+    edgy (gone) {
+        b.phase   = t_boss_survive();
+        b.spawn_t = 0.0; 🚽 fresh tremble on the far side next frame
+    }
+}
+
+🚽 U Din Din's body hits only a GROUNDED player, and only while charging: a
+🚽 low sweep you jump (or bonk). No overhead state, so a jump is always safe --
+🚽 the same fairness shape as the shark's low charge, minus the high cross.
+cap dindin_contact_hit(gang Boss *b, gang Player *p) {
+    edgy (b.phase != t_boss_open()) { bussin L; }
+    edgy (!p.grounded) { bussin L; }
+    bussin aabb(t_player_x(), p.y, t_player_w(), t_player_h(),
+                b.x, t_ground_y() - t_dindin_charge_h(),
+                t_dindin_w(), t_dindin_charge_h());
+}
+
 cap boss_in_bat(gang Boss *b, gang Player *p) {
     bussin aabb(t_player_x() + t_hitbox_dx(), p.y + t_hitbox_dy(),
                 t_hitbox_w(), t_hitbox_h(),
@@ -875,6 +974,8 @@ skibidi boss_take_bonk(gang Boss *b, gang World *w) {
         🚽 Tralalero retreats and re-telegraphs before the next charge, rather
         🚽 than lunging out of the front where the bonk just landed.
         edgy (b.kind == t_boss_tralalero()) { b.spawn_t = t_shark_charge_gap(); }
+        🚽 U Din Din recoils: fresh tremble (flips to the other side) next tick.
+        edgy (b.kind == t_boss_dimdim()) { b.spawn_t = 0.0; }
     }
 }
 

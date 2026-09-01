@@ -45,6 +45,12 @@ skibidi main {
     yapping("after start, shark due again %d", boss_due(&wd, 8));
     yapping("croc still due               %d", boss_due(&wd, 8));
 
+    🚽 U Din Din is the final boss: only due once the other two are done, and
+    🚽 only at his level. Mark both prior flags and check lvl 7 vs 8.
+    wd.did_bombardiro = W;
+    yapping("dindin at lvl 7 %d, at lvl 8 %d",
+            boss_due(&wd, 7), boss_due(&wd, 8));
+
     🚽 --- the shared phase machine --------------------------------------
     yapping("-- phases --");
     yapping("start phase %d bonks %d owns_spawner %b vulnerable %b",
@@ -505,7 +511,7 @@ skibidi main {
     🚽   happen. shark_contact_hit()'s phase split is what guarantees it.
     yapping("-- no unavoidable contact --");
 
-    flex (rizz which = 1; which <= 2; which = which + 1) {
+    flex (rizz which = 1; which <= 3; which = which + 1) {
         boss_clear(&bo);
         world_reset(&wd);
         player_reset(&pl);
@@ -539,6 +545,17 @@ skibidi main {
                     unfair = unfair + 1;
                 }
             }
+            🚽 U Din Din fairness: same probe. He only hits a grounded player
+            🚽 (low charge), so an apex player is always safe -- unfair == 0.
+            edgy (which == t_boss_dimdim()) {
+                pg.grounded = W;
+                pg.y = t_ground_y() - t_player_h();
+                pa.grounded = L;
+                pa.y = t_ground_y() - t_player_h() - 190.0;
+                edgy (dindin_contact_hit(&bo, &pg) && dindin_contact_hit(&bo, &pa)) {
+                    unfair = unfair + 1;
+                }
+            }
 
             🚽 The smallest gap between Tung's back and the boss's nose.
             🚽 Negative means the boss is in FRONT of him, which is where an
@@ -569,7 +586,7 @@ skibidi main {
             f = f + 1;
             up = boss_active(&bo);
         }
-        edgy (which == t_boss_tralalero()) {
+        edgy (which == t_boss_tralalero() || which == t_boss_dimdim()) {
             yapping("boss %d: %d frames, %d open frames, un-dodgeable frames %d (must be 0)",
                     which, f, openings, unfair);
         }

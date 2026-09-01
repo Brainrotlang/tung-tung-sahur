@@ -46,6 +46,7 @@ skibidi main {
     rizz bg_fore   = draw_load("assets/bg_fore.png");
     rizz tex_shark = draw_load("assets/tralalero.png");
     rizz tex_croc  = draw_load("assets/bombardiro.png");
+    rizz tex_dindin = draw_load("assets/dindin.png");
     rizz tex_bomb  = draw_load("assets/bomb.png");
     rizz tex_blast = draw_load("assets/blast.png");
     rizz music     = plat_music_open("assets/music/tung-tung.ogg");
@@ -283,6 +284,15 @@ skibidi main {
                         edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
                     }
                 }
+                🚽 U Din Din's charging body: a low sweep. Grounded contact
+                🚽 hurts (jump it, or bonk him); airborne is always safe.
+                edgy (bo.kind == t_boss_dimdim() && player_vulnerable(&pl)) {
+                    edgy (dindin_contact_hit(&bo, &pl)) {
+                        player_take_hit(&pl, &wd);
+                        boss_note_hit(&bo);
+                        edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
+                    }
+                }
             }
         }
 
@@ -386,7 +396,8 @@ skibidi main {
 
         cap boss_shown = boss_active(&bo);
         edgy (boss_shown) {
-            draw_boss(bo.x, bo.y, bo.kind, bo.phase, tex_shark, tex_croc);
+            draw_boss(bo.x, bo.y, bo.kind, bo.phase, bo.phase_t, bo.dir,
+                      tex_shark, tex_croc, tex_dindin);
         }
 
         draw_hearts(pl.hearts);
