@@ -152,6 +152,12 @@ skibidi main {
                 rizz due = boss_due(&wd, lvl);
                 edgy (due != t_boss_none()) {
                     boss_start(&bo, &wd, due);
+                    🚽 Clear the field: a boss is a duel, not chaos on top of
+                    🚽 chaos. Tralalero's own body is the threat now; the croc
+                    🚽 then spawns its bombs into an empty screen.
+                    pool_clear(&obstacles[0], MAX_OBS);
+                    pool_clear(&enemies[0], MAX_EN);
+                    bombs_clear(&bombs[0], MAX_BMB);
                     plat_sfx_play(sfx_bruh);
                     yapping("boss %d incoming at lvl %d (score %d)",
                             due, lvl, score);
@@ -172,32 +178,18 @@ skibidi main {
         🚽 diving, and he would release it the frame he got back into
         🚽 position: the same bad drop, moved. Frozen, he finishes the
         🚽 interval he was part-way through instead.
+        🚽 Croc only. Tralalero no longer spawns a barrage -- his own charging
+        🚽 body is the threat, and shark_charge_move() owns bo.spawn_t as its
+        🚽 charge timer, so main must not touch it during his fight.
         cap may_spawn = boss_may_spawn(&bo, &wd);
-        edgy (in_run && boss_up && may_spawn) {
+        edgy (in_run && boss_up && may_spawn && bo.kind == t_boss_bombardiro()) {
             bo.spawn_t = bo.spawn_t - wd.dt;
             edgy (bo.spawn_t <= 0.0) {
-                edgy (bo.kind == t_boss_tralalero()) {
-                    🚽 Obstacles only. The shark's phase is pure survival,
-                    🚽 so there is nothing to bonk but the shark.
-                    wd.seed = rng_next(wd.seed);
-                    rizz k = t_kind_crate();
-                    edgy (wd.seed % 2 == 0) { k = t_kind_post(); }
-                    rizz slot = pool_free_slot(&obstacles[0], MAX_OBS);
-                    edgy (slot >= 0) { ent_spawn(&obstacles[slot], k); }
-
-                    🚽 Through the SAME clamp the world spawner uses. A
-                    🚽 boss does not get to spawn something unjumpable, and
-                    🚽 boss_spawn_gap() is a function so a test can prove it.
-                    bo.spawn_t   = boss_spawn_gap(&bo, k);
-                    bo.prev_kind = k;
-                }
-                amogus {
-                    rizz slot = bombs_free_slot(&bombs[0], MAX_BMB);
-                    edgy (slot >= 0) { bomb_spawn(&bombs[slot], &bo); }
-                    🚽 Bombs are not a jump obstacle, so they have their own
-                    🚽 cadence rather than borrowing the ground one.
-                    bo.spawn_t = t_bomb_interval();
-                }
+                rizz slot = bombs_free_slot(&bombs[0], MAX_BMB);
+                edgy (slot >= 0) { bomb_spawn(&bombs[slot], &bo); }
+                🚽 Bombs are not a jump obstacle, so they have their own
+                🚽 cadence rather than borrowing the ground one.
+                bo.spawn_t = t_bomb_interval();
             }
         }
 
@@ -278,13 +270,19 @@ skibidi main {
                         plat_sfx_play(sfx_tung);
                     }
                 }
-                🚽 No body-contact pass. The player is pinned at
-                🚽 t_player_x() and can only jump, so a boss that
-                🚽 positions ITSELF into them is damage nobody can dodge --
-                🚽 see boss_hits_body(), which is now an invariant the unit
-                🚽 test asserts is never true rather than a damage source.
-                🚽 Each boss hurts through what it produces: Tralalero's
-                🚽 obstacle barrage, Bombardiro's bombs.
+                🚽 The croc still has no body-contact pass -- it never
+                🚽 positions itself into Tung (boss_hits_body invariant); it
+                🚽 hurts through its bombs. Tralalero, though, IS the threat:
+                🚽 shark_contact_hit() fires only in a dodgeable state (jump
+                🚽 the low charge, duck the high cross), so contact damage
+                🚽 here is always something the player could have avoided.
+                edgy (bo.kind == t_boss_tralalero() && player_vulnerable(&pl)) {
+                    edgy (shark_contact_hit(&bo, &pl)) {
+                        player_take_hit(&pl, &wd);
+                        boss_note_hit(&bo);
+                        edgy (pl.hearts > 0) { plat_sfx_play(sfx_damage); }
+                    }
+                }
             }
         }
 

@@ -553,8 +553,11 @@ skibidi boss_start(gang Boss *b, gang World *w, rizz kind) {
     🚽 Enter from where he lives, so the approach is visible rather than a
     🚽 pop-in: the shark from off the left edge, the croc from overhead.
     edgy (kind == t_boss_tralalero()) {
-        b.x = t_shark_lurk_x();
+        🚽 Start reared back at the left edge with a telegraph before the
+        🚽 first charge -- spawn_t is the charge timer here, not a spawner one.
+        b.x = t_shark_charge_x0();
         b.y = t_ground_y() - t_shark_h();
+        b.spawn_t = t_shark_charge_gap();
         w.did_tralalero = W;
     }
     amogus {
@@ -701,7 +704,20 @@ skibidi boss_tick(gang Boss *b, gang World *w) {
     edgy (b.phase == t_boss_open()) { ticking = boss_in_position(b, w); }
     edgy (ticking) { b.phase_t = b.phase_t + w.dt; }
 
-    boss_move(b, w);
+    🚽 Tralalero's survive phase is his own charge loop, not the generic
+    🚽 approach-to-target move. Every other case (his opening cross, his
+    🚽 leave, and the whole croc fight) still uses boss_move().
+    edgy (b.kind == t_boss_tralalero() && b.phase == t_boss_survive()) {
+        shark_charge_move(b, w);
+    }
+    amogus {
+        edgy (b.kind == t_boss_tralalero() && b.phase == t_boss_open()) {
+            shark_open_move(b, w);
+        }
+        amogus {
+            boss_move(b, w);
+        }
+    }
 
     edgy (b.phase == t_boss_leave()) {
         edgy (b.phase_t >= t_boss_leave_time()) { boss_clear(b); }
@@ -712,6 +728,14 @@ skibidi boss_tick(gang Boss *b, gang World *w) {
         edgy (b.phase_t >= t_boss_survive_time()) {
             b.phase   = t_boss_open();
             b.phase_t = 0.0;
+            🚽 Tralalero winds up before the lunge: retreat behind Tung and
+            🚽 seed the vertical-bob tell (spawn_t), which shark_open_move()
+            🚽 plays before crossing to the front.
+            edgy (b.kind == t_boss_tralalero()) {
+                b.x       = t_shark_charge_x0();
+                b.y       = t_ground_y() - t_shark_h();
+                b.spawn_t = t_shark_lunge_tell();
+            }
         }
         bussin;
     }
@@ -719,7 +743,93 @@ skibidi boss_tick(gang Boss *b, gang World *w) {
     edgy (b.phase_t >= t_boss_open_time()) {
         b.phase   = t_boss_survive();
         b.phase_t = 0.0;
+        🚽 Missed opening: re-telegraph the next charge (Tralalero only).
+        edgy (b.kind == t_boss_tralalero()) { b.spawn_t = t_shark_charge_gap(); }
     }
+}
+
+🚽 --- Tralalero's charge (survive phase) ---------------------------------
+🚽 He waits reared at the left edge (spawn_t counting down = the telegraph),
+🚽 then sweeps right across the whole screen, low on the ground. The player
+🚽 jumps the pass. Off the right edge he loops back to the start and rears
+🚽 again. Uses only b.x, b.y and b.spawn_t -- no struct change, and no world
+🚽 spawner (main clears the field and spawns nothing during his fight).
+skibidi shark_charge_move(gang Boss *b, gang World *w) {
+    b.y = t_ground_y() - t_shark_h();
+    edgy (b.spawn_t > 0.0) {
+        b.spawn_t = b.spawn_t - w.dt;
+        🚽 Anticipation tell: rear back + shudder, both harder as the launch
+        🚽 nears (grow runs 0 -> 1 across the telegraph). He is off the left
+        🚽 edge, far from Tung, so this x wobble is cosmetic wind-up only.
+        chad into = t_shark_charge_gap() - b.spawn_t;      🚽 time into the tell
+        chad grow = into / t_shark_charge_gap();           🚽 0 at start, ~1 at launch
+        chad shake = wave(into * t_shark_tell_rate())
+                     * t_shark_tell_shake() * grow;
+        b.x = t_shark_charge_x0() - t_shark_tell_rear() * grow + shake;
+        bussin;
+    }
+    b.x = b.x + t_shark_charge_speed() * w.dt;
+    edgy (b.x > t_screen_w()) {
+        b.x       = t_shark_charge_x0();
+        b.spawn_t = t_shark_charge_gap();
+    }
+}
+
+🚽 Tralalero's open phase. First a VERTICAL wind-up (spawn_t, seeded on the
+🚽 survive->open flip): he waits behind Tung's column and bobs up and down,
+🚽 harder as it runs down, telegraphing the lunge. Then boss_move() carries
+🚽 the actual cross to the front -- rising over Tung (the "don't jump" beat)
+🚽 and parking at t_shark_open_x() for the bonk window.
+skibidi shark_open_move(gang Boss *b, gang World *w) {
+    edgy (b.spawn_t > 0.0) {
+        b.spawn_t = b.spawn_t - w.dt;
+        chad into = t_shark_lunge_tell() - b.spawn_t;
+        chad grow = into / t_shark_lunge_tell();
+        🚽 (0.5 + 0.5*wave) keeps the bob ABOVE the ground rest -- up and back,
+        🚽 never clipping down through the floor.
+        chad bob  = t_shark_lunge_bob() * grow
+                    * (0.5 + 0.5 * wave(into * t_shark_tell_rate()));
+        b.x = t_shark_charge_x0();
+        b.y = t_ground_y() - t_shark_h() - bob;
+        bussin;
+    }
+    boss_move(b, w);
+}
+
+🚽 The low charge's collision box: a jumpable band (t_shark_charge_h) on the
+🚽 ground under the shark, not his full sprite -- see t_shark_charge_h().
+cap shark_low_hits(gang Boss *b, gang Player *p) {
+    bussin aabb(t_player_x(), p.y, t_player_w(), t_player_h(),
+                b.x, t_ground_y() - t_shark_charge_h(),
+                t_shark_w(), t_shark_charge_h());
+}
+
+🚽 The overhead cross box: his full sprite, up at head height during the
+🚽 lunge to the front (b.y raised above the ground line).
+cap shark_high_hits(gang Boss *b, gang Player *p) {
+    bussin aabb(t_player_x(), p.y, t_player_w(), t_player_h(),
+                b.x, b.y, t_shark_w(), t_shark_h());
+}
+
+🚽 Tralalero's body is the threat (unlike the croc, whose body never touches
+🚽 -- see boss_hits_body). But ONLY in a dodgeable state, and the two states
+🚽 are phase-separated so there is never a frame where both would hit:
+🚽   survive: he charges LOW  -> jump it   (grounded + overlap = hit)
+🚽   open:    he crosses HIGH -> duck it   (airborne + overlap = hit),
+🚽            and only while raised mid-cross; once parked in front at ground
+🚽            level he no longer overlaps Tung's column, so the bonk window is
+🚽            contact-safe.
+🚽 That "always exactly one safe input during an overlap" is the fairness
+🚽 invariant unit_boss asserts, replacing the old "body never overlaps at all".
+cap shark_contact_hit(gang Boss *b, gang Player *p) {
+    edgy (b.phase == t_boss_survive()) {
+        bussin p.grounded && shark_low_hits(b, p);
+    }
+    edgy (b.phase == t_boss_open()) {
+        cap crossing = b.y < t_ground_y() - t_shark_h() - 1.0;
+        bussin crossing && !p.grounded && shark_high_hits(b, p);
+    }
+    bussin L;
 }
 
 cap boss_in_bat(gang Boss *b, gang Player *p) {
@@ -762,6 +872,9 @@ skibidi boss_take_bonk(gang Boss *b, gang World *w) {
     }
     amogus {
         b.phase = t_boss_survive();
+        🚽 Tralalero retreats and re-telegraphs before the next charge, rather
+        🚽 than lunging out of the front where the bonk just landed.
+        edgy (b.kind == t_boss_tralalero()) { b.spawn_t = t_shark_charge_gap(); }
     }
 }
 

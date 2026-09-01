@@ -601,38 +601,67 @@ is a table rather than a claim.
 
 ### 12.1 TRALALERO TRALALA — LVL 3
 
-The three-legged shark, characterised by speed, chases from the left. The game
-becomes pure obstacle survival: an unbroken sequence of jump obstacles with no
-bonkable enemies, the shark closing a little with each mistake.
+The three-legged shark, characterised by speed. When he arrives the **field is
+cleared** — no obstacles, no Patapim (`main` clears the pools on `boss_start`).
+It is a duel, and the shark's **own body is the threat**. That is the one place
+the game breaks the §12.3 rule below (a boss body never touches Tung), and it
+earns the exception by being *dodgeable*: every contact has a safe input.
 
-**"Unbroken", not "denser".** The boss's gaps go through the same
-`fair_clamp()` every other spawn does, because §7.3's rule — *any spawn the
-player cannot avoid is a bug, not a difficulty setting* — is not suspended for
-a boss. What makes the phase hard is that **every** obstacle needs a jump, with
-no Patapim to break the rhythm and a shark closing behind on each mistake.
+The fight is a three-beat loop:
 
-It shipped the other way and the fight was unclearable. `t_boss_gap()` was a
-flat 0.72s that `main` set directly, never calling `fair_clamp()` — against a
-jump airtime of `2 × |t_jump_v()| / t_gravity()` = **0.769s**. The next obstacle
-arrived 49ms *before* the player landed from the last one, and since the boss
-spawns only crates and posts, every single gap was jump-to-jump. There was no
-frame on which the jump could be made.
-
-`boss_spawn_gap()` exists as a function for one reason: a unit test can call it
-and a line inside `main`'s frame loop cannot. `unit_boss.brainrot` now sweeps
-every kind pair and asserts each jump-to-jump gap exceeds the airtime, and
-`unit_curve.brainrot` asserts the same of every gap the world spawner can
-produce.
+1. **Charge (survive phase).** He rears at the left edge, then sweeps **low**
+   across the screen from behind. You **jump** the pass. Off the right edge he
+   loops back and charges again.
+2. **Lunge to the front (open phase).** After `t_boss_survive_time()` he
+   retreats behind you and crosses **high**, over your head, to park in front.
+   While he is crossing over your column you must **stay grounded** — jumping
+   rises into him. Once parked he no longer overlaps your column.
+3. **Counter.** Parked in front, he's in bat range: **swing**. Three bonks
+   (`t_boss_bonks()`) and he's launched; a missed window costs time, not health,
+   and he charges again.
 
 ```
-                         🦈👟  ← closes on every obstacle you clip
- 🪵    █       █
- /|\  █ █     █ █
-_/ \____________________________
+   charge (jump it)                 lunge to front (don't jump into the cross)
+     🦈➡️                                     🦈↘
+ 🧍           →   ...   →     🧍  🦈   →   🦈🧍   → 🧍 🦈  ← swing here
+_/ \______________________________________________________
 ```
 
-After each survival phase he over-commits and drifts into bat range for a
-1.0 s window. Three of those and he's out. Then the run resumes, faster.
+**Two attacks, opposite answers — that is the skill.** Jump is the runner's
+reflex verb, so making it both the right move (low charge) and the wrong move
+(high cross) is the whole test. It is only fair because the two are
+**phase-separated**: `shark_contact_hit()` (`sim.brainrot`) hurts a *grounded*
+player only during the low charge and an *airborne* player only during the high
+cross, and the two never coincide. So on every frame there is exactly one safe
+vertical position. `unit_boss.brainrot` asserts this directly — it probes a
+grounded stand-in and an apex stand-in each frame and counts **un-dodgeable
+frames (must be 0)**, the invariant that replaces the croc's "body never
+touches" one *for the shark specifically*.
+
+**The charge is jumpable by construction.** Jump apex is
+`t_jump_v()² / (2·t_gravity())` ≈ **192 px** and Tung is 96 px tall, so a
+full-height (96 px) charge would be a coin flip. `t_shark_charge_h()` is
+therefore **56 px** — a low hit-band under the sprite, leaving ~40 px of
+clearance at the top of a well-timed jump.
+
+**Both attacks are telegraphed, because a body threat with no wind-up is just an
+unfair hit.** The tells are deliberately *different shapes* so they read as the
+two different answers:
+
+- **Charge:** a **horizontal** shudder plus a rear-back at the left edge,
+  intensifying as the launch nears (`t_shark_tell_shake/rate/rear`, over
+  `t_shark_charge_gap()`).
+- **Lunge:** a **vertical** bob in place — up and down — before the cross
+  (`t_shark_lunge_tell/bob`). Both tells happen off to the left, clear of Tung's
+  column, so they are pure wind-up and cannot themselves land a hit.
+
+This replaced an earlier design where the shark loomed behind and the fight was
+a `fair_clamp()`'d obstacle *barrage* (crates and posts you jumped while he
+closed on each mistake). The barrage was fair but impersonal — the shark was a
+spawner, not an opponent. Making his own body the hazard turns "survive his
+spawns" into "read *him*", and it generalises: the charge/counter loop is built
+to **recur and escalate** in the endless late game (faster charges, shorter
+counter windows) rather than being a one-shot.
 
 ### 12.2 BOMBARDIRO CROCODILO — LVL 6
 
@@ -711,26 +740,33 @@ column.** Both were wrong, and each on its own made the fight an instant kill:
   the foliage layer, half over the ground — which is a washed-out colour across
   a boundary between two backgrounds, and could not be read.
 
-### 12.3 Neither boss deals contact damage
+### 12.3 Contact damage must always be dodgeable
 
-The player is pinned at `t_player_x()` and can only jump. A boss that
-*positions itself* is therefore not dodgeable, and contact damage from one is
-damage nobody can avoid — which is not difficulty, it is a coin the game takes.
+The player is pinned at `t_player_x()` and can only jump. So the rule is not
+"a boss never touches Tung" — it is "**every** contact leaves a safe input".
+The two bosses satisfy it in opposite ways.
 
-Both fights shipped with exactly that bug and it made them unwinnable. The
-openings have to be in **front** of the player, because the bat only reaches
-forward (`t_hitbox_dx()` onward). They were placed to overlap the bat and
-nothing else was checked — and a 140px shark at `x = 150` spans 150–290, which
-covers the bat box *and* Tung's own 200–248. So every opening cost a heart,
-three openings win a fight, and the player has three hearts.
+Both fights *shipped* violating it, and it made them unwinnable. The openings
+have to be in **front** of the player, because the bat only reaches forward
+(`t_hitbox_dx()` onward). They were placed to overlap the bat and nothing else
+was checked — a 140px shark at `x = 150` spans 150–290, covering the bat box
+*and* Tung's own 200–248. Every opening cost a heart, three openings win, three
+hearts. Unwinnable, unavoidable, and green.
 
-What each boss damages the player *with* is the thing it produces and the player
-can read coming: Tralalero's obstacle barrage, Bombardiro's bombs. Those are
-dodgeable, so those are the fight. `boss_hits_body()` survives as an
-**invariant** — `test/unit_boss.brainrot` replays both fights and asserts it is
-false on every frame.
+- **Bombardiro never positions its body into Tung at all.** It hurts only
+  through its bombs, which are dodgeable and readable. `boss_hits_body()`
+  survives as an **invariant for the croc**: `test/unit_boss.brainrot` replays
+  its fight and asserts the body is never in contact, on any frame. This is
+  what forces the movement rule in §12.4.
+- **Tralalero's body *is* the threat** (§12.1), so for the shark the invariant
+  is not "no contact" but "no *un-dodgeable* contact". Contact is phase-split
+  by `shark_contact_hit()` — grounded-only during the low charge, airborne-only
+  during the high cross — so a safe vertical position always exists. The test
+  asserts **un-dodgeable frames == 0** over the shark's fight: never a frame on
+  which both a grounded and an airborne player would be hit.
 
-That invariant is what forces the movement rule in §12.4.
+Same principle, two shapes: nothing hurts you that a correct input could not
+have avoided.
 
 ### 12.4 How it is built
 
@@ -749,17 +785,19 @@ would ease in and never quite arrive, and the opening would land at a different
 `unit_boss.brainrot` asserts the boss actually *reaches* bat range inside the
 window, since the fight is unwinnable if it does not.
 
-**The leap leads the crossing.** Tralalero chases from behind and his opening is
-in front, so he has to cross Tung — and per §12.3 he must never occupy Tung's
-space while doing it. Two rules get that:
+**The leap leads the crossing.** Tralalero's opening is in front and he comes
+from behind, so his lunge (`shark_open_move()` → `boss_move()`) has to cross
+Tung. Two rules shape that crossing:
 
 1. `boss_move()` moves **vertically first**.
 2. `boss_may_advance()` gates every horizontal move on either being clear above
    Tung's head, or already being on the side it is heading for.
 
-So he rises in place, crosses overhead, and comes down on the far side — and
-the same rule carries the return trip and the launched exit of a beaten boss,
-both of which slid straight back through the player before it existed.
+So he rises in place, crosses **overhead**, and comes down in front. For the
+croc this keeps a harmless pass clear of Tung; for the shark that overhead pass
+is exactly the "don't jump into the cross" beat (§12.1) — the geometry is the
+same, its meaning is the threat. The same rule carries the launched exit of a
+beaten boss, which slid straight back through the player before it existed.
 
 Moving both axes together cannot work: at `t_boss_move_speed()` a boss climbs
 exactly as fast as it advances, so it is only half-way up when it arrives. Nor
@@ -767,9 +805,10 @@ can the airborne test be "while `boss_may_advance()` is false" — that is
 circular. Rising makes it true, which returns the target to the ground, which
 drops him, which makes it false. He hovers and never crosses.
 
-Tralalero's closing is clamped by `boss_lurk_x()` to stop `t_shark_close_min()`
-short of Tung's back, so it stays dread rather than becoming damage however many
-mistakes are made or however many hearts a future `t_hearts_max()` hands out.
+(The shark's *survive* phase is its own `shark_charge_move()`, not this
+approach-to-target logic — the low sweep and its horizontal tell. `boss_move()`
+carries only his opening lunge and his exit. The old lurk-and-close design —
+`boss_lurk_x()`, `t_shark_close_*` — is no longer part of the fight.)
 
 A missed opening costs time, not health: the phase returns to `survive` and the
 cycle repeats. The fight is long rather than unfair.

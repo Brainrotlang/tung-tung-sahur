@@ -21,6 +21,10 @@ skibidi main {
     gang World wd;
     gang Player pl;
     gang Boss bo;
+    🚽 Two stand-ins for the fairness probe below: one grounded, one at jump
+    🚽 apex. Only .grounded and .y are read (by shark_contact_hit).
+    gang Player pg;
+    gang Player pa;
 
     world_reset(&wd);
     player_reset(&pl);
@@ -484,17 +488,21 @@ skibidi main {
     yapping("fight over in %d frames, %d swing attempts", frames, swings);
     yapping("boss kind %d, hearts %d, bonus %d", bo.kind, pl.hearts, wd.bonus);
 
-    🚽 --- the invariant that was missing -------------------------------------
+    🚽 --- the fairness invariant --------------------------------------------
     🚽
-    🚽 The fight above passed while the game was unwinnable, because it only
-    🚽 ever asked whether the bat could reach the boss. It never asked whether
-    🚽 the BOSS could reach the player -- and both openings were positioned on
-    🚽 top of Tung, so every opening cost a heart, three openings win, three
-    🚽 hearts. Unwinnable, and unavoidable, and green.
+    🚽 The player is pinned at t_player_x() and can only jump, so the rule is:
+    🚽 EVERY frame must leave a safe vertical position. Two bosses, two shapes
+    🚽 of the same rule:
     🚽
-    🚽 So: replay both fights and assert boss_hits_body() is false on every
-    🚽 single frame. The player is pinned at t_player_x() and can only jump;
-    🚽 anything that positions itself into them is damage nobody can dodge.
+    🚽   Bombardiro never positions its BODY into Tung at all -- it hurts only
+    🚽   through dodgeable bombs -- so for the croc, boss_hits_body() must be
+    🚽   false on every frame (the original invariant, unchanged).
+    🚽
+    🚽   Tralalero's body IS the threat: he charges low (jump it) and crosses
+    🚽   high (duck it). That is fair only if the two never coincide -- so the
+    🚽   probe hits a grounded stand-in AND an apex stand-in each frame, and an
+    🚽   "un-dodgeable frame" (both hit at once, no safe input) must never
+    🚽   happen. shark_contact_hit()'s phase split is what guarantees it.
     yapping("-- no unavoidable contact --");
 
     flex (rizz which = 1; which <= 2; which = which + 1) {
@@ -505,6 +513,7 @@ skibidi main {
         boss_start(&bo, &wd, which);
 
         rizz touches = 0;
+        rizz unfair = 0;
         rizz openings = 0;
         rizz worst_hits = 0;
         chad nearest = 99999.0;
@@ -518,6 +527,18 @@ skibidi main {
 
             cap touching = boss_hits_body(&bo, &pl);
             edgy (touching) { touches = touches + 1; }
+
+            🚽 Tralalero fairness: would BOTH a grounded and an apex player be
+            🚽 hit this frame? If so there was no safe input -- must never be.
+            edgy (which == t_boss_tralalero()) {
+                pg.grounded = W;
+                pg.y = t_ground_y() - t_player_h();
+                pa.grounded = L;
+                pa.y = t_ground_y() - t_player_h() - 190.0;
+                edgy (shark_contact_hit(&bo, &pg) && shark_contact_hit(&bo, &pa)) {
+                    unfair = unfair + 1;
+                }
+            }
 
             🚽 The smallest gap between Tung's back and the boss's nose.
             🚽 Negative means the boss is in FRONT of him, which is where an
@@ -548,8 +569,14 @@ skibidi main {
             f = f + 1;
             up = boss_active(&bo);
         }
-        yapping("boss %d: %d frames, %d open frames, body contacts %d (must be 0)",
-                which, f, openings, touches);
+        edgy (which == t_boss_tralalero()) {
+            yapping("boss %d: %d frames, %d open frames, un-dodgeable frames %d (must be 0)",
+                    which, f, openings, unfair);
+        }
+        amogus {
+            yapping("boss %d: %d frames, %d open frames, body contacts %d (must be 0)",
+                    which, f, openings, touches);
+        }
         🚽 bo.hits is read from worst_hits, not the boss: the loop exits
         🚽 after boss_clear() has zeroed it.
         yapping("        nose got within %.0fpx of Tung's back (negative = in front)",
