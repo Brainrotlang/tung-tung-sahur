@@ -131,6 +131,17 @@ CHARACTERS = {
     "dindin":      ("dimdim", ["dindin1.png", "dindin2.png", "dindin3.png",
                                "dindin4.png", "dindin5.png", "dindin6.png"], 96),
 
+    # LA GRANDE COMBINASION -- the true final boss (12.6). A 5-frame
+    # windup->swing strip in FILENAME order: attack1 (bat low, mid-stride)
+    # through attack5 (bat raised overhead). draw_combinasion() holds frame 4
+    # for the windup, sweeps 4->0 for the swing, and rests on 0 in recovery.
+    # He faces RIGHT natively and is mirrored when he faces left, like U Din
+    # Din. Height t_combi_h(); the frames are already single characters on a
+    # magenta key, so no JPEG rim -- but the same key handles the family.
+    "combinacion": ("combinacion",
+                    ["attack1.png", "attack2.png", "attack3.png",
+                     "attack4.png", "attack5.png"], 168),
+
     "bomb":        ("bombardino", ["bomb.jpg"], 26),
     "blast":       ("bombardino", ["blast.jpg"], 34),
 
@@ -148,6 +159,7 @@ GROUPS = {
     "tralalero": ["tralalero"],
     "bombardiro": ["bombardiro"],
     "dindin": ["dindin"],
+    "combinacion": ["combinacion"],
     "bomb": ["bomb"],
     "blast": ["blast"],
     "crate": ["crate"],

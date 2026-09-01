@@ -94,3 +94,9 @@ boss 2: opening 105 frames, in bat reach 68 of them (1.13s)
    4 hits -> lurk x     36, nose    176, Tung's back 200
    8 hits -> lurk x     36, nose    176, Tung's back 200
   12 hits -> lurk x     36, nose    176, Tung's back 200
+-- La Grande Combinasion --
+fight over in 454 frames, 3 bonks landed
+hearts left 3 (a clean win keeps all 3)
+boss cleared: W
+the swing is a real threat (grounded-hit frames > 0): W
+un-dodgeable frames 0 (must be 0)

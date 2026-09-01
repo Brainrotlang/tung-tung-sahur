@@ -957,6 +957,73 @@ the order `main` calls it. All three bosses were additionally verified in the
 real frame loop by temporarily lowering the thresholds. The higher LVL 9
 ceiling does not touch the headless tape either.
 
+### 12.6 LA GRANDE COMBINASION — the true final
+
+U Din Din is the *story* cap; Combinasion is what is behind it. He wears every
+other boss at once — the shark on his back, the cactus, the elephant, the frog
+on a stopwatch, the lobster, the tire — and swings the same bat Tung does. He is
+the developer. He triggers the moment U Din Din dies: `boss_due()` returns him
+on `did_dimdim && !did_combinasion` at LVL 9, so the run the player thought they
+had won just keeps going.
+
+**The reveal (§12.6.1) ships.** On the frame U Din Din dies, `main` enters a
+frozen, timed cinematic (`in_reveal`, driven by `reveal_t` against the
+`t_reveal_*` timeline) instead of starting the fight: the normal track plays on
+for ~2 s so the run seems to continue, then `plat_music_stop()` cuts it
+mid-stream, the sky drains to grey (`draw_sky`'s new `drain` ramp), the HUD
+flickers and holds off, and after a silent gap he walks in from the right; at
+full silhouette the name card shows and `finalboss.ogg` detonates as the fight
+goes live. Beating him ends the run in **`t_state_win()`** — *YOU BEAT THE
+DEVELOPER / SAHUR SAVED* — rather than dropping back into an endless run. The
+whole cinematic is gated behind LVL 9 + `did_dimdim`, which the headless tape
+never reaches, so the golden run is untouched.
+
+**One moveset, one new rule.** He is the one fight that unpins Tung: `Player.x`
+becomes live (`LEFT/A`, `RIGHT/D`, clamped to `t_combi_arena_l/r()`), where every
+other mode leaves it at `t_player_x()`. Only the `combi_*` functions and the
+player draw read `pl.x`, so nothing else in the game changes — the headless
+golden is byte-identical. Everything else is one loop, run as a small state
+machine in `combi_move()` (routed from `boss_tick()` like U Din Din, off
+`Boss.state` = `t_cs_*`):
+
+```
+OUT ──► TELL ──► WIND ──► SWING ──► chain? ─yes─► OUT
+ (blank)  (marker) (bat up)  (sweep)     │no
+                                         ▼
+                                      RECOVER ──► OUT
+```
+
+- **TELL** puts a *truthful* destination marker up `t_combi_tell()` before he
+  materialises — he lands exactly on it (`b.x = b.dest_x`). This is the reaction
+  window; the windup is follow-through (why a sub-200 ms phase-3 windup is still
+  fair — the human floor is spent on the tell, not the swing).
+- **SWING** is a low band in *front* of him, on the facing side locked at
+  materialise. `combi_contact_hit()` hurts a **grounded** player in the arc and
+  never an airborne one — the exact fairness shape as U Din Din's low charge, so
+  **a jump is always the safe input** and §12.4 holds by construction. Facing is
+  locked at WIND, so a player who runs *behind* him during the windup makes the
+  swing whiff — the second dodge, and the reason horizontal movement matters.
+- **RECOVER** is the only window `boss_vulnerable()` is true, and it opens only
+  after a *chain* of `combi_chain()` swings — 1 in phase 1, 2 in phase 2, 3 in
+  phase 3. Punishing it means being in bat range (`combi_in_bat()`, off Tung's
+  live `x`) when it opens, which is what horizontal movement is *for*: the fight
+  asks how little you can dodge while staying close enough to hit back.
+
+**Phases are HP-gated** (`combi_phase()` = `b.bonks`), tightening tell / windup /
+recovery and lengthening the swing chain each of the three bonks. **A `TUNG`
+outside RECOVERY is a parry** — `CLANG`, no damage, no movement lockout (a
+lockout would eat a dodge, which §12.4 forbids); it only says *you cannot
+unga-bunga this boss*. Rung once per swing on the bat's rising edge.
+
+**The invariant, and the test.** `unit_boss.brainrot` drives a scripted bot —
+chase his column, jump a swing that would land, punish the recovery — and asserts
+all at once that the fight is **winnable** (three bonks), costs a clean player
+**no health**, the swing is a **real threat** (a grounded stand-in is hit), and
+**un-dodgeable frames == 0**: never a frame where both a grounded and an apex
+stand-in are hit. Same probe as the shark and U Din Din, now over Tung's live
+column. Art is the 5-frame `attack1..5` windup→swing strip (122×168, anchor 56,
+faced by `dir` like U Din Din), behind the usual `tex >= 0` fallback.
+
 ---
 
 ## 13. Run structure

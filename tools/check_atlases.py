@@ -51,6 +51,8 @@ def main():
          const(t, "t_croc_frame_h"), const(t, "t_croc_frames")),
         ("dindin", const(t, "t_dindin_frame_w"),
          const(t, "t_dindin_frame_h"), const(t, "t_dindin_frames")),
+        ("combinacion", const(t, "t_combi_frame_w"),
+         const(t, "t_combi_frame_h"), const(t, "t_combi_frames")),
         ("bomb", const(t, "t_bomb_frame_w"),
          const(t, "t_bomb_frame_h"), 1.0),
         ("blast", const(t, "t_blast_frame_w"),
@@ -80,7 +82,9 @@ def main():
                               ("bombardiro", const(t, "t_croc_anchor"),
                                const(t, "t_croc_frame_w")),
                               ("dindin", const(t, "t_dindin_anchor"),
-                               const(t, "t_dindin_frame_w"))):
+                               const(t, "t_dindin_frame_w")),
+                              ("combinacion", const(t, "t_combi_anchor"),
+                               const(t, "t_combi_frame_w"))):
         if not 0 <= anchor < fw:
             print(f"  MISMATCH {label} anchor {int(anchor)} outside frame "
                   f"width {int(fw)}")

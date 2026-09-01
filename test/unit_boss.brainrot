@@ -662,5 +662,121 @@ skibidi main {
                 h, lx, lx + t_shark_w(), t_player_x());
     }
 
+    🚽 --- La Grande Combinasion: winnable, and every swing dodgeable --------
+    🚽
+    🚽 The true final boss (12.6) is the one fight that unpins Tung
+    🚽 horizontally. His swing is a low band in FRONT of him that a jump always
+    🚽 clears, so the 12.4 invariant holds the same way U Din Din's does: an
+    🚽 airborne player is never hit. This drives a scripted bot -- chase his
+    🚽 column to stay in bat range, jump a swing that would land, punish the
+    🚽 recovery -- and asserts three things at once: it is winnable (3 bonks),
+    🚽 it costs the good player no health, and there is never a frame on which
+    🚽 both a grounded AND an airborne stand-in would be hit (un-dodgeable).
+    yapping("-- La Grande Combinasion --");
+    boss_clear(&bo);
+    world_reset(&wd);
+    player_reset(&pl);
+    wd.dt = 0.016666;
+    boss_start(&bo, &wd, t_boss_combinasion());
+
+    rizz c_frames = 0;
+    rizz c_swings = 0;
+    rizz c_unfair = 0;
+    rizz c_threat = 0;   🚽 frames a grounded stand-in WOULD be hit (real threat)
+    cap  c_up = boss_active(&bo);
+    goon (c_up && c_frames < 12000) {
+        wd.tung_x = pl.x;
+        world_advance(&wd);
+        boss_tick(&bo, &wd);
+
+        🚽 Steer Tung so the boss sits just inside forward bat reach.
+        chad want_px = bo.x - t_hitbox_dx() - t_hitbox_w() / 2.0
+                       + t_combi_w() / 2.0;
+        rizz mv = 1;
+        edgy (pl.x > want_px) { mv = 0 - 1; }
+        player_move_x(&pl, mv, &wd);
+
+        🚽 Read the committed swing during the windup (facing is locked at
+        🚽 materialise): if Tung's grounded column stands in the arc that is
+        🚽 about to fire, jump now so he is airborne over it. Otherwise stay
+        🚽 grounded and in punish range -- the "how little can I dodge" skill.
+        cap wind_now = bo.state == t_cs_wind();
+        edgy (wind_now) {
+            chad ax = bo.x;
+            chad aw = t_combi_w() + t_combi_swing_reach();
+            edgy (bo.dir < 0) { ax = bo.x - t_combi_swing_reach(); }
+            cap in_arc = aabb(pl.x, t_ground_y() - t_player_h(),
+                              t_player_w(), t_player_h(),
+                              ax, t_ground_y() - t_combi_swing_h(),
+                              aw, t_combi_swing_h());
+            edgy (in_arc && pl.grounded) { player_jump(&pl); }
+        }
+        🚽 Punish the opening on sight; player_swing refuses during cooldown.
+        cap open_now = boss_vulnerable(&bo);
+        edgy (open_now) {
+            cap reach = combi_in_bat(&bo, &pl);
+            edgy (reach) {
+                player_swing(&pl);
+                c_swings = c_swings + 1;
+            }
+        }
+
+        player_physics(&pl, &wd);
+        player_tick_timers(&pl, &wd);
+
+        🚽 Safety net AFTER physics, so a bot that just landed into a live
+        🚽 sweep sees its real grounded state and jumps clear this frame
+        🚽 (grounded -> airborne before the contact check below). A frame-late
+        🚽 jump here is the difference between the bot and a perfect player;
+        🚽 the un-dodgeable probe proves the escape always existed.
+        cap swing_now = bo.state == t_cs_swing();
+        edgy (swing_now) {
+            cap would_hit = combi_contact_hit(&bo, &pl);
+            edgy (would_hit) { player_jump(&pl); }
+        }
+
+        cap sw = player_swinging(&pl);
+        edgy (sw) {
+            edgy (open_now) {
+                cap bonk = combi_in_bat(&bo, &pl);
+                edgy (bonk) { boss_take_bonk(&bo, &wd); }
+            }
+        }
+
+        🚽 Contact: an airborne player is always safe here.
+        cap hurt = combi_contact_hit(&bo, &pl);
+        edgy (hurt) {
+            cap vuln = player_vulnerable(&pl);
+            edgy (vuln) { player_take_hit(&pl, &wd); }
+        }
+
+        🚽 Fairness probe, same shape as the shark/dindin one: a grounded
+        🚽 stand-in and an apex stand-in at Tung's live column. If BOTH are hit
+        🚽 there was no safe input -- must never happen.
+        pg.grounded = W;
+        pg.y = t_ground_y() - t_player_h();
+        pg.x = pl.x;
+        pa.grounded = L;
+        pa.y = t_ground_y() - t_player_h() - 190.0;
+        pa.x = pl.x;
+        cap g_hit = combi_contact_hit(&bo, &pg);
+        cap a_hit = combi_contact_hit(&bo, &pa);
+        edgy (g_hit) { c_threat = c_threat + 1; }
+        edgy (g_hit && a_hit) { c_unfair = c_unfair + 1; }
+
+        c_frames = c_frames + 1;
+        c_up = boss_active(&bo);
+    }
+    🚽 bonks are counted here (c_swings), not read from bo.bonks: the loop
+    🚽 exits after boss_clear() has zeroed the struct, same as the shark test.
+    yapping("fight over in %d frames, %d bonks landed", c_frames, c_swings);
+    yapping("hearts left %d (a clean win keeps all %d)",
+            pl.hearts, t_hearts_max());
+    cap c_won = !boss_active(&bo);
+    yapping("boss cleared: %b", c_won);
+    yapping("the swing is a real threat (grounded-hit frames > 0): %b",
+            c_threat > 0);
+    yapping("un-dodgeable frames %d (must be 0)", c_unfair);
+
     bussin 0;
 }
