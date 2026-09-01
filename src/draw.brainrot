@@ -189,7 +189,7 @@ skibidi draw_hearts(rizz hearts) {
 🚽 Eight segments, one per level, matching speed_to_lvl's range.
 skibidi draw_speedbar(rizz lvl) {
     rl_draw_text("SPEED", 1064, 18, 20, 220, 220, 220, 255);
-    flex (rizz i = 0; i < 8; i = i + 1) {
+    flex (rizz i = 0; i < 9; i = i + 1) {
         edgy (i < lvl) {
             rl_draw_rectangle(1136 + i * 16, 18, 12, 20, 240, 150, 40, 255);
         }
@@ -228,9 +228,12 @@ skibidi draw_title(chad t) {
         rl_draw_text("SAHUR", cx - w4 / 2, 360, 96, 245, 200, 90, 255);
     }
     edgy (t > 2.2) {
-        rizz w5 = rl_measure_text("SPACE to run   X to TUNG   ESC to quit", 24);
-        rl_draw_text("SPACE to run   X to TUNG   ESC to quit",
+        rizz w5 = rl_measure_text("SPACE to jump, X to TUNG, ESC to quit", 24);
+        rl_draw_text("SPACE to jump, X to TUNG, ESC to quit",
                      cx - w5 / 2, 480, 24, 190, 190, 190, 255);
+        rizz w6 = rl_measure_text("ENTER to start playing", 28);
+        rl_draw_text("ENTER to start playing",
+                     cx - w6 / 2, 516, 28, 245, 200, 90, 255);
     }
 }
 
@@ -252,9 +255,9 @@ skibidi draw_gameover(rizz score, rizz seed) {
     rl_draw_text_int("seed ", seed, 0, cx - w3 / 2, 396, 18,
                      140, 140, 140, 255);
 
-    rizz w4 = rl_measure_text("R or SPACE to run again", 24);
-    rl_draw_text("R or SPACE to run again", cx - w4 / 2, 420, 24,
-                 210, 210, 210, 255);
+    rizz w4 = rl_measure_text("ENTER to play again", 28);
+    rl_draw_text("ENTER to play again", cx - w4 / 2, 420, 28,
+                 245, 200, 90, 255);
 }
 
 🚽 --- bosses ---------------------------------------------------------------
@@ -264,15 +267,40 @@ skibidi draw_gameover(rizz score, rizz seed) {
 🚽 and the atlases drop in later behind the same `tex >= 0` fallback every
 🚽 other draw here already uses. Nothing in the simulation knows or cares.
 
-skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
-                  rizz tex_shark, rizz tex_croc) {
+skibidi draw_boss(chad x, chad y, rizz kind, rizz phase, chad anim, rizz dir,
+                  rizz tex_shark, rizz tex_croc, rizz tex_dindin) {
     chad w = boss_w(kind);
     chad h = boss_h(kind);
 
     rizz tex = tex_croc;
     edgy (kind == t_boss_tralalero()) { tex = tex_shark; }
+    edgy (kind == t_boss_dimdim()) { tex = tex_dindin; }
 
     edgy (tex >= 0) {
+      edgy (kind == t_boss_dimdim()) {
+        🚽 U Din Din: a 6-frame run cycle, always bottom-aligned (he's on the
+        🚽 ground). The art faces LEFT, so charging right (dir > 0) draws it
+        🚽 mirrored -- negative source width flips the frame, and the anchor
+        🚽 column mirrors to (fw - anchor).
+        chad fw  = t_dindin_frame_w();
+        chad fh  = t_dindin_frame_h();
+        chad anc = t_dindin_anchor();
+        rizz fi  = anim * t_dindin_anim_rate();
+        rizz frame = fi % t_dindin_frames();
+        chad col = frame * fw;
+        chad srcw = fw;
+        🚽 The art faces RIGHT natively, so charging LEFT (dir < 0) draws it
+        🚽 mirrored -- negative source width flips the frame, anchor mirrors to
+        🚽 (fw - anchor). Charging right uses the frame as-is.
+        edgy (dir < 0) {
+            srcw = 0.0 - fw;
+            anc  = fw - anc;
+        }
+        rl_draw_texture_rec(tex, col, 0.0, srcw, fh,
+                            x + w / 2.0 - anc, y + h - fh,
+                            255, 255, 255, 255);
+      }
+      amogus {
         🚽 Frame 1 is the opening in both atlases. That is the whole tell --
         🚽 jaws wide -- and the one second in three cycles where the bat
         🚽 connects.
@@ -303,6 +331,7 @@ skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
         rl_draw_texture_rec(tex, col, 0.0, fw, fh,
                             x + w / 2.0 - anc, dy,
                             255, 255, 255, 255);
+      }
     }
     amogus {
         edgy (kind == t_boss_tralalero()) {
@@ -321,6 +350,14 @@ skibidi draw_boss(chad x, chad y, rizz kind, rizz phase,
                 rl_draw_rectangle(sx - 4.0, y + h - 8.0, 26.0, 10.0,
                                   240, 240, 240, 255);
             }
+        }
+        amogus edgy (kind == t_boss_dimdim()) {
+            🚽 A blocky orange bruiser, for when the atlas is missing.
+            rl_draw_rectangle(x, y, w, h * 0.42, 235, 120, 30, 255);
+            rl_draw_rectangle(x, y + h * 0.42, w, h * 0.58, 214, 92, 44, 255);
+            rl_draw_rectangle(x + w * 0.5, y + 12.0, 12.0, 12.0,
+                              250, 250, 250, 255);
+            rl_draw_rectangle(x + w * 0.52, y + 15.0, 6.0, 6.0, 20, 20, 20, 255);
         }
         amogus {
             🚽 A crocodile with wings and a bomb bay.
@@ -448,6 +485,10 @@ skibidi draw_boss_bar(rizz kind, rizz bonks, cap ready) {
     }
     edgy (kind == t_boss_tralalero()) {
         rl_draw_text_int("TRALALERO TRALALA x", bonks, 0, x0 - 8.0, 50.0, 18,
+                         255, 214, 64, 255);
+    }
+    amogus edgy (kind == t_boss_dimdim()) {
+        rl_draw_text_int("U DIN DIN x", bonks, 0, x0 - 8.0, 50.0, 18,
                          255, 214, 64, 255);
     }
     amogus {

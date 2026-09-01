@@ -121,6 +121,16 @@ CHARACTERS = {
     "bombardiro":  ("bombardino",
                     ["bombardino1.jpg", "bombardino2.jpg"], 72, "centre"),
 
+    # U DIN DIN -- the final-level boss. A six-frame charge animation (a buff
+    # orange sprinter). draw.brainrot cycles the frames while he charges and
+    # MIRRORS the whole sprite by charge direction so he always faces the way
+    # he is going; the "trembling" tell reuses the frames with a shake. He is
+    # bonkable throughout the charge, not in a separate open window, so there
+    # is no closed/open pose split like the other two bosses. Height
+    # t_dindin_h().
+    "dindin":      ("dimdim", ["dindin1.png", "dindin2.png", "dindin3.png",
+                               "dindin4.png", "dindin5.png", "dindin6.png"], 96),
+
     "bomb":        ("bombardino", ["bomb.jpg"], 26),
     "blast":       ("bombardino", ["blast.jpg"], 34),
 
@@ -137,6 +147,7 @@ GROUPS = {
     "patapim": ["patapim_run"],
     "tralalero": ["tralalero"],
     "bombardiro": ["bombardiro"],
+    "dindin": ["dindin"],
     "bomb": ["bomb"],
     "blast": ["blast"],
     "crate": ["crate"],

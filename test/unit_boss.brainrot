@@ -37,13 +37,19 @@ skibidi main {
     🚽 rather than how far you have got, and the boss used to arrive
     🚽 EARLIER for a better player. See t_tralalero_lvl().
     yapping("-- boss_due, by level --");
-    flex (rizz l = 1; l <= 8; l = l + 1) {
+    flex (rizz l = 1; l <= 9; l = l + 1) {
         yapping("  lvl %d -> boss %d", l, boss_due(&wd, l));
     }
 
     boss_start(&bo, &wd, t_boss_tralalero());
     yapping("after start, shark due again %d", boss_due(&wd, 8));
     yapping("croc still due               %d", boss_due(&wd, 8));
+
+    🚽 U Din Din is the final boss: only due once the other two are done, and
+    🚽 only at his level (9). Mark both prior flags and check lvl 8 vs 9.
+    wd.did_bombardiro = W;
+    yapping("dindin at lvl 8 %d, at lvl 9 %d",
+            boss_due(&wd, 8), boss_due(&wd, 9));
 
     🚽 --- the shared phase machine --------------------------------------
     yapping("-- phases --");
@@ -505,7 +511,7 @@ skibidi main {
     🚽   happen. shark_contact_hit()'s phase split is what guarantees it.
     yapping("-- no unavoidable contact --");
 
-    flex (rizz which = 1; which <= 2; which = which + 1) {
+    flex (rizz which = 1; which <= 3; which = which + 1) {
         boss_clear(&bo);
         world_reset(&wd);
         player_reset(&pl);
@@ -539,6 +545,17 @@ skibidi main {
                     unfair = unfair + 1;
                 }
             }
+            🚽 U Din Din fairness: same probe. He only hits a grounded player
+            🚽 (low charge), so an apex player is always safe -- unfair == 0.
+            edgy (which == t_boss_dimdim()) {
+                pg.grounded = W;
+                pg.y = t_ground_y() - t_player_h();
+                pa.grounded = L;
+                pa.y = t_ground_y() - t_player_h() - 190.0;
+                edgy (dindin_contact_hit(&bo, &pg) && dindin_contact_hit(&bo, &pa)) {
+                    unfair = unfair + 1;
+                }
+            }
 
             🚽 The smallest gap between Tung's back and the boss's nose.
             🚽 Negative means the boss is in FRONT of him, which is where an
@@ -569,7 +586,7 @@ skibidi main {
             f = f + 1;
             up = boss_active(&bo);
         }
-        edgy (which == t_boss_tralalero()) {
+        edgy (which == t_boss_tralalero() || which == t_boss_dimdim()) {
             yapping("boss %d: %d frames, %d open frames, un-dodgeable frames %d (must be 0)",
                     which, f, openings, unfair);
         }

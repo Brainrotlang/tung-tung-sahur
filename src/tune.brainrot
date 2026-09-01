@@ -33,7 +33,9 @@ chad t_hitbox_h()        { bussin 56.0; }
 🚽 --- world ---
 chad t_speed_start()     { bussin 260.0; }
 chad t_speed_accel()     { bussin 3.0; }
-chad t_speed_max()       { bussin 900.0; }
+🚽 One level per +90 speed (see speed_to_lvl). LVL 9 tops out at 260 + 8*90 =
+🚽 980, so that is the cap -- reaching it is LVL 9, the final tier.
+chad t_speed_max()       { bussin 980.0; }
 chad t_enemy_close()     { bussin 40.0; }
 chad t_dt_max()          { bussin 0.05; }
 chad t_sahur_distance()  { bussin 200000.0; }   🚽 M3
@@ -60,6 +62,7 @@ rizz t_max_bombs()       { bussin 32; }
 rizz t_boss_none()         { bussin 0; }
 rizz t_boss_tralalero()    { bussin 1; }
 rizz t_boss_bombardiro()   { bussin 2; }
+rizz t_boss_dimdim()       { bussin 3; }
 
 rizz t_boss_off()          { bussin 0; }
 rizz t_boss_survive()      { bussin 1; }
@@ -81,6 +84,7 @@ rizz t_boss_leave()        { bussin 3; }
 🚽 table those come from; move either number and it re-prints.
 rizz t_tralalero_lvl()     { bussin 3; }
 rizz t_bombardiro_lvl()    { bussin 6; }
+rizz t_dindin_lvl()        { bussin 9; }   🚽 the final-level boss (LVL 9)
 rizz t_boss_bonks()        { bussin 3; }
 
 chad t_boss_survive_time() { bussin 8.0; }
@@ -308,6 +312,32 @@ chad t_bomb_interval()     { bussin 1.30; }
 🚽 Clearing a boss is worth more than the three bonks that did it.
 rizz t_boss_reward()       { bussin 2000; }
 
+🚽 U DIN DIN -- the final-level boss (LVL 9). A buff orange sprinter who
+🚽 CHARGES across the whole screen, alternating sides: he trembles briefly at
+🚽 one edge (the tell), then sweeps across; the player JUMPS the low pass or
+🚽 SWINGS to bonk him as he crosses the bat zone. Off the far edge he trembles
+🚽 on THAT side and charges back. Three bonks and he's out. He is always low,
+🚽 so -- unlike Tralalero's high cross -- a jump is ALWAYS safe; standing to
+🚽 swing is the risk. charge_h is the jumpable band (see t_shark_charge_h()).
+🚽
+🚽 The 6-frame sprite faces LEFT natively; draw.brainrot mirrors it when he
+🚽 charges right. frame_w/frame_h/anchor/frames match assets/dindin.png and are
+🚽 asserted by tools/check_atlases.py.
+chad t_dindin_w()          { bussin 84.0; }   🚽 collision width
+chad t_dindin_h()          { bussin 96.0; }   🚽 sprite/box height
+chad t_dindin_charge_h()   { bussin 56.0; }   🚽 jumpable hit band on the ground
+chad t_dindin_frame_w()    { bussin 73.0; }
+chad t_dindin_frame_h()    { bussin 96.0; }
+chad t_dindin_anchor()     { bussin 43.0; }
+rizz t_dindin_frames()     { bussin 6; }
+chad t_dindin_charge_speed() { bussin 720.0; } 🚽 px/s of the sweep
+chad t_dindin_tremble()      { bussin 0.85; }  🚽 s of the edge tell before a charge
+chad t_dindin_tremble_shake(){ bussin 8.0; }   🚽 tremble amplitude, px
+chad t_dindin_shake_rate()   { bussin 20.0; }  🚽 tremble frequency
+chad t_dindin_anim_rate()    { bussin 15.0; }  🚽 run-cycle frames per second
+🚽 How much of the sprite pokes onto the screen while trembling at an edge.
+chad t_dindin_peek()         { bussin 70.0; }
+
 🚽 --- audio ---
 🚽 Effects sit above the music so a bat connecting still reads over the
 🚽 track rather than under it.
@@ -402,3 +432,4 @@ rizz t_key_up()          { bussin 265; }
 rizz t_key_x()           { bussin 88; }
 rizz t_key_z()           { bussin 90; }
 rizz t_key_r()           { bussin 82; }
+rizz t_key_enter()       { bussin 257; }

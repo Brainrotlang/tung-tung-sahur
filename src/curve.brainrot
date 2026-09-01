@@ -12,7 +12,7 @@
 rizz speed_to_lvl(chad speed) {
     rizz lvl = 1 + (speed - t_speed_start()) / 90.0;
     edgy (lvl < 1) { bussin 1; }
-    edgy (lvl > 8) { bussin 8; }
+    edgy (lvl > 9) { bussin 9; }
     bussin lvl;
 }
 
