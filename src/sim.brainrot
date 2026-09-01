@@ -711,7 +711,12 @@ skibidi boss_tick(gang Boss *b, gang World *w) {
         shark_charge_move(b, w);
     }
     amogus {
-        boss_move(b, w);
+        edgy (b.kind == t_boss_tralalero() && b.phase == t_boss_open()) {
+            shark_open_move(b, w);
+        }
+        amogus {
+            boss_move(b, w);
+        }
     }
 
     edgy (b.phase == t_boss_leave()) {
@@ -723,6 +728,14 @@ skibidi boss_tick(gang Boss *b, gang World *w) {
         edgy (b.phase_t >= t_boss_survive_time()) {
             b.phase   = t_boss_open();
             b.phase_t = 0.0;
+            🚽 Tralalero winds up before the lunge: retreat behind Tung and
+            🚽 seed the vertical-bob tell (spawn_t), which shark_open_move()
+            🚽 plays before crossing to the front.
+            edgy (b.kind == t_boss_tralalero()) {
+                b.x       = t_shark_charge_x0();
+                b.y       = t_ground_y() - t_shark_h();
+                b.spawn_t = t_shark_lunge_tell();
+            }
         }
         bussin;
     }
@@ -730,6 +743,8 @@ skibidi boss_tick(gang Boss *b, gang World *w) {
     edgy (b.phase_t >= t_boss_open_time()) {
         b.phase   = t_boss_survive();
         b.phase_t = 0.0;
+        🚽 Missed opening: re-telegraph the next charge (Tralalero only).
+        edgy (b.kind == t_boss_tralalero()) { b.spawn_t = t_shark_charge_gap(); }
     }
 }
 
@@ -758,6 +773,27 @@ skibidi shark_charge_move(gang Boss *b, gang World *w) {
         b.x       = t_shark_charge_x0();
         b.spawn_t = t_shark_charge_gap();
     }
+}
+
+🚽 Tralalero's open phase. First a VERTICAL wind-up (spawn_t, seeded on the
+🚽 survive->open flip): he waits behind Tung's column and bobs up and down,
+🚽 harder as it runs down, telegraphing the lunge. Then boss_move() carries
+🚽 the actual cross to the front -- rising over Tung (the "don't jump" beat)
+🚽 and parking at t_shark_open_x() for the bonk window.
+skibidi shark_open_move(gang Boss *b, gang World *w) {
+    edgy (b.spawn_t > 0.0) {
+        b.spawn_t = b.spawn_t - w.dt;
+        chad into = t_shark_lunge_tell() - b.spawn_t;
+        chad grow = into / t_shark_lunge_tell();
+        🚽 (0.5 + 0.5*wave) keeps the bob ABOVE the ground rest -- up and back,
+        🚽 never clipping down through the floor.
+        chad bob  = t_shark_lunge_bob() * grow
+                    * (0.5 + 0.5 * wave(into * t_shark_tell_rate()));
+        b.x = t_shark_charge_x0();
+        b.y = t_ground_y() - t_shark_h() - bob;
+        bussin;
+    }
+    boss_move(b, w);
 }
 
 🚽 The low charge's collision box: a jumpable band (t_shark_charge_h) on the
@@ -836,6 +872,9 @@ skibidi boss_take_bonk(gang Boss *b, gang World *w) {
     }
     amogus {
         b.phase = t_boss_survive();
+        🚽 Tralalero retreats and re-telegraphs before the next charge, rather
+        🚽 than lunging out of the front where the bonk just landed.
+        edgy (b.kind == t_boss_tralalero()) { b.spawn_t = t_shark_charge_gap(); }
     }
 }
 

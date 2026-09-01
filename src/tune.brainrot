@@ -176,6 +176,14 @@ chad t_shark_tell_shake()  { bussin 9.0; }   🚽 shudder amplitude, px
 chad t_shark_tell_rate()   { bussin 19.0; }  🚽 shudder frequency
 chad t_shark_tell_rear()   { bussin 28.0; }  🚽 how far he pulls back before lunging
 
+🚽 The LUNGE tell. Before he crosses to the front (the "he's coming over you,
+🚽 don't jump" beat), he bobs VERTICALLY in place -- up and down, growing --
+🚽 so the switch from charging to lunging is read. He waits behind Tung's
+🚽 column here, so the bob is a cosmetic wind-up (no contact). Uses the same
+🚽 t_shark_tell_rate() frequency as the charge shudder.
+chad t_shark_lunge_tell()  { bussin 0.6; }   🚽 s of vertical wind-up before the lunge
+chad t_shark_lunge_bob()   { bussin 30.0; }  🚽 bob amplitude, px (up from the ground rest)
+
 🚽 BOMBARDIRO CROCODILO -- does not chase. Bombs from overhead, so the
 🚽 whole vertical axis is hostile while you are still running.
 🚽
