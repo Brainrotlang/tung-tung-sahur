@@ -266,18 +266,26 @@ jobs:
           # game
           cp -r game/src game/assets "$out/"
 
-          # vendor libraylib + point raylib.so at the local copy
+          # Vendor libraylib next to raylib.so and point raylib.so at the local
+          # copy. Copy it straight from the raylib install prefix by the exact
+          # name raylib.so records as needed -- deriving the SOURCE path from
+          # ldd/otool doesn't work here: ldd prints "not found" (the prefix
+          # isn't on the loader path in this step) and otool prints the
+          # @rpath install-name, neither of which is a file to cp.
+          raylib_libdir="$HOME/raylib-prefix/lib"
           if [ "${{ matrix.os }}" = "linux" ]; then
-            lib="$(ldd "$out/raylib.so" | awk '/libraylib/{print $3}')"
-            cp -L "$lib" "$out/"
+            soname="$(patchelf --print-needed "$out/raylib.so" \
+                      | grep -m1 '^libraylib')"
+            cp -L "$raylib_libdir/$soname" "$out/$soname"
             patchelf --set-rpath '$ORIGIN' "$out/raylib.so"
             patchelf --set-rpath '$ORIGIN' "$out/brainrot"
-            echo "-- ldd raylib.so after rpath fix --"; ldd "$out/raylib.so" || true
+            echo "-- ldd raylib.so after rpath fix --"
+            LD_LIBRARY_PATH="$out" ldd "$out/raylib.so" || true
           else
-            lib="$(otool -L "$out/raylib.so" | awk '/libraylib/{print $1}')"
-            base="$(basename "$lib")"
-            cp -L "$lib" "$out/$base"
-            install_name_tool -change "$lib" "@loader_path/$base" "$out/raylib.so"
+            inst="$(otool -L "$out/raylib.so" | awk '/libraylib/{print $1}')"
+            base="$(basename "$inst")"          # e.g. libraylib.550.dylib
+            cp -L "$raylib_libdir/$base" "$out/$base"
+            install_name_tool -change "$inst" "@loader_path/$base" "$out/raylib.so"
             chmod u+w "$out/$base"
             install_name_tool -id "@loader_path/$base" "$out/$base"
             echo "-- otool -L raylib.so after rewrite --"; otool -L "$out/raylib.so"
