@@ -974,8 +974,15 @@ skibidi boss_take_bonk(gang Boss *b, gang World *w) {
         🚽 Tralalero retreats and re-telegraphs before the next charge, rather
         🚽 than lunging out of the front where the bonk just landed.
         edgy (b.kind == t_boss_tralalero()) { b.spawn_t = t_shark_charge_gap(); }
-        🚽 U Din Din recoils: fresh tremble (flips to the other side) next tick.
-        edgy (b.kind == t_boss_dimdim()) { b.spawn_t = 0.0; }
+        🚽 U Din Din: a hit does NOT relocate him into view -- keep him
+        🚽 charging (undo the survive flip above) and knock him off the edge he
+        🚽 was heading for. dindin_move()'s charge-exit then trembles on the far
+        🚽 side and he charges back. Off-screen, so boss_in_bat can't re-bonk.
+        edgy (b.kind == t_boss_dimdim()) {
+            b.phase = t_boss_open();
+            edgy (b.dir > 0) { b.x = t_screen_w() + t_dindin_w(); }
+            amogus            { b.x = 0.0 - 2.0 * t_dindin_w(); }
+        }
     }
 }
 

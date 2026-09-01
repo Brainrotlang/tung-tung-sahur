@@ -80,8 +80,8 @@ boss 1: 1792 frames, 261 open frames, un-dodgeable frames 0 (must be 0)
 boss 2: 1645 frames, 114 open frames, body contacts 0 (must be 0)
         nose got within -288px of Tung's back (negative = in front)
         mistakes made during the fight: 2
-boss 3: 371 frames, 199 open frames, un-dodgeable frames 0 (must be 0)
-        nose got within -1164px of Tung's back (negative = in front)
+boss 3: 373 frames, 199 open frames, un-dodgeable frames 0 (must be 0)
+        nose got within -1260px of Tung's back (negative = in front)
         mistakes made during the fight: 1
 -- how long is an opening, really --
 boss 1: opening 156 frames, in bat reach 70 of them (1.17s)

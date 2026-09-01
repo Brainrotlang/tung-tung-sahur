@@ -286,7 +286,10 @@ skibidi draw_boss(chad x, chad y, rizz kind, rizz phase, chad anim, rizz dir,
         rizz frame = fi % t_dindin_frames();
         chad col = frame * fw;
         chad srcw = fw;
-        edgy (dir > 0) {
+        🚽 The art faces RIGHT natively, so charging LEFT (dir < 0) draws it
+        🚽 mirrored -- negative source width flips the frame, anchor mirrors to
+        🚽 (fw - anchor). Charging right uses the frame as-is.
+        edgy (dir < 0) {
             srcw = 0.0 - fw;
             anc  = fw - anc;
         }
@@ -479,6 +482,10 @@ skibidi draw_boss_bar(rizz kind, rizz bonks, cap ready) {
     }
     edgy (kind == t_boss_tralalero()) {
         rl_draw_text_int("TRALALERO TRALALA x", bonks, 0, x0 - 8.0, 50.0, 18,
+                         255, 214, 64, 255);
+    }
+    amogus edgy (kind == t_boss_dimdim()) {
+        rl_draw_text_int("U DIN DIN x", bonks, 0, x0 - 8.0, 50.0, 18,
                          255, 214, 64, 255);
     }
     amogus {
