@@ -212,5 +212,4 @@ art, as are Bombardiro's bombs and their blasts. They arrive at **LVL 3** and
 **LVL 6** — on level rather than score, because score includes bonk bonus and so
 brought the boss *sooner* to the player who was playing better.
 
-**M3** is next: the `SAHUR_DISTANCE` win state, the ending card, and Endless
-Schizo Mode. Milestones are in DESIGN.md §18.
+**M3** shipped: final boss and ending achieved.
