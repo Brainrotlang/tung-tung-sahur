@@ -85,9 +85,11 @@ skibidi main {
     yapping("crate is jump   %b", kind_is_jump(t_kind_crate()));
     yapping("post is jump    %b", kind_is_jump(t_kind_post()));
     yapping("patapim is jump %b", kind_is_jump(t_kind_patapim()));
+    yapping("vaca is jump    %b", kind_is_jump(t_kind_vaca()));
     yapping("crate   %.0fx%.0f", kind_w(t_kind_crate()),   kind_h(t_kind_crate()));
     yapping("post    %.0fx%.0f", kind_w(t_kind_post()),    kind_h(t_kind_post()));
     yapping("patapim %.0fx%.0f", kind_w(t_kind_patapim()), kind_h(t_kind_patapim()));
+    yapping("vaca    %.0fx%.0f", kind_w(t_kind_vaca()),    kind_h(t_kind_vaca()));
 
     🚽 --- pick_kind ---------------------------------------------------
     🚽 The tall post must not appear at level 1: the opening seconds
@@ -97,7 +99,7 @@ skibidi main {
     rizz s1 = 7;
     flex (rizz i = 0; i < 10000; i = i + 1) {
         s1 = rng_next(s1);
-        edgy (pick_kind(s1, 1) == t_kind_post()) { lvl1_posts = lvl1_posts + 1; }
+        edgy (pick_kind(s1, 1, L) == t_kind_post()) { lvl1_posts = lvl1_posts + 1; }
     }
     yapping("posts at lvl 1: %d", lvl1_posts);
 
@@ -107,13 +109,32 @@ skibidi main {
     rizz s2 = 7;
     flex (rizz i = 0; i < 10000; i = i + 1) {
         s2 = rng_next(s2);
-        rizz k = pick_kind(s2, 5);
+        rizz k = pick_kind(s2, 5, L);
         edgy (k == t_kind_crate())   { c_crate = c_crate + 1; }
         edgy (k == t_kind_post())    { c_post  = c_post + 1; }
         edgy (k == t_kind_patapim()) { c_pat   = c_pat + 1; }
     }
     yapping("lvl 5 over 10000: crate %d post %d patapim %d",
             c_crate, c_post, c_pat);
+
+    🚽 After the Bombardiro fight (after_croc = W) the ground obstacles are
+    🚽 gone entirely: crate, post and Patapim all drop to zero and every draw
+    🚽 is a flying Vaca. This is what "the obstacles vanish" means concretely.
+    rizz v_crate = 0;
+    rizz v_post  = 0;
+    rizz v_pat   = 0;
+    rizz v_vaca  = 0;
+    rizz s3 = 7;
+    flex (rizz i = 0; i < 10000; i = i + 1) {
+        s3 = rng_next(s3);
+        rizz k = pick_kind(s3, 7, W);
+        edgy (k == t_kind_crate())   { v_crate = v_crate + 1; }
+        edgy (k == t_kind_post())    { v_post  = v_post + 1; }
+        edgy (k == t_kind_patapim()) { v_pat   = v_pat + 1; }
+        edgy (k == t_kind_vaca())    { v_vaca  = v_vaca + 1; }
+    }
+    yapping("after croc over 10000: crate %d post %d patapim %d vaca %d",
+            v_crate, v_post, v_pat, v_vaca);
 
     🚽 --- the curve over time ------------------------------------------
     🚽 The headless harness cannot cover this: its input tape is blind, so

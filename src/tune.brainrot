@@ -448,6 +448,32 @@ chad t_patapim_w()       { bussin 74.0; }
 chad t_patapim_h()       { bussin 64.0; }
 chad t_patapim_anchor()  { bussin 37.0; }
 
+🚽 Vaca Saturno -- the flying enemy that TAKES OVER after the Bombardiro
+🚽 fight (DESIGN.md 9.6). Reaching that point, the ground obstacles stop for
+🚽 good and the sky fills with Vacas flying straight across at three fixed
+🚽 heights -- no wobble, no hop, no gravity:
+🚽   LOW  -- at bat height: hit it, or it hits a grounded player.
+🚽   MID  -- above your head grounded, but a JUMP rises into it.
+🚽   HIGH -- above the jump apex: unreachable, pure flyover.
+🚽 The bands are y of the box top; the box is 72x64 (kind_w/kind_h). Geometry:
+🚽 ground 560, grounded player 464..560, bat band 480..536, jump apex top 272.
+🚽 Art faces right (mirrored in draw_ent, it flies left); frame_w/h/anchor are
+🚽 printed by process_sprites.py and checked by check_atlases.py.
+rizz t_vaca_frames()     { bussin 2; }
+chad t_vaca_w()          { bussin 85.0; }
+chad t_vaca_h()          { bussin 64.0; }
+chad t_vaca_anchor()     { bussin 41.0; }
+🚽 px of travel per walk frame. Large on purpose: it is a TWO-frame cycle,
+🚽 so a short stride flips ~40x/s and blurs into a static-looking sprite. At
+🚽 ~130px each pose holds for a readable step.
+chad t_vaca_stride()     { bussin 130.0; }
+🚽 The three flight heights (box top y). Low overlaps the bat band and a
+🚽 grounded player; mid clears a grounded player but sits in the jump arc;
+🚽 high sits above the apex (box bottom 214 < apex top 272), unreachable.
+chad t_vaca_low_y()      { bussin 476.0; }
+chad t_vaca_mid_y()      { bussin 320.0; }
+chad t_vaca_high_y()     { bussin 150.0; }
+
 🚽 --- parallax layers ---
 🚽
 🚽 Tile width, on-screen height, and parallax rate per layer, back to front.
@@ -503,6 +529,7 @@ chad t_run_stride()      { bussin 22.0; }
 rizz t_kind_crate()      { bussin 0; }
 rizz t_kind_post()       { bussin 1; }
 rizz t_kind_patapim()    { bussin 2; }
+rizz t_kind_vaca()       { bussin 3; }   🚽 replaces patapim after Bombardiro
 
 🚽 --- run states ---
 rizz t_state_title()     { bussin 0; }

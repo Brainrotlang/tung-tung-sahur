@@ -142,6 +142,13 @@ CHARACTERS = {
                     ["attack1.png", "attack2.png", "attack3.png",
                      "attack4.png", "attack5.png"], 168),
 
+    # VACA SATURNO -- the hopping enemy that replaces Brr Brr Patapim after
+    # the Bombardiro fight (DESIGN.md 9). A two-frame walk, faced right like
+    # every sprite and mirrored in draw_ent since it charges left. Height
+    # kind_h(t_kind_vaca()); the art overhangs the collision box (the Saturn
+    # ring and the trailing leg), same split as Patapim.
+    "vaca":        ("vaca", ["vaca1.jpg", "vaca2.jpg"], 64),
+
     "bomb":        ("bombardino", ["bomb.jpg"], 26),
     "blast":       ("bombardino", ["blast.jpg"], 34),
 
@@ -159,6 +166,7 @@ GROUPS = {
     "tralalero": ["tralalero"],
     "bombardiro": ["bombardiro"],
     "dindin": ["dindin"],
+    "vaca": ["vaca"],
     "combinacion": ["combinacion"],
     "bomb": ["bomb"],
     "blast": ["blast"],

@@ -38,6 +38,7 @@ skibidi main {
     rizz tex_jump  = draw_load("assets/tung_jump.png");
     rizz tex_swing = draw_load("assets/tung_swing.png");
     rizz tex_pat   = draw_load("assets/patapim_run.png");
+    rizz tex_vaca  = draw_load("assets/vaca.png");
     rizz tex_crate = draw_load("assets/crate.png");
     rizz tex_post  = draw_load("assets/post.png");
     rizz bg_far    = draw_load("assets/bg_far.png");
@@ -130,7 +131,7 @@ skibidi main {
             🚽 seed that produced a run is shown when it ends.
             run_seed = rng_next(run_seed);
             wd.seed  = rng_next(run_seed);
-            wd.next_kind = pick_kind(wd.seed, 1);
+            wd.next_kind = pick_kind(wd.seed, 1, L);
 
             pool_clear(&obstacles[0], MAX_OBS);
             pool_clear(&enemies[0], MAX_EN);
@@ -353,12 +354,26 @@ skibidi main {
         edgy (in_run && !boss_up) {
             wd.spawn_t = wd.spawn_t - wd.dt;
             edgy (wd.spawn_t <= 0.0) {
+                🚽 Past the Bombardiro fight the ground obstacles are gone for
+                🚽 good -- only flying Vacas (DESIGN.md 9.6). This also clears any
+                🚽 crate/post that was still pending from before the fight.
+                edgy (wd.did_bombardiro) { wd.next_kind = t_kind_vaca(); }
+
                 cap is_enemy = L;
                 edgy (wd.next_kind == t_kind_patapim()) { is_enemy = W; }
+                edgy (wd.next_kind == t_kind_vaca()) { is_enemy = W; }
 
                 edgy (is_enemy) {
                     rizz slot = pool_free_slot(&enemies[0], MAX_EN);
-                    edgy (slot >= 0) { ent_spawn(&enemies[slot], wd.next_kind); }
+                    edgy (slot >= 0) {
+                        ent_spawn(&enemies[slot], wd.next_kind);
+                        🚽 Flying Vacas take one of three fixed heights; its band
+                        🚽 comes from a fresh draw (DESIGN.md 9.6).
+                        edgy (wd.next_kind == t_kind_vaca()) {
+                            wd.seed = rng_next(wd.seed);
+                            enemies[slot].y = vaca_band_y(wd.seed);
+                        }
+                    }
                 }
                 amogus {
                     rizz slot = pool_free_slot(&obstacles[0], MAX_OBS);
@@ -369,7 +384,9 @@ skibidi main {
                 🚽 both ends of the gap it is about to size.
                 wd.prev_kind = wd.next_kind;
                 wd.seed      = rng_next(wd.seed);
-                wd.next_kind = pick_kind(wd.seed, lvl);
+                🚽 After the Bombardiro fight the charging enemy is Vaca Saturno
+                🚽 instead of Patapim (DESIGN.md 9.6).
+                wd.next_kind = pick_kind(wd.seed, lvl, wd.did_bombardiro);
 
                 wd.seed    = rng_next(wd.seed);
                 chad gap   = spawn_gap(wd.speed) + rng_signed(wd.seed) * t_gap_jitter();
@@ -590,15 +607,20 @@ skibidi main {
             edgy (obstacles[i].alive) {
                 draw_ent(obstacles[i].x, obstacles[i].y,
                          obstacles[i].w, obstacles[i].h, obstacles[i].kind,
-                         tex_pat, tex_crate, tex_post, 0);
+                         tex_pat, tex_crate, tex_post, tex_vaca, 0);
             }
         }
         flex (rizz i = 0; i < MAX_EN; i = i + 1) {
             edgy (enemies[i].alive) {
+                🚽 Patapim and Vaca share the enemy pool but animate off their
+                🚽 own frame counters.
+                rizz efr = patapim_frame(&enemies[i]);
+                edgy (enemies[i].kind == t_kind_vaca()) {
+                    efr = vaca_frame(&enemies[i]);
+                }
                 draw_ent(enemies[i].x, enemies[i].y,
                          enemies[i].w, enemies[i].h, enemies[i].kind,
-                         tex_pat, tex_crate, tex_post,
-                         patapim_frame(&enemies[i]));
+                         tex_pat, tex_crate, tex_post, tex_vaca, efr);
             }
         }
 
@@ -696,6 +718,7 @@ skibidi main {
     draw_unload(tex_jump);
     draw_unload(tex_swing);
     draw_unload(tex_pat);
+    draw_unload(tex_vaca);
     draw_unload(tex_crate);
     draw_unload(tex_post);
     draw_unload(bg_far);
