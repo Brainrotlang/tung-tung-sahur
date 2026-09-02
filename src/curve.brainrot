@@ -27,9 +27,11 @@ chad spawn_gap(chad speed) {
     bussin maxf(gap, t_gap_min());
 }
 
-🚽 True when a kind has to be jumped rather than bonked.
+🚽 True when a kind has to be jumped rather than bonked. Vaca is bonkable
+🚽 like Patapim (you can also jump it), so both are false.
 cap kind_is_jump(rizz kind) {
     edgy (kind == t_kind_patapim()) { bussin L; }
+    edgy (kind == t_kind_vaca()) { bussin L; }
     bussin W;
 }
 
@@ -56,7 +58,12 @@ chad fair_clamp(chad gap, rizz prev_kind, rizz kind) {
 🚽
 🚽 Patapim shows up just under half the time. The tall post only appears
 🚽 from level 2, so the first few seconds teach the crate jump cleanly.
-rizz pick_kind(rizz draw, rizz lvl) {
+🚽
+🚽 `after_croc` is `did_bombardiro`: once the Bombardiro fight is done the
+🚽 ground obstacles STOP for good and the whole spawn table becomes the flying
+🚽 Vaca Saturno (DESIGN.md 9.6) -- crates, posts and Patapim are gone.
+rizz pick_kind(rizz draw, rizz lvl, cap after_croc) {
+    edgy (after_croc) { bussin t_kind_vaca(); }
     rizz r = draw % 100;
     edgy (r < 45) { bussin t_kind_patapim(); }
     edgy (lvl < 2) { bussin t_kind_crate(); }
@@ -64,15 +71,27 @@ rizz pick_kind(rizz draw, rizz lvl) {
     bussin t_kind_post();
 }
 
+🚽 Which of the three flight heights a Vaca takes, from a PRNG draw (DESIGN.md
+🚽 9.6). Low (hit it, or be hit while grounded) is the most common, then mid
+🚽 (safe grounded, punishes a jump), then the unreachable high flyover.
+chad vaca_band_y(rizz draw) {
+    rizz r = draw % 100;
+    edgy (r < 45) { bussin t_vaca_low_y(); }
+    edgy (r < 80) { bussin t_vaca_mid_y(); }
+    bussin t_vaca_high_y();
+}
+
 chad kind_w(rizz kind) {
     edgy (kind == t_kind_crate())   { bussin 48.0; }
     edgy (kind == t_kind_post())    { bussin 40.0; }
+    edgy (kind == t_kind_vaca())    { bussin 72.0; }
     bussin 64.0;
 }
 
 chad kind_h(rizz kind) {
     edgy (kind == t_kind_crate())   { bussin 48.0; }
     edgy (kind == t_kind_post())    { bussin 96.0; }
+    edgy (kind == t_kind_vaca())    { bussin 64.0; }
     bussin 64.0;
 }
 

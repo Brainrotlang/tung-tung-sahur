@@ -23,7 +23,8 @@ skibidi draw_player(chad x, chad y, rizz tex, rizz frame, rizz face) { rizz noop
 skibidi draw_bat(chad x, chad y, rizz tex) { rizz noop = 0; }
 
 skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind,
-                 rizz tex_pat, rizz tex_crate, rizz tex_post, rizz frame) { rizz noop = 0; }
+                 rizz tex_pat, rizz tex_crate, rizz tex_post, rizz tex_vaca,
+                 rizz frame) { rizz noop = 0; }
 
 skibidi draw_hearts(rizz hearts)   { rizz noop = 0; }
 skibidi draw_speedbar(rizz lvl)    { rizz noop = 0; }

@@ -115,7 +115,29 @@ skibidi draw_bat(chad x, chad y, rizz tex) {
 🚽 A negative handle falls back to the M0 rectangle, per kind, so a partial
 🚽 set of assets degrades one entity at a time instead of all at once.
 skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind,
-                 rizz tex_pat, rizz tex_crate, rizz tex_post, rizz frame) {
+                 rizz tex_pat, rizz tex_crate, rizz tex_post, rizz tex_vaca,
+                 rizz frame) {
+    🚽 Vaca Saturno -- the hopping enemy. Two frames, mirrored like Patapim
+    🚽 (faces right, charges left). Drawn at the hopped y from ent_scroll.
+    edgy (kind == t_kind_vaca()) {
+        edgy (tex_vaca >= 0) {
+            chad vw = t_vaca_w();
+            rl_draw_texture_rec(tex_vaca, frame * vw, 0.0, 0.0 - vw, t_vaca_h(),
+                                x + w / 2.0 - t_vaca_anchor(), y,
+                                255, 255, 255, 255);
+        }
+        amogus {
+            🚽 A green orb with a cow face, for a missing atlas.
+            rl_draw_rectangle(x, y, w, h, 150, 182, 150, 255);
+            rl_draw_rectangle(x + w * 0.62, y + 8.0, 14.0, 12.0,
+                              240, 240, 240, 255);
+            rl_draw_rectangle(x + w * 0.66, y + 11.0, 6.0, 6.0, 20, 20, 20, 255);
+            rl_draw_rectangle(x + 10.0, y + h - 14.0, 10.0, 14.0, 84, 62, 50, 255);
+            rl_draw_rectangle(x + w - 22.0, y + h - 14.0, 10.0, 14.0,
+                              84, 62, 50, 255);
+        }
+        bussin;
+    }
     edgy (kind == t_kind_patapim()) {
         edgy (tex_pat >= 0) {
             🚽 NEGATIVE source width, which mirrors the frame.

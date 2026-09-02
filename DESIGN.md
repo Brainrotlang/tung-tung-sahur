@@ -376,6 +376,7 @@ A full pool silently skips the spawn — which is correct behaviour, not an erro
 | 0 | Crate | 48 × 48, grounded | jump |
 | 1 | Post | 40 × 96, grounded | jump |
 | 2 | Brr Brr Patapim | 64 × 64, grounded | bonk |
+| 3 | Vaca Saturno | 72 × 64, **flies at 3 heights** | §9.6 |
 
 ### 8.2 Spacing is measured in time
 
@@ -500,6 +501,42 @@ spacing:
 ```c
 enemies[i].x = enemies[i].x - (speed + ENEMY_CLOSE) * dt;   🚽 ENEMY_CLOSE = 40.0
 ```
+
+### 9.6 Vaca Saturno — the flying section
+
+The Bombardiro fight is a **turning point**. Reaching it, the ground obstacles stop
+for good — `pick_kind()` returns nothing but **Vaca Saturno** (kind 3) once
+`did_bombardiro` is set, so no more crates, posts or Patapim, and `main` also
+overrides any spawn still pending from before the fight. The fight itself cleared
+the field (§12), so "the obstacles vanish" is the moment you cross into the boss.
+`unit_curve` asserts every post-croc draw is a Vaca.
+
+From there the sky fills with Vacas — a Saturn with a cow's head — **flying straight
+across at three fixed heights**. No wobble, no hop, no gravity: `ent_scroll()` is
+the plain scroll, and the height is set once at spawn from `vaca_band_y()`. Each
+band is a different interaction, and the three are chosen against the real hitbox
+geometry (ground `560`, grounded player `464..560`, bat band `480..536`, jump apex
+top `272`):
+
+| Band | Box top `y` | Box | Grounded player | A jump | The bat |
+| --- | --- | --- | --- | --- | --- |
+| **Low** | `476` | `476..540` | **hit** (in its path) | clears it | **connects** — hit it |
+| **Mid** | `320` | `320..384` | safe (it's overhead) | **rises into it** | misses |
+| **High** | `150` | `150..214` | safe | safe (below `272`) | misses — unreachable |
+
+So the section reads at a glance: **bat the low ones** (or they clip a grounded
+player), **do not jump** into the mid ones, and the high ones are pure flyover you
+can neither touch nor be touched by. `unit_vaca.brainrot` pins all three to
+`ent_in_bat` / `ent_hits_body` — the exact passes `main` runs — plus that the
+height holds flat while flying and that every post-croc draw is a Vaca.
+
+Fairness: staying grounded and batting the low ones is always a complete answer, so
+there is no forced jump; jumping is optional and the mid band is what punishes a
+panicked one. Nothing ever occupies both the grounded lane and the jump lane at
+once at a single band, so a safe posture always exists.
+
+The bands (`t_vaca_low_y` / `t_vaca_mid_y` / `t_vaca_high_y`) and their odds
+(`vaca_band_y`, ~45 / 35 / 20) are the knobs, all in `tune.brainrot` / `curve`.
 
 ---
 

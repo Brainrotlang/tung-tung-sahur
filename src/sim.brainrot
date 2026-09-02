@@ -299,6 +299,14 @@ rizz patapim_frame(gang Ent *e) {
     bussin i % t_patapim_frames();
 }
 
+🚽 Vaca Saturno's two-frame walk, off its own travel like Patapim's.
+rizz vaca_frame(gang Ent *e) {
+    rizz i = (t_spawn_x() - e.x) / t_vaca_stride();
+    edgy (i < 0) { i = 0 - i; }
+    bussin i % t_vaca_frames();
+}
+
+
 🚽 --- entities ------------------------------------------------------------
 
 skibidi ent_spawn(gang Ent *e, rizz kind) {

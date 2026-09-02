@@ -18,12 +18,15 @@ fair everywhere=W  worst jump-jump 0.950s  worst any 0.600s
 crate is jump   W
 post is jump    W
 patapim is jump L
+vaca is jump    L
 crate   48x48
 post    40x96
 patapim 64x64
+vaca    72x64
 -- pick_kind --
 posts at lvl 1: 0
 lvl 5 over 10000: crate 2985 post 2464 patapim 4551
+after croc over 10000: crate 0 post 0 patapim 0 vaca 10000
 -- clean run, 60hz --
 0:00  speed  260.00  lvl 1  dist         0  gap 1.264
 1:00  speed  439.96  lvl 2  dist     21000  gap 1.066

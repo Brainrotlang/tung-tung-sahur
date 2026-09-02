@@ -45,6 +45,8 @@ def main():
         ("tung_jump", tw, th, 2.0),
         ("tung_swing", tw, th, const(t, "t_swing_frames")),
         ("patapim_run", pw, ph, const(t, "t_patapim_frames")),
+        ("vaca", const(t, "t_vaca_w"), const(t, "t_vaca_h"),
+         const(t, "t_vaca_frames")),
         ("tralalero", const(t, "t_shark_frame_w"),
          const(t, "t_shark_frame_h"), const(t, "t_shark_frames")),
         ("bombardiro", const(t, "t_croc_frame_w"),
@@ -77,6 +79,8 @@ def main():
             print(f"  ok       {name} {w}x{h} ({int(n)} frames)")
 
     for label, anchor, fw in (("tung", ta, tw), ("patapim", pa, pw),
+                              ("vaca", const(t, "t_vaca_anchor"),
+                               const(t, "t_vaca_w")),
                               ("tralalero", const(t, "t_shark_anchor"),
                                const(t, "t_shark_frame_w")),
                               ("bombardiro", const(t, "t_croc_anchor"),

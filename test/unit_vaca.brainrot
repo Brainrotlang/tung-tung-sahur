@@ -1,0 +1,97 @@
+🚽 unit_vaca.brainrot — Vaca Saturno, the flying enemy that takes over the
+🚽 spawn table after the Bombardiro fight (DESIGN.md 9.6). It flies straight
+🚽 across at one of three fixed heights, and each height is a different
+🚽 interaction. This pins those three to the collision geometry:
+🚽   LOW  -- in bat reach, and it hits a grounded player (hit it, or be hit).
+🚽   MID  -- clears a grounded player, but a jump rises into it.
+🚽   HIGH -- above the jump apex: cannot be hit and cannot hit.
+
+#cooked "../src/tune.brainrot"
+#cooked "../src/math.brainrot"
+#cooked "../src/collide.brainrot"
+#cooked "../src/curve.brainrot"
+#cooked "../src/sim.brainrot"
+
+skibidi main {
+    🚽 --- after the croc, the whole table is Vaca ----------------------
+    yapping("-- vaca takes over --");
+    rizz only_vaca = 0;
+    rizz s = 7;
+    flex (rizz i = 0; i < 500; i = i + 1) {
+        s = rng_next(s);
+        edgy (pick_kind(s, 7, W) == t_kind_vaca()) { only_vaca = only_vaca + 1; }
+    }
+    yapping("after croc, 500 draws are all vaca: %b", only_vaca == 500);
+
+    🚽 --- it flies straight: y does not change as it crosses ------------
+    yapping("-- flies straight --");
+    gang World w;
+    world_reset(&w);
+    w.dt = 0.016666;
+    w.speed = 800.0;
+    gang Ent v;
+    ent_spawn(&v, t_kind_vaca());
+    v.y = t_vaca_mid_y();
+    chad y0 = v.y;
+    cap level = W;
+    flex (rizz f = 0; f < 40; f = f + 1) {
+        ent_scroll(&v, &w, t_enemy_close());
+        edgy (v.y != y0) { level = L; }
+    }
+    yapping("height held flat while flying (no wobble/hop): %b", level);
+    yapping("it crossed toward the player (x fell): %b", v.x < t_spawn_x());
+
+    🚽 --- the three bands, against the real hitboxes -------------------
+    🚽 A grounded stand-in and an apex stand-in on the player's column; a Vaca
+    🚽 parked on that column at each band height. ent_in_bat / ent_hits_body
+    🚽 are exactly what main runs.
+    gang Player pg;
+    player_reset(&pg);
+    pg.grounded = W;
+    pg.y = t_ground_y() - t_player_h();
+
+    gang Player pa;
+    player_reset(&pa);
+    pa.grounded = L;
+    pa.y = t_ground_y() - t_player_h() - 190.0;
+
+    gang Ent vb;
+    ent_spawn(&vb, t_kind_vaca());
+    vb.x = t_player_x();
+
+    yapping("-- LOW: hit it, or be hit grounded --");
+    vb.y = t_vaca_low_y();
+    yapping("in bat reach:            %b", ent_in_bat(&vb, &pg));
+    yapping("hits a grounded player:  %b", ent_hits_body(&vb, &pg));
+    yapping("a jump clears it:        %b", !ent_hits_body(&vb, &pa));
+
+    yapping("-- MID: don't jump --");
+    vb.y = t_vaca_mid_y();
+    yapping("out of bat reach:        %b", !ent_in_bat(&vb, &pg));
+    yapping("safe while grounded:     %b", !ent_hits_body(&vb, &pg));
+    yapping("a jump rises into it:    %b", ent_hits_body(&vb, &pa));
+
+    yapping("-- HIGH: unreachable flyover --");
+    vb.y = t_vaca_high_y();
+    yapping("cannot be batted:        %b", !ent_in_bat(&vb, &pg));
+    yapping("cannot hit grounded:     %b", !ent_hits_body(&vb, &pg));
+    yapping("cannot hit a jump:       %b", !ent_hits_body(&vb, &pa));
+
+    🚽 --- the band draw picks all three -------------------------------
+    yapping("-- band distribution --");
+    rizz lo = 0;
+    rizz mid = 0;
+    rizz hi = 0;
+    rizz s2 = 7;
+    flex (rizz i = 0; i < 9000; i = i + 1) {
+        s2 = rng_next(s2);
+        chad by = vaca_band_y(s2);
+        edgy (by == t_vaca_low_y())  { lo = lo + 1; }
+        edgy (by == t_vaca_mid_y())  { mid = mid + 1; }
+        edgy (by == t_vaca_high_y()) { hi = hi + 1; }
+    }
+    yapping("over 9000: low %d mid %d high %d (all three appear: %b)",
+            lo, mid, hi, lo > 0 && mid > 0 && hi > 0);
+
+    bussin 0;
+}

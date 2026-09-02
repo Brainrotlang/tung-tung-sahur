@@ -1,0 +1,19 @@
+-- vaca takes over --
+after croc, 500 draws are all vaca: W
+-- flies straight --
+height held flat while flying (no wobble/hop): W
+it crossed toward the player (x fell): W
+-- LOW: hit it, or be hit grounded --
+in bat reach:            W
+hits a grounded player:  W
+a jump clears it:        W
+-- MID: don't jump --
+out of bat reach:        W
+safe while grounded:     W
+a jump rises into it:    W
+-- HIGH: unreachable flyover --
+cannot be batted:        W
+cannot hit grounded:     W
+cannot hit a jump:       W
+-- band distribution --
+over 9000: low 4088 mid 3137 high 1775 (all three appear: W)
