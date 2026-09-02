@@ -536,6 +536,7 @@ rizz t_state_title()     { bussin 0; }
 rizz t_state_run()       { bussin 1; }
 rizz t_state_over()      { bussin 2; }
 rizz t_state_win()       { bussin 3; }   🚽 the developer is beaten (12.6.11)
+rizz t_state_pause()     { bussin 4; }   🚽 ESC mid-run: RESUME / RESTART / QUIT
 
 🚽 The La Grande Combinasion reveal (12.6.1), as cumulative seconds from the
 🚽 frame U Din Din dies. The scene freezes; the normal song plays on so the
@@ -565,3 +566,10 @@ rizz t_key_left()        { bussin 263; }
 rizz t_key_right()       { bussin 262; }
 rizz t_key_a()           { bussin 65; }
 rizz t_key_d()           { bussin 68; }
+rizz t_key_down()        { bussin 264; }   🚽 pause-menu down
+rizz t_key_esc()         { bussin 256; }   🚽 pause / resume (no longer quits)
+rizz t_key_f11()         { bussin 300; }   🚽 toggle fullscreen
+
+🚽 raylib FLAG_WINDOW_RESIZABLE, set before the window opens so it can be
+🚽 dragged and go borderless-fullscreen; the framebuffer rescales to fit.
+rizz t_flag_resizable()  { bussin 4; }

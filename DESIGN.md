@@ -609,12 +609,19 @@ frame number, and nobody ever went to read their console for it.
 | Action | Keys | Codes | Trigger |
 | --- | --- | --- | --- |
 | Jump | `SPACE`, `UP` | 32, 265 | `is_key_down`, gated on `grounded` |
-| Bat | `X`, `Z` | 88, 90 | `is_key_pressed`, gated on `atk_t <= 0` |
-| Duck (M1) | `DOWN` | 264 | `is_key_down` |
-| Start / restart | `ENTER` | 257 | `is_key_pressed`; title (after the beat) and game-over |
-| Quit | `ESC` | 256 | raylib default + `rl_window_should_close` |
+| Bat | `X`, `Z`, `W` | 88, 90, 87 | `is_key_pressed`, gated on `atk_t <= 0` |
+| Move (Combinasion) | `LEFT`/`A`, `RIGHT`/`D` | 263/65, 262/68 | `is_key_down`, final-boss fight only (§12.6.2) |
+| Start / restart | `ENTER` | 257 | `is_key_pressed`; title (after the beat), game-over, win |
+| Pause / resume | `ESC` | 256 | `is_key_pressed` — §13.1 |
+| Menu move | `UP` / `DOWN` | 265 / 264 | `is_key_pressed`, pause menu |
+| Fullscreen | `F11` | 300 | `is_key_pressed`, any state |
+| Quit window | `ESC` (title/over/win), window ✕ | 256 | `rl_window_should_close` (✕) |
 
-No pause. It's an arcade runner.
+**ESC no longer quits mid-run.** raylib's default exit key is disabled at
+startup (`rl_set_exit_key(0)`), so `rl_window_should_close()` fires only on the
+window's ✕ button; ESC is read as an ordinary key. Mid-run it opens the pause
+menu (§13.1); on the title / game-over / win screens it still quits, since you
+are not mid-run there.
 
 ---
 
@@ -1083,6 +1090,30 @@ TITLE ──ENTER──► RUN ──dist >= SAHUR_DISTANCE──► SAHUR (win)
 - **High score** is in-session only. Brainrot has no file I/O, so persistence is
   a known gap, not an oversight — noted in §15.
 
+### 13.1 Pause, and the scaled window
+
+**Pause.** ESC mid-run enters `t_state_pause()` and opens **RESUME / RESTART /
+QUIT** (UP/DOWN to move, ENTER to confirm, ESC to resume). It is a state, not a
+flag: the whole simulation is already gated on `state == run` (via `in_run` →
+`live`), so pausing freezes it for free — no separate "paused" plumbing through
+the step functions. `draw_pause()` dims the frozen scene and draws the menu over
+it. RESTART reuses the one `do_reset` path; QUIT drops `running`. Handled before
+`in_run` is sampled, so the pause takes hold on the same frame ESC is pressed.
+
+This is the desktop-release fix for ESC instantly killing a four-minute run —
+see §11 for why `rl_set_exit_key(0)` is what makes it possible.
+
+**Scaled window.** The game renders its fixed **1280×720** logical frame into a
+render-texture framebuffer (`plat_framebuffer_make()` → `draw_begin(fb)` /
+`draw_end(fb)`), then blits it to the real window **scaled-to-fit and centred
+with black bars** (`rl_draw_render_texture_fit`). The window opens
+`FLAG_WINDOW_RESIZABLE`, and **F11** toggles borderless fullscreen; the blit
+rescales to whatever size the window becomes, so no gameplay coordinate ever
+changes — it stays 1280×720 to the simulation. A `-1` framebuffer handle
+(headless, or a rayrot without render-texture support) degrades to presenting
+straight to the window, unscaled, so the game still runs. The rayrot functions
+this needs are in §15.1.
+
 ---
 
 ## 14. Architecture
@@ -1249,12 +1280,27 @@ depends on none of them.**
 | ~~**B2**~~ | ~~`rl_draw_texture_rec`~~ — **landed**, [brainrot#293](https://github.com/Brainrotlang/brainrot/pull/293). Negative source width/height mirrors a sprite | Sprite atlases, animation frames, tiled parallax | ✅ |
 | ~~**B3**~~ | ~~`rl_init_audio_device`, `rl_load_sound`, `rl_play_sound`, `rl_unload_sound`, `rl_close_audio_device`~~ — **landed**, [brainrot#302](https://github.com/Brainrotlang/brainrot/pull/302). Music streams too. Initialise the audio device *before* the window; see `src/platform.brainrot` | The `TUNG` on every bat hit. The entire joke | ✅ |
 | **B4** | `rl_draw_texture_pro` (scale / flip / rotate), `rl_draw_rectangle_lines`, `rl_get_time` | Facing flips, debug hitbox overlays | M3 |
+| **B7** | `rl_set_exit_key`, `rl_set_config_flags`, `rl_toggle_borderless_windowed`, `rl_is_window_resized`, and a render-texture family — `rl_load_render_texture` / `rl_begin_texture_mode` / `rl_end_texture_mode` / `rl_draw_render_texture_fit` / `rl_unload_render_texture` (Road A handle table, same as textures) | Desktop pause (ESC no longer quits) and the scaled/fullscreen window (§13.1) | **built in `rayrot`; needs an upstream PR + a brainrot release so the pinned bundles ship it** |
 
 B1 was the smallest change with the largest payoff and went first. Formatting
 is fixed at one literal prefix plus one integer rather than a general format
 string: a Brainrot-supplied `"%s"` would make the host read an argument that
 isn't there, and nothing can check a user-supplied format against the single
 `rizz` actually passed. B2 and B3 followed; **B4** is next.
+
+**B7** is the desktop-release polish. `rl_draw_render_texture_fit` is a
+composite: it reads the live window size and blits the framebuffer letterboxed
+with `DrawTexturePro`, keeping the scale/flip maths in C rather than exposing a
+16-argument `DrawTexturePro` across the boundary. Render textures use the same
+Road A integer-handle table as textures (`RenderTexture2D` is a struct, so the
+generated Road B binding cannot return one — §"Road B does not replace this
+yet"). The functions are implemented and built locally; the game calls them
+unconditionally, so it now **requires** a `rayrot` that has them (an interpreter
+without B7 rejects the calls at analysis time). The `-1`-framebuffer fallback in
+`draw_begin`/`draw_end` covers a render-texture that fails to *load* at runtime
+(and the headless fake), not a `rayrot` missing the function. Shipping in the
+pinned bundles therefore needs the upstream PR landed and a new brainrot
+release — the usual downstream sync.
 
 #### Road B does not replace this yet
 
