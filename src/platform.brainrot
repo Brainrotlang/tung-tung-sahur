@@ -28,12 +28,55 @@
 🚽 nothing and avoids it.
 skibidi plat_open() {
     rl_init_audio_device();
+    🚽 Resizable BEFORE the window opens, so it can be dragged and go
+    🚽 borderless-fullscreen; the 1280x720 framebuffer rescales to fit.
+    rl_set_config_flags(t_flag_resizable());
     rl_init_window(t_screen_w(), t_screen_h(), "TUNG TUNG TUNG SAHUR: RUN");
     rl_set_target_fps(60);
+    🚽 Stop raylib from closing the window on ESC (its default exit key) so the
+    🚽 game can make ESC a pause instead. 0 == KEY_NULL.
+    rl_set_exit_key(0);
 }
 
 skibidi plat_close() {
     rl_close_window();
+}
+
+🚽 --- framebuffer (fixed 1280x720, scaled to the window) -----------------
+🚽 The whole scene draws into this render texture, then it is blitted
+🚽 letterboxed to the real window (any size / fullscreen). A -1 handle means
+🚽 render textures are unavailable (headless, or an old rayrot): the drawing
+🚽 seam then presents straight to the window, unscaled, and nothing breaks.
+rizz plat_framebuffer_make() {
+    bussin rl_load_render_texture(t_screen_w(), t_screen_h());
+}
+
+skibidi plat_framebuffer_free(rizz fb) {
+    edgy (fb >= 0) { rl_unload_render_texture(fb); }
+}
+
+🚽 F11 toggles borderless fullscreen. The framebuffer blit rescales to
+🚽 whatever size the window becomes, so nothing else has to change.
+skibidi plat_toggle_fullscreen() {
+    rl_toggle_borderless_windowed();
+}
+
+cap plat_fullscreen_pressed(rizz frame) {
+    bussin rl_is_key_pressed(t_key_f11());
+}
+
+🚽 ESC: pause / resume (it no longer quits -- see rl_set_exit_key above).
+cap plat_pause_pressed(rizz frame) {
+    bussin rl_is_key_pressed(t_key_esc());
+}
+
+🚽 Pause-menu navigation.
+cap plat_menu_up_pressed(rizz frame) {
+    bussin rl_is_key_pressed(t_key_up());
+}
+
+cap plat_menu_down_pressed(rizz frame) {
+    bussin rl_is_key_pressed(t_key_down());
 }
 
 🚽 --- music ---------------------------------------------------------------

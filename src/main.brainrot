@@ -89,6 +89,12 @@ skibidi main {
     rizz frame    = 0;
     rizz run_seed = 20260827;
 
+    🚽 The 1280x720 framebuffer the whole scene draws into, then blitted
+    🚽 scaled-to-fit to the window (any size / fullscreen). -1 if unavailable.
+    rizz fb        = plat_framebuffer_make();
+    🚽 Pause-menu selection: 0 RESUME, 1 RESTART, 2 QUIT.
+    rizz pause_sel = 0;
+
     gang World wd;
     gang Player pl;
     gang Ent obstacles[16];
@@ -165,6 +171,45 @@ skibidi main {
         🚽 tunnels every entity straight through the player.
         wd.dt = plat_dt(frame);
         edgy (wd.dt > t_dt_max()) { wd.dt = t_dt_max(); }
+
+        🚽 --- window controls: fullscreen, and ESC (pause / resume / quit) ---
+        🚽 Handled BEFORE in_run below, so a pause takes hold this same frame --
+        🚽 the sim is already gated on state==run, so pausing freezes it.
+        cap fs = plat_fullscreen_pressed(frame);
+        edgy (fs) { plat_toggle_fullscreen(); }
+
+        cap esc = plat_pause_pressed(frame);
+        edgy (esc) {
+            edgy (state == t_state_run()) {
+                state     = t_state_pause();
+                pause_sel = 0;
+            }
+            amogus {
+                🚽 In the pause menu ESC resumes; on the title/over/win screens
+                🚽 it still quits (safe -- you are not mid-run).
+                edgy (state == t_state_pause()) { state = t_state_run(); }
+                amogus { running = L; }
+            }
+        }
+
+        edgy (state == t_state_pause()) {
+            cap up = plat_menu_up_pressed(frame);
+            edgy (up) {
+                pause_sel = pause_sel - 1;
+                edgy (pause_sel < 0) { pause_sel = 2; }
+            }
+            cap dn = plat_menu_down_pressed(frame);
+            edgy (dn) {
+                pause_sel = pause_sel + 1;
+                edgy (pause_sel > 2) { pause_sel = 0; }
+            }
+            cap pick = plat_enter_pressed(frame);
+            edgy (pick) {
+                edgy (pause_sel == 0) { state = t_state_run(); }
+                edgy (pause_sel == 1) { state = t_state_run(); do_reset = W; }
+                edgy (pause_sel == 2) { running = L; }
+            }
+        }
 
         cap in_run = L;
         edgy (state == t_state_run()) { in_run = W; }
@@ -598,7 +643,7 @@ skibidi main {
             }
         }
 
-        draw_begin();
+        draw_begin(fb);
         draw_sky(lvl, drain);
         draw_background(bg_far, bg_mid, bg_near, bg_fore, wd.dist);
         draw_ground();
@@ -705,8 +750,10 @@ skibidi main {
         edgy (state == t_state_title()) { draw_title(title_t); }
         edgy (state == t_state_over())  { draw_gameover(score, run_seed); }
         edgy (state == t_state_win())   { draw_win(score, run_seed); }
+        🚽 The pause menu draws over the frozen scene, inside the framebuffer.
+        edgy (state == t_state_pause())  { draw_pause(pause_sel); }
 
-        draw_end();
+        draw_end(fb);
 
         🚽 --- 11. quit --------------------------------------------------
         edgy (plat_should_close(frame)) { running = L; }
@@ -743,6 +790,7 @@ skibidi main {
     plat_sfx_close(sfx_nonono);
     plat_sfx_close(sfx_susp);
     plat_sfx_close(sfx_wow);
+    plat_framebuffer_free(fb);
     plat_music_unload(music_boss);
     plat_music_close(music);
     plat_close();

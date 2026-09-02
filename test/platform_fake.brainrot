@@ -91,6 +91,16 @@ cap plat_should_close(rizz frame) {
     bussin L;
 }
 
+🚽 No window, so no framebuffer (-1 -> the draw seam presents unscaled), no
+🚽 fullscreen, and none of the pause/menu keys are ever down.
+rizz plat_framebuffer_make()             { bussin 0 - 1; }
+skibidi plat_framebuffer_free(rizz fb)   { rizz noop = 0; }
+skibidi plat_toggle_fullscreen()         { rizz noop = 0; }
+cap plat_fullscreen_pressed(rizz frame)  { bussin L; }
+cap plat_pause_pressed(rizz frame)       { bussin L; }
+cap plat_menu_up_pressed(rizz frame)     { bussin L; }
+cap plat_menu_down_pressed(rizz frame)   { bussin L; }
+
 🚽 Sample the whole scalar state every 250 frames. `score` is downstream
 🚽 of the spawn table, the fairness clamp, every collision pass and the
 🚽 combo rules, so drift anywhere in the simulation moves these numbers.

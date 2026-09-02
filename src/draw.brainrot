@@ -12,12 +12,24 @@
 🚽
 🚽 Requires `#cooked <raylib>` earlier in the including file.
 
-skibidi draw_begin() {
-    rl_begin_drawing();
+🚽 The whole scene is drawn into the 1280x720 framebuffer `fb`, then presented
+🚽 to the window scaled-to-fit with black bars (draw_end). A negative `fb`
+🚽 (headless, or no render-texture support) draws straight to the window
+🚽 instead, unscaled -- the game still runs, just fixed-size.
+skibidi draw_begin(rizz fb) {
+    edgy (fb >= 0) { rl_begin_texture_mode(fb); }
+    amogus { rl_begin_drawing(); }
 }
 
-skibidi draw_end() {
-    rl_end_drawing();
+skibidi draw_end(rizz fb) {
+    edgy (fb >= 0) {
+        rl_end_texture_mode();
+        rl_begin_drawing();
+        rl_clear_background(0, 0, 0, 255);   🚽 the letterbox bars
+        rl_draw_render_texture_fit(fb);
+        rl_end_drawing();
+    }
+    amogus { rl_end_drawing(); }
 }
 
 🚽 `drain` 0 is the normal per-level sky; 1 lerps it toward a dead grey-black.
@@ -310,6 +322,42 @@ skibidi draw_namecard() {
     rl_draw_text("LA GRANDE", cx - w1 / 2, 120, 88, 214, 64, 64, 255);
     rizz w2 = rl_measure_text("COMBINASION", 88);
     rl_draw_text("COMBINASION", cx - w2 / 2, 210, 88, 214, 64, 64, 255);
+}
+
+🚽 The pause menu (ESC mid-run). `sel` is 0 RESUME / 1 RESTART / 2 QUIT, drawn
+🚽 highlighted; UP/DOWN move it, ENTER confirms, ESC resumes. The frozen scene
+🚽 shows through a dim scrim behind it.
+skibidi draw_pause(rizz sel) {
+    rizz cx = t_screen_w() / 2;
+    rl_draw_rectangle(0, 0, t_screen_w(), t_screen_h(), 0, 0, 0, 150);
+
+    rizz w1 = rl_measure_text("PAUSED", 80);
+    rl_draw_text("PAUSED", cx - w1 / 2, 180, 80, 245, 200, 90, 255);
+
+    🚽 Three rows; the selected one is brighter and tagged with a caret.
+    flex (rizz i = 0; i < 3; i = i + 1) {
+        rizz oy = 320 + i * 60;
+        rizz cr = 150;
+        rizz cg = 150;
+        rizz cb = 150;
+        edgy (i == sel) { cr = 255; cg = 214; cb = 64; }
+        edgy (i == 0) {
+            rizz w = rl_measure_text("RESUME", 40);
+            rl_draw_text("RESUME", cx - w / 2, oy, 40, cr, cg, cb, 255);
+        }
+        edgy (i == 1) {
+            rizz w = rl_measure_text("RESTART", 40);
+            rl_draw_text("RESTART", cx - w / 2, oy, 40, cr, cg, cb, 255);
+        }
+        edgy (i == 2) {
+            rizz w = rl_measure_text("QUIT", 40);
+            rl_draw_text("QUIT", cx - w / 2, oy, 40, cr, cg, cb, 255);
+        }
+    }
+
+    rizz wh = rl_measure_text("UP / DOWN to choose, ENTER to confirm, ESC to resume", 20);
+    rl_draw_text("UP / DOWN to choose, ENTER to confirm, ESC to resume",
+                 cx - wh / 2, 520, 20, 170, 170, 170, 255);
 }
 
 🚽 Beating the developer ends the run in a win, not a game over (12.6.11).
