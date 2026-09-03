@@ -345,6 +345,56 @@ skibidi draw_namecard() {
     rl_draw_text("COMBINASION", cx - w2 / 2, 210, 88, 214, 64, 64, 255);
 }
 
+🚽 The difficulty menu (ENTER from the title / game-over / win). Five rows,
+🚽 easiest to hardest, each showing its starting heart count; the selected one
+🚽 is highlighted. UP/DOWN move, ENTER starts, ESC backs out.
+skibidi draw_difficulty(rizz sel) {
+    rizz cx = t_screen_w() / 2;
+    rl_draw_rectangle(0, 0, t_screen_w(), t_screen_h(), 0, 0, 0, 200);
+
+    rizz wt = rl_measure_text("SELECT DIFFICULTY", 56);
+    rl_draw_text("SELECT DIFFICULTY", cx - wt / 2, 90, 56, 245, 200, 90, 255);
+    rizz ws = rl_measure_text("hearts you start with", 22);
+    rl_draw_text("hearts you start with", cx - ws / 2, 158, 22, 170, 170, 170, 255);
+
+    flex (rizz i = 0; i < 5; i = i + 1) {
+        rizz oy = 220 + i * 58;
+        rizz cr = 150;
+        rizz cg = 150;
+        rizz cb = 150;
+        edgy (i == sel) { cr = 255; cg = 214; cb = 64; }
+        edgy (i == 0) {
+            rizz w = rl_measure_text_int("n00b     ", t_diff_noob(), 0, 40);
+            rl_draw_text_int("n00b     ", t_diff_noob(), 0, cx - w / 2, oy, 40,
+                             cr, cg, cb, 255);
+        }
+        edgy (i == 1) {
+            rizz w = rl_measure_text_int("easy     ", t_diff_easy(), 0, 40);
+            rl_draw_text_int("easy     ", t_diff_easy(), 0, cx - w / 2, oy, 40,
+                             cr, cg, cb, 255);
+        }
+        edgy (i == 2) {
+            rizz w = rl_measure_text_int("normal     ", t_diff_normal(), 0, 40);
+            rl_draw_text_int("normal     ", t_diff_normal(), 0, cx - w / 2, oy, 40,
+                             cr, cg, cb, 255);
+        }
+        edgy (i == 3) {
+            rizz w = rl_measure_text_int("hard     ", t_diff_hard(), 0, 40);
+            rl_draw_text_int("hard     ", t_diff_hard(), 0, cx - w / 2, oy, 40,
+                             cr, cg, cb, 255);
+        }
+        edgy (i == 4) {
+            rizz w = rl_measure_text_int("PRO     ", t_diff_pro(), 0, 40);
+            rl_draw_text_int("PRO     ", t_diff_pro(), 0, cx - w / 2, oy, 40,
+                             cr, cg, cb, 255);
+        }
+    }
+
+    rizz wh = rl_measure_text("UP / DOWN to choose, ENTER to start, ESC to go back", 20);
+    rl_draw_text("UP / DOWN to choose, ENTER to start, ESC to go back",
+                 cx - wh / 2, 550, 20, 170, 170, 170, 255);
+}
+
 🚽 The pause menu (ESC mid-run). `sel` is 0 RESUME / 1 RESTART / 2 QUIT, drawn
 🚽 highlighted; UP/DOWN move it, ENTER confirms, ESC resumes. The frozen scene
 🚽 shows through a dim scrim behind it.

@@ -13,6 +13,7 @@ rizz draw_load(rant path) { bussin 0 - 1; }
 skibidi draw_begin(rizz fb) { rizz noop = 0; }
 skibidi draw_end(rizz fb)   { rizz noop = 0; }
 skibidi draw_pause(rizz sel) { rizz noop = 0; }
+skibidi draw_difficulty(rizz sel) { rizz noop = 0; }
 
 skibidi draw_sky(rizz lvl, chad drain) { rizz noop = 0; }
 skibidi draw_ground()         { rizz noop = 0; }

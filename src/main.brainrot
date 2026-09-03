@@ -57,6 +57,9 @@ skibidi main {
     🚽 the end of the Combinasion reveal (12.6.1) and loops under the fight.
     rizz music     = plat_music_load("assets/music/tung-tung.ogg");
     rizz music_boss = plat_music_load("assets/music/finalboss.ogg");
+    🚽 The regular-boss track: Tralalero, Bombardiro and U Din Din swap the main
+    🚽 track for this while they are up, and it swaps back when they are beaten.
+    rizz music_fight = plat_music_load("assets/music/boss.ogg");
     rizz sfx_tung   = plat_sfx_load("assets/sfx/tung.ogg");
     rizz sfx_jump   = plat_sfx_load("assets/sfx/jump.ogg");
     rizz sfx_damage = plat_sfx_load("assets/sfx/damage.ogg");
@@ -68,6 +71,11 @@ skibidi main {
     rizz sfx_nonono = plat_sfx_load("assets/sfx/nonono.ogg");
     rizz sfx_susp   = plat_sfx_load("assets/sfx/suspense.ogg");
     rizz sfx_wow    = plat_sfx_load("assets/sfx/wow.ogg");
+    🚽 The final boss's two tells: warp on every teleport (he blinks out),
+    🚽 explosion on every bash (the swing lands). Both fire off his state
+    🚽 machine's edges in step 9 -- see combi_live.
+    rizz sfx_warp   = plat_sfx_load("assets/sfx/warp.ogg");
+    rizz sfx_boom   = plat_sfx_load("assets/sfx/explosion.ogg");
 
     🚽 The opening sting, played once here and never again. It belongs to
     🚽 the title card, and the title is only ever seen at startup -- a
@@ -95,6 +103,10 @@ skibidi main {
     rizz fb        = plat_framebuffer_make();
     🚽 Pause-menu selection: 0 RESUME, 1 RESTART, 2 QUIT.
     rizz pause_sel = 0;
+    🚽 Difficulty menu: selection (0 n00b .. 4 PRO, default Normal) and the
+    🚽 starting hearts it maps to, applied on do_reset.
+    rizz diff_sel = 2;
+    rizz start_hearts = t_diff_normal();
 
     gang World wd;
     gang Player pl;
@@ -127,10 +139,17 @@ skibidi main {
     🚽 True while his fight is actually live, so its end reads as a WIN rather
     🚽 than a death (the run continued past U Din Din, and the player won it).
     cap  combi_live_prev = L;
+    🚽 Was a regular boss (Tralalero/Bombardiro/U Din Din) up last frame? Its
+    🚽 fall edge is what swaps boss.ogg back to the main track.
+    cap  fight_boss_prev = L;
+    🚽 The final boss's combi state last frame, for the teleport/bash sfx edges.
+    rizz cs_prev = t_cs_out();
 
     goon (running) {
         edgy (do_reset) {
             player_reset(&pl);
+            🚽 Difficulty is the starting heart count, chosen on the menu.
+            pl.hearts = start_hearts;
             world_reset(&wd);
 
             🚽 Each run advances the seed, so runs differ -- but the whole
@@ -149,6 +168,7 @@ skibidi main {
             🚽 plays only for a RUN, from the top -- do_reset also fires once at
             🚽 the title (state still title), where it must stay silent.
             plat_music_stop(music_boss);
+            plat_music_stop(music_fight);
             edgy (state == t_state_run()) { plat_music_play(music); }
             amogus { plat_music_stop(music); }
             reveal_t   = 0.0;
@@ -157,14 +177,17 @@ skibidi main {
             rv_boom    = L;
             namecard_t = 0.0;
             combi_live_prev = L;
+            fight_boss_prev = L;
+            cs_prev = t_cs_out();
             tung_face  = 1;
 
             do_reset = L;
         }
 
         plat_music_tick(music);
-        🚽 Both streams pump every frame; the boss one is silent until played.
+        🚽 Every stream pumps every frame; each is silent until played.
         plat_music_tick(music_boss);
+        plat_music_tick(music_fight);
 
         🚽 --- 1. frame time -------------------------------------------
         🚽 The clamp is not optional. rl_get_frame_time after a window
@@ -186,9 +209,13 @@ skibidi main {
                 pause_sel = 0;
             }
             amogus {
-                🚽 In the pause menu ESC resumes; on the title/over/win screens
-                🚽 it still quits (safe -- you are not mid-run).
+                🚽 In the pause menu ESC resumes; on the difficulty menu it
+                🚽 backs out to the title; on the title/over/win screens it
+                🚽 still quits (safe -- you are not mid-run).
                 edgy (state == t_state_pause()) { state = t_state_run(); }
+                amogus edgy (state == t_state_difficulty()) {
+                    state = t_state_title();
+                }
                 amogus { running = L; }
             }
         }
@@ -318,6 +345,10 @@ skibidi main {
                     }
                     amogus {
                         plat_sfx_play(sfx_bark);
+                        🚽 A regular boss is up: swap the main track for boss.ogg
+                        🚽 (it swaps back on the boss's fall, in step 9).
+                        plat_music_stop(music);
+                        plat_music_play(music_fight);
                         yapping("boss %d incoming at lvl %d (score %d)",
                                 due, lvl, score);
                     }
@@ -583,15 +614,68 @@ skibidi main {
                         score);
             }
         }
+        🚽 His two audible tells, off the combi state machine's edges. Only
+        🚽 while the fight was already live last frame -- so the initial
+        🚽 materialise out of the reveal is silent (the namecard boom owns it),
+        🚽 and every mid-fight teleport (blink to OUT) warps, every bash (the
+        🚽 swing lands) explodes. One sound per transition, never per frame.
+        edgy (combi_live && combi_live_prev) {
+            edgy (bo.state != cs_prev) {
+                edgy (bo.state == t_cs_out())   { plat_sfx_play(sfx_warp); }
+                edgy (bo.state == t_cs_swing()) { plat_sfx_play(sfx_boom); }
+            }
+        }
+        cs_prev = bo.state;
         combi_live_prev = combi_live;
 
+        🚽 When a regular boss (Tralalero/Bombardiro/U Din Din) is beaten and
+        🚽 gone, boss.ogg swaps back to the main track. Its fall edge: it was up
+        🚽 last frame, is no longer active this frame, and the player survived.
+        cap fight_boss = L;
+        edgy (boss_active(&bo)) {
+            edgy (bo.kind != t_boss_combinasion()) { fight_boss = W; }
+        }
+        edgy (fight_boss_prev && !fight_boss && pl.hearts > 0) {
+            plat_music_stop(music_fight);
+            plat_music_play(music);
+        }
+        fight_boss_prev = fight_boss;
+
         🚽 --- 9. state transitions -------------------------------------
+        🚽 The difficulty menu, handled BEFORE the title so the same ENTER that
+        🚽 opens it (title, below) cannot also confirm it in one frame -- the
+        🚽 menu processes input starting the frame AFTER it opens. UP/DOWN move,
+        🚽 ENTER starts the run with the chosen starting hearts, ESC backs out.
+        edgy (state == t_state_difficulty()) {
+            cap up = plat_menu_up_pressed(frame);
+            edgy (up) {
+                diff_sel = diff_sel - 1;
+                edgy (diff_sel < 0) { diff_sel = t_diff_count() - 1; }
+            }
+            cap dn = plat_menu_down_pressed(frame);
+            edgy (dn) {
+                diff_sel = diff_sel + 1;
+                edgy (diff_sel >= t_diff_count()) { diff_sel = 0; }
+            }
+            cap go = plat_enter_pressed(frame);
+            edgy (go) {
+                edgy (diff_sel == 0) { start_hearts = t_diff_noob(); }
+                edgy (diff_sel == 1) { start_hearts = t_diff_easy(); }
+                edgy (diff_sel == 2) { start_hearts = t_diff_normal(); }
+                edgy (diff_sel == 3) { start_hearts = t_diff_hard(); }
+                edgy (diff_sel == 4) { start_hearts = t_diff_pro(); }
+                state    = t_state_run();
+                do_reset = W;
+            }
+        }
+
+        🚽 ENTER from the title opens the difficulty menu, not the run -- the
+        🚽 run starts once a difficulty (starting hearts) is chosen above.
         edgy (state == t_state_title()) {
             title_t = title_t + wd.dt;
             edgy (title_t > 2.2) {
                 edgy (plat_enter_pressed(frame)) {
-                    state    = t_state_run();
-                    do_reset = W;
+                    state = t_state_difficulty();
                 }
             }
         }
@@ -603,11 +687,12 @@ skibidi main {
         edgy (in_run) {
             edgy (pl.hearts <= 0) {
                 state = t_state_over();
-                🚽 Game over: both tracks stop -- the main one, or the boss one
-                🚽 if you died to the final boss -- and the death sting plays:
+                🚽 Game over: every track stops -- the main one, the regular
+                🚽 boss one, or the final-boss one -- and the death sting plays:
                 🚽 bruh.ogg, then nonono.ogg right on top of it.
                 plat_music_stop(music);
                 plat_music_stop(music_boss);
+                plat_music_stop(music_fight);
                 plat_sfx_play(sfx_bruh);
                 plat_sfx_play(sfx_nonono);
                 yapping("run over -- score %d, seed %d, frames %d",
@@ -615,19 +700,19 @@ skibidi main {
             }
         }
 
+        🚽 Game over / win "play again" go back through the difficulty menu, so
+        🚽 the player can re-pick before the next run.
         edgy (state == t_state_over()) {
             cap again = plat_enter_pressed(frame);
             edgy (again) {
-                state    = t_state_run();
-                do_reset = W;
+                state = t_state_difficulty();
             }
         }
 
         edgy (state == t_state_win()) {
             cap again = plat_enter_pressed(frame);
             edgy (again) {
-                state    = t_state_run();
-                do_reset = W;
+                state = t_state_difficulty();
             }
         }
 
@@ -770,6 +855,7 @@ skibidi main {
         edgy (namecard_t > 0.0) { draw_namecard(); }
 
         edgy (state == t_state_title()) { draw_title(title_t); }
+        edgy (state == t_state_difficulty()) { draw_difficulty(diff_sel); }
         edgy (state == t_state_over())  { draw_gameover(score, run_seed); }
         edgy (state == t_state_win())   { draw_win(score, run_seed); }
         🚽 The pause menu draws over the frozen scene, inside the framebuffer.
@@ -813,8 +899,11 @@ skibidi main {
     plat_sfx_close(sfx_nonono);
     plat_sfx_close(sfx_susp);
     plat_sfx_close(sfx_wow);
+    plat_sfx_close(sfx_warp);
+    plat_sfx_close(sfx_boom);
     plat_framebuffer_free(fb);
     plat_music_unload(music_boss);
+    plat_music_unload(music_fight);
     plat_music_close(music);
     plat_close();
     bussin 0;

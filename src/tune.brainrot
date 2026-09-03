@@ -554,6 +554,17 @@ rizz t_state_run()       { bussin 1; }
 rizz t_state_over()      { bussin 2; }
 rizz t_state_win()       { bussin 3; }   🚽 the developer is beaten (12.6.11)
 rizz t_state_pause()     { bussin 4; }   🚽 ESC mid-run: RESUME / RESTART / QUIT
+rizz t_state_difficulty() { bussin 5; }  🚽 pick starting hearts before a run
+
+🚽 Difficulty = the number of hearts a run starts with, chosen on the
+🚽 difficulty menu (ENTER from the title / game-over / win). Ordered easiest
+🚽 to hardest; the menu defaults to Normal.
+rizz t_diff_count()      { bussin 5; }
+rizz t_diff_noob()       { bussin 10; }
+rizz t_diff_easy()       { bussin 5; }
+rizz t_diff_normal()     { bussin 3; }
+rizz t_diff_hard()       { bussin 2; }
+rizz t_diff_pro()        { bussin 1; }
 
 🚽 The La Grande Combinasion reveal (12.6.1), as cumulative seconds from the
 🚽 frame U Din Din dies. The scene freezes; the normal song plays on so the
