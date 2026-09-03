@@ -1,0 +1,91 @@
+🚽 unit_bailarina.brainrot — Ballerina Cappuccina, the last enemy phase
+🚽 (DESIGN.md 9.7). After a full Vaca phase she takes over: a grounded enemy
+🚽 at Tung's height and Patapim's speed, but coming from BOTH edges. This
+🚽 pins the phase handover, the two directions, and that she is a normal
+🚽 bonkable-or-jumpable ground enemy.
+
+#cooked "../src/tune.brainrot"
+#cooked "../src/math.brainrot"
+#cooked "../src/collide.brainrot"
+#cooked "../src/curve.brainrot"
+#cooked "../src/sim.brainrot"
+
+skibidi main {
+    🚽 --- the phase handover: vaca -> bailarina -----------------------
+    🚽 After the croc, below t_bailarina_lvl it is all Vaca; at/above it, all
+    🚽 Ballerina and the Vacas vanish.
+    yapping("-- vaca phase then bailarina phase --");
+    rizz vac = 0;
+    rizz bal = 0;
+    rizz s = 7;
+    flex (rizz i = 0; i < 400; i = i + 1) {
+        s = rng_next(s);
+        edgy (pick_kind(s, t_bailarina_lvl() - 1, W) == t_kind_vaca()) { vac = vac + 1; }
+        edgy (pick_kind(s, t_bailarina_lvl(), W) == t_kind_bailarina()) { bal = bal + 1; }
+    }
+    yapping("below the level: all vaca %b", vac == 400);
+    yapping("at the level: all bailarina, vacas gone %b", bal == 400);
+    yapping("she is jump-required (kind_is_jump): %b", kind_is_jump(t_kind_bailarina()));
+
+    🚽 --- both directions, flying straight ----------------------------
+    yapping("-- flies in from both edges --");
+    gang World w;
+    world_reset(&w);
+    w.dt = 0.016666;
+    w.speed = 900.0;
+
+    🚽 She is grounded (Tung's height), so ent_spawn's default y already
+    🚽 stands her on the ground -- no y override.
+    chad grnd = t_ground_y() - t_bailarina_h();
+
+    🚽 From the right (the default) it enters off the right edge (t_spawn_x >
+    🚽 the screen width) and moves left -- and must SURVIVE that first frame:
+    🚽 the despawn is direction-aware, so a left-mover is not killed for being
+    🚽 past the right edge it just spawned behind.
+    gang Ent br;
+    ent_spawn(&br, t_kind_bailarina());
+    chad rx0 = br.x;
+    flex (rizz f = 0; f < 10; f = f + 1) { ent_scroll(&br, &w, t_enemy_close()); }
+    yapping("from right: alive %b, moves left %b, grounded %b",
+            br.alive, br.x < rx0, br.y == grnd);
+
+    🚽 From the left edge, moving right (dir = +1).
+    gang Ent bl;
+    ent_spawn(&bl, t_kind_bailarina());
+    bl.dir = 1;
+    bl.x = 0.0 - bl.w;
+    chad lx0 = bl.x;
+    flex (rizz f = 0; f < 10; f = f + 1) { ent_scroll(&bl, &w, t_enemy_close()); }
+    yapping("from left:  moves right %b", bl.x > lx0);
+
+    🚽 A quarter of the Patapim's speed: 4x the Ballerina's displacement equals
+    🚽 the Patapim's over the same frames.
+    gang Ent pat;
+    ent_spawn(&pat, t_kind_patapim());
+    chad px0 = pat.x;
+    flex (rizz f = 0; f < 10; f = f + 1) { ent_scroll(&pat, &w, t_enemy_close()); }
+    yapping("a quarter of patapim speed: %b",
+            absf((rx0 - br.x) * 4.0 - (px0 - pat.x)) < 1.0);
+
+    🚽 --- a normal ground enemy: bonkable and jumpable ----------------
+    yapping("-- grounded: hit it or jump it --");
+    gang Ent vb;
+    ent_spawn(&vb, t_kind_bailarina());
+    vb.x = t_player_x();
+
+    gang Player pg;
+    player_reset(&pg);
+    pg.grounded = W;
+    pg.y = t_ground_y() - t_player_h();
+
+    gang Player pa;
+    player_reset(&pa);
+    pa.grounded = L;
+    pa.y = t_ground_y() - t_player_h() - 190.0;   🚽 full-jump apex
+
+    yapping("grounded player is hit:      %b", ent_hits_body(&vb, &pg));
+    yapping("grounded bat reaches her:    %b", ent_in_bat(&vb, &pg));
+    yapping("a jump to apex clears her:   %b", !ent_hits_body(&vb, &pa));
+
+    bussin 0;
+}

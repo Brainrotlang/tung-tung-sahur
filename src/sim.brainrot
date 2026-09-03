@@ -65,6 +65,10 @@ gang Ent {
     chad h;
     rizz kind;
     cap  alive;
+    🚽 Travel direction: -1 = moving left (the default for every ground
+    🚽 entity), +1 = moving right. Only the Ballerina uses +1 -- she flies in
+    🚽 from either edge (DESIGN.md 9.7). Others leave it -1 and never read it.
+    rizz dir;
 };
 
 🚽 A boss is not an Ent and does not live in a pool. It has phases, a bonk
@@ -306,6 +310,14 @@ rizz vaca_frame(gang Ent *e) {
     bussin i % t_vaca_frames();
 }
 
+🚽 Ballerinas twirl in SYNC, off world distance rather than their own travel:
+🚽 they fly in from both edges, so no single per-entity travel unites them,
+🚽 and a synchronised corps de ballet is the better look anyway.
+rizz bailarina_frame(gang World *w) {
+    rizz i = w.dist / t_bailarina_stride();
+    bussin i % t_bailarina_frames();
+}
+
 
 🚽 --- entities ------------------------------------------------------------
 
@@ -316,6 +328,7 @@ skibidi ent_spawn(gang Ent *e, rizz kind) {
     e.x     = t_spawn_x();
     e.y     = t_ground_y() - kind_h(kind);
     e.alive = W;
+    e.dir   = 0 - 1;   🚽 moving left; main flips it for a left-spawned Ballerina
 }
 
 🚽 `extra` is the closing speed on top of the world's: zero for obstacles,
@@ -325,6 +338,17 @@ skibidi ent_spawn(gang Ent *e, rizz kind) {
 🚽 Despawning off the left edge does NOT break the combo. Only getting hit
 🚽 does, which keeps the incentive aggressive rather than cautious.
 skibidi ent_scroll(gang Ent *e, gang World *w, chad extra) {
+    🚽 The Ballerina drifts at a QUARTER of the Patapim's speed in her own
+    🚽 direction -- from either edge (DESIGN.md 9.7). The despawn is
+    🚽 direction-aware: a right-mover leaves off the right, a left-mover off the
+    🚽 left. (A left-mover spawns at t_spawn_x() > screen width, so testing the
+    🚽 right edge for it would kill it on its very first frame.)
+    edgy (e.kind == t_kind_bailarina()) {
+        e.x = e.x + e.dir * (w.speed + extra) * t_bailarina_speed_frac() * w.dt;
+        edgy (e.dir < 0 && e.x < 0.0 - e.w) { e.alive = L; }
+        edgy (e.dir > 0 && e.x > t_screen_w()) { e.alive = L; }
+        bussin;
+    }
     e.x = e.x - (w.speed + extra) * w.dt;
     edgy (e.x < 0.0 - e.w) { e.alive = L; }
 }

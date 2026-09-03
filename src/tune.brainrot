@@ -474,6 +474,22 @@ chad t_vaca_low_y()      { bussin 476.0; }
 chad t_vaca_mid_y()      { bussin 320.0; }
 chad t_vaca_high_y()     { bussin 150.0; }
 
+🚽 Ballerina Cappuccina -- the LAST enemy phase, after a full phase of Vacas
+🚽 (DESIGN.md 9.7). At t_bailarina_lvl() the Vacas vanish and Ballerinas take
+🚽 over. She is a grounded enemy at Tung's own height, moving at the Patapim's
+🚽 speed (world + enemy-close) -- but from BOTH edges: some right->left, some
+🚽 left->right. Bonkable or jumpable like a Patapim; the twist is that the bat
+🚽 only reaches forward, so the ones arriving from behind (left->right) can
+🚽 only be jumped, not hit, until they have passed. Jump-required for spacing.
+rizz t_bailarina_lvl()   { bussin 8; }     🚽 level the Ballerina phase begins
+chad t_bailarina_speed_frac() { bussin 0.25; }  🚽 a quarter of Patapim's speed
+🚽 Dance cycle, animated off world distance so every Ballerina twirls in sync.
+rizz t_bailarina_frames(){ bussin 4; }
+chad t_bailarina_w()     { bussin 39.0; }
+chad t_bailarina_h()     { bussin 84.0; }
+chad t_bailarina_anchor(){ bussin 19.0; }
+chad t_bailarina_stride(){ bussin 110.0; }
+
 🚽 --- parallax layers ---
 🚽
 🚽 Tile width, on-screen height, and parallax rate per layer, back to front.
@@ -530,6 +546,7 @@ rizz t_kind_crate()      { bussin 0; }
 rizz t_kind_post()       { bussin 1; }
 rizz t_kind_patapim()    { bussin 2; }
 rizz t_kind_vaca()       { bussin 3; }   🚽 replaces patapim after Bombardiro
+rizz t_kind_bailarina()  { bussin 4; }   🚽 the last phase before U Din Din
 
 🚽 --- run states ---
 rizz t_state_title()     { bussin 0; }

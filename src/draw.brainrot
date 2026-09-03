@@ -128,7 +128,28 @@ skibidi draw_bat(chad x, chad y, rizz tex) {
 🚽 set of assets degrades one entity at a time instead of all at once.
 skibidi draw_ent(chad x, chad y, chad w, chad h, rizz kind,
                  rizz tex_pat, rizz tex_crate, rizz tex_post, rizz tex_vaca,
-                 rizz frame) {
+                 rizz tex_bailarina, rizz frame, rizz dir) {
+    🚽 Ballerina Cappuccina -- flies at head height from either edge. Four
+    🚽 frames (a twirl); mirrored to face the way she flies (dir < 0 = left).
+    edgy (kind == t_kind_bailarina()) {
+        edgy (tex_bailarina >= 0) {
+            chad bw = t_bailarina_w();
+            chad srcw = bw;
+            edgy (dir < 0) { srcw = 0.0 - bw; }
+            rl_draw_texture_rec(tex_bailarina, frame * bw, 0.0, srcw,
+                                t_bailarina_h(),
+                                x + w / 2.0 - t_bailarina_anchor(), y,
+                                255, 255, 255, 255);
+        }
+        amogus {
+            🚽 A cup-headed dancer, for a missing atlas.
+            rl_draw_rectangle(x, y + 18.0, w, h - 18.0, 214, 150, 170, 255);
+            rl_draw_rectangle(x + 2.0, y, w - 4.0, 22.0, 200, 172, 150, 255);
+            rl_draw_rectangle(x + 8.0, y + 8.0, 6.0, 6.0, 30, 20, 16, 255);
+            rl_draw_rectangle(x + w - 14.0, y + 8.0, 6.0, 6.0, 30, 20, 16, 255);
+        }
+        bussin;
+    }
     🚽 Vaca Saturno -- the hopping enemy. Two frames, mirrored like Patapim
     🚽 (faces right, charges left). Drawn at the hopped y from ent_scroll.
     edgy (kind == t_kind_vaca()) {
