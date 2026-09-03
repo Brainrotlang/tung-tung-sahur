@@ -377,6 +377,7 @@ A full pool silently skips the spawn — which is correct behaviour, not an erro
 | 1 | Post | 40 × 96, grounded | jump |
 | 2 | Brr Brr Patapim | 64 × 64, grounded | bonk |
 | 3 | Vaca Saturno | 72 × 64, **flies at 3 heights** | §9.6 |
+| 4 | Ballerina Cappuccina | 40 × 84, grounded, **from both ways** | §9.7 |
 
 ### 8.2 Spacing is measured in time
 
@@ -537,6 +538,40 @@ once at a single band, so a safe posture always exists.
 
 The bands (`t_vaca_low_y` / `t_vaca_mid_y` / `t_vaca_high_y`) and their odds
 (`vaca_band_y`, ~45 / 35 / 20) are the knobs, all in `tune.brainrot` / `curve`.
+
+### 9.7 Ballerina Cappuccina — the last phase
+
+The Vaca sky is one phase. At **`t_bailarina_lvl()`** (LVL 8, one full phase
+past the croc) it ends: `pick_kind()` stops returning Vaca entirely and the
+**Ballerina Cappuccina** (kind 4) — a coffee-cup-headed dancer — takes over for
+the last stretch before U Din Din. The Vacas vanish; the sky is nothing but
+Ballerinas.
+
+She is a **grounded** enemy at Tung's own height, drifting at **a quarter of the
+Patapim's speed** (`t_bailarina_speed_frac × (world + enemy-close)`) — a slow
+gliding dancer, bonkable or jumpable. The difficulty is that she is the first
+enemy to **come from both directions**, chosen at random per spawn: some off the
+right edge moving left, some off the left edge (behind the player) moving right.
+`Ent` gains a `dir` field (−1 left, +1 right; every other entity leaves it −1 and
+never reads it), and `ent_scroll()` moves a Ballerina by `dir × ¼(world +
+enemy-close)` in her direction. Her despawn is **direction-aware** — a right-mover
+leaves off the right, a left-mover off the left — because a left-mover spawns at
+`t_spawn_x()`, which is *past* the right edge; testing the right edge for it would
+kill it on its first frame (which is exactly the bug that made every Ballerina
+appear to come from the left). They twirl **in sync**: `bailarina_frame` is keyed
+to world distance, not per-entity travel, because two Ballerinas going opposite
+ways share no single clock, and a synchronised corps is the nicer look.
+
+The bite is that **the bat only reaches forward** (`t_hitbox_dx` onward, to
+Tung's right). A right-to-left Ballerina you can bonk *or* jump, like a Patapim.
+A left-to-right one arrives from **behind** and is out of bat reach until it has
+already passed you — so it can only be **jumped**. That is the *jump-and-hit* of
+the phase: hit the ones coming at you, jump the ones coming from behind, and read
+which is which. She is `kind_is_jump` (jump-required) so `fair_clamp` always
+leaves a jump arc — a full jump to apex clears her (the §9.3 safe input) whichever
+way she is going. `unit_bailarina.brainrot` pins the handover, both directions,
+the Patapim-speed match, and that she is a normal bonkable-or-jumpable ground
+enemy. Knobs in `tune.brainrot`: `t_bailarina_lvl` (when the phase starts).
 
 ---
 

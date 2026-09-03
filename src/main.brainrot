@@ -39,6 +39,7 @@ skibidi main {
     rizz tex_swing = draw_load("assets/tung_swing.png");
     rizz tex_pat   = draw_load("assets/patapim_run.png");
     rizz tex_vaca  = draw_load("assets/vaca.png");
+    rizz tex_bailarina = draw_load("assets/bailarina.png");
     rizz tex_crate = draw_load("assets/crate.png");
     rizz tex_post  = draw_load("assets/post.png");
     rizz bg_far    = draw_load("assets/bg_far.png");
@@ -400,13 +401,18 @@ skibidi main {
             wd.spawn_t = wd.spawn_t - wd.dt;
             edgy (wd.spawn_t <= 0.0) {
                 🚽 Past the Bombardiro fight the ground obstacles are gone for
-                🚽 good -- only flying Vacas (DESIGN.md 9.6). This also clears any
-                🚽 crate/post that was still pending from before the fight.
-                edgy (wd.did_bombardiro) { wd.next_kind = t_kind_vaca(); }
+                🚽 good -- flying Vacas, then Ballerinas for the last phase
+                🚽 (DESIGN.md 9.6/9.7). This also clears any crate/post that was
+                🚽 still pending from before the fight.
+                edgy (wd.did_bombardiro) {
+                    edgy (lvl >= t_bailarina_lvl()) { wd.next_kind = t_kind_bailarina(); }
+                    amogus { wd.next_kind = t_kind_vaca(); }
+                }
 
                 cap is_enemy = L;
                 edgy (wd.next_kind == t_kind_patapim()) { is_enemy = W; }
                 edgy (wd.next_kind == t_kind_vaca()) { is_enemy = W; }
+                edgy (wd.next_kind == t_kind_bailarina()) { is_enemy = W; }
 
                 edgy (is_enemy) {
                     rizz slot = pool_free_slot(&enemies[0], MAX_EN);
@@ -417,6 +423,17 @@ skibidi main {
                         edgy (wd.next_kind == t_kind_vaca()) {
                             wd.seed = rng_next(wd.seed);
                             enemies[slot].y = vaca_band_y(wd.seed);
+                        }
+                        🚽 Ballerinas are grounded (ent_spawn's default y) but
+                        🚽 come from EITHER edge: a fresh draw picks the side, and
+                        🚽 a left spawn enters from the left edge moving right
+                        🚽 (DESIGN.md 9.7).
+                        edgy (wd.next_kind == t_kind_bailarina()) {
+                            wd.seed = rng_next(wd.seed);
+                            edgy (wd.seed % 2 == 0) {
+                                enemies[slot].dir = 1;
+                                enemies[slot].x = 0.0 - enemies[slot].w;
+                            }
                         }
                     }
                 }
@@ -652,20 +669,25 @@ skibidi main {
             edgy (obstacles[i].alive) {
                 draw_ent(obstacles[i].x, obstacles[i].y,
                          obstacles[i].w, obstacles[i].h, obstacles[i].kind,
-                         tex_pat, tex_crate, tex_post, tex_vaca, 0);
+                         tex_pat, tex_crate, tex_post, tex_vaca, tex_bailarina,
+                         0, 0 - 1);
             }
         }
         flex (rizz i = 0; i < MAX_EN; i = i + 1) {
             edgy (enemies[i].alive) {
-                🚽 Patapim and Vaca share the enemy pool but animate off their
-                🚽 own frame counters.
+                🚽 Enemies share the pool but animate off their own counters:
+                🚽 Patapim/Vaca off their travel, the Ballerina off world dist.
                 rizz efr = patapim_frame(&enemies[i]);
                 edgy (enemies[i].kind == t_kind_vaca()) {
                     efr = vaca_frame(&enemies[i]);
                 }
+                edgy (enemies[i].kind == t_kind_bailarina()) {
+                    efr = bailarina_frame(&wd);
+                }
                 draw_ent(enemies[i].x, enemies[i].y,
                          enemies[i].w, enemies[i].h, enemies[i].kind,
-                         tex_pat, tex_crate, tex_post, tex_vaca, efr);
+                         tex_pat, tex_crate, tex_post, tex_vaca, tex_bailarina,
+                         efr, enemies[i].dir);
             }
         }
 
@@ -766,6 +788,7 @@ skibidi main {
     draw_unload(tex_swing);
     draw_unload(tex_pat);
     draw_unload(tex_vaca);
+    draw_unload(tex_bailarina);
     draw_unload(tex_crate);
     draw_unload(tex_post);
     draw_unload(bg_far);

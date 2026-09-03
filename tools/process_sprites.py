@@ -149,6 +149,14 @@ CHARACTERS = {
     # ring and the trailing leg), same split as Patapim.
     "vaca":        ("vaca", ["vaca1.jpg", "vaca2.jpg"], 64),
 
+    # BALLERINA CAPPUCCINA -- the flying enemy of the last pre-U-Din-Din phase
+    # (DESIGN.md 9.7). A four-frame dance cycle, a coffee-cup head on a
+    # ballerina. Faces forward and is roughly symmetric, so the mirror by
+    # travel direction (draw_ent) reads as her turning. Height kind_h; the art
+    # (arms, tutu) overhangs the narrow body collision box.
+    "bailarina":   ("bailarina", ["bailarina1.png", "bailarina2.png",
+                                   "bailarina3.png", "bailarina4.png"], 84),
+
     "bomb":        ("bombardino", ["bomb.jpg"], 26),
     "blast":       ("bombardino", ["blast.jpg"], 34),
 
@@ -167,6 +175,7 @@ GROUPS = {
     "bombardiro": ["bombardiro"],
     "dindin": ["dindin"],
     "vaca": ["vaca"],
+    "bailarina": ["bailarina"],
     "combinacion": ["combinacion"],
     "bomb": ["bomb"],
     "blast": ["blast"],

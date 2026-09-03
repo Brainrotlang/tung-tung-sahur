@@ -1,0 +1,12 @@
+-- vaca phase then bailarina phase --
+below the level: all vaca W
+at the level: all bailarina, vacas gone W
+she is jump-required (kind_is_jump): W
+-- flies in from both edges --
+from right: alive W, moves left W, grounded W
+from left:  moves right W
+a quarter of patapim speed: W
+-- grounded: hit it or jump it --
+grounded player is hit:      W
+grounded bat reaches her:    W
+a jump to apex clears her:   W

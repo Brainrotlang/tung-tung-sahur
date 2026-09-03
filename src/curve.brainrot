@@ -32,6 +32,9 @@ chad spawn_gap(chad speed) {
 cap kind_is_jump(rizz kind) {
     edgy (kind == t_kind_patapim()) { bussin L; }
     edgy (kind == t_kind_vaca()) { bussin L; }
+    🚽 Ballerina flies at head height out of bat reach, so the safe input is a
+    🚽 full jump -- jump-required, so fair_clamp gives a jump arc between them.
+    edgy (kind == t_kind_bailarina()) { bussin W; }
     bussin W;
 }
 
@@ -63,7 +66,12 @@ chad fair_clamp(chad gap, rizz prev_kind, rizz kind) {
 🚽 ground obstacles STOP for good and the whole spawn table becomes the flying
 🚽 Vaca Saturno (DESIGN.md 9.6) -- crates, posts and Patapim are gone.
 rizz pick_kind(rizz draw, rizz lvl, cap after_croc) {
-    edgy (after_croc) { bussin t_kind_vaca(); }
+    edgy (after_croc) {
+        🚽 After a full Vaca phase the Ballerinas take over for the last phase
+        🚽 before U Din Din, and the Vacas vanish (DESIGN.md 9.7).
+        edgy (lvl >= t_bailarina_lvl()) { bussin t_kind_bailarina(); }
+        bussin t_kind_vaca();
+    }
     rizz r = draw % 100;
     edgy (r < 45) { bussin t_kind_patapim(); }
     edgy (lvl < 2) { bussin t_kind_crate(); }
@@ -85,6 +93,7 @@ chad kind_w(rizz kind) {
     edgy (kind == t_kind_crate())   { bussin 48.0; }
     edgy (kind == t_kind_post())    { bussin 40.0; }
     edgy (kind == t_kind_vaca())    { bussin 72.0; }
+    edgy (kind == t_kind_bailarina()) { bussin 40.0; }
     bussin 64.0;
 }
 
@@ -92,6 +101,7 @@ chad kind_h(rizz kind) {
     edgy (kind == t_kind_crate())   { bussin 48.0; }
     edgy (kind == t_kind_post())    { bussin 96.0; }
     edgy (kind == t_kind_vaca())    { bussin 64.0; }
+    edgy (kind == t_kind_bailarina()) { bussin 84.0; }
     bussin 64.0;
 }
 
