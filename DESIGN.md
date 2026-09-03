@@ -668,6 +668,14 @@ boss owns the pattern — and **you can still die**, hearts and all. `main`
 clears the obstacle, enemy, and bomb pools on `boss_start`: a boss is a duel,
 not chaos on chaos.
 
+They also **own the music**: when one of the three appears the main track
+(`tung-tung.ogg`) stops and `boss.ogg` plays, and when the boss falls — beaten,
+with the player alive — it swaps back. `main` reads the boss's fall as an edge
+(active last frame, gone this frame, `hearts > 0`); a death instead cuts every
+track on the way to game over. La Grande Combinasion is the exception — the
+final boss has its own `finalboss.ogg` behind the reveal (§12.6.10), so the
+swap is gated to a *non-Combinasion* boss being up.
+
 Tralalero and Bombardiro share the same three-cycle shape: *survive a phase →
 an opening appears → one bonk → repeat ×3*. U Din Din does not: `boss_tick()`
 routes him to his own tremble/charge/leave loop in `dindin_move()`. Three
@@ -1082,6 +1090,11 @@ OUT ──► TELL ──► WIND ──► SWING ──► chain? ─yes─► 
   **a jump is always the safe input** and §12.4 holds by construction. Facing is
   locked at WIND, so a player who runs *behind* him during the windup makes the
   swing whiff — the second dodge, and the reason horizontal movement matters.
+- **He is audible.** Two of those edges play a sound, off the same state
+  machine in `main` (gated to a fight already live last frame, so the reveal's
+  first materialise stays silent — the name-card boom owns it): every teleport
+  (the blink to **OUT**) plays `warp.ogg`, and every bash (entering **SWING**)
+  plays `explosion.ogg`. One sound per transition, never per frame.
 - **RECOVER** is the only window `boss_vulnerable()` is true, and it opens only
   after a *chain* of `combi_chain()` swings — 1 in phase 1, 2 in phase 2, 3 in
   phase 3. Punishing it means being in bat range (`combi_in_bat()`, off Tung's
@@ -1108,16 +1121,26 @@ faced by `dir` like U Din Din), behind the usual `tex >= 0` fallback.
 ## 13. Run structure
 
 ```
-TITLE ──ENTER──► RUN ──dist >= SAHUR_DISTANCE──► SAHUR (win) ──► unlocks ENDLESS
-                  │
-                  └──hearts == 0──► GAME OVER ──ENTER──► RUN
+TITLE ──ENTER──► DIFFICULTY ──ENTER──► RUN ──dist >= SAHUR_DISTANCE──► SAHUR (win)
+                     ▲                   │                                  │
+                     └── ENTER ──────────┴──hearts == 0──► GAME OVER ────────┘
+                                (play again re-picks difficulty)
 ```
 
 - **Title.** Literal text, so it's M0. The `TUNG... TUNG... TUNG... SAHUR` beat
-  plays out on a timer — four words — then a controls line ("SPACE to jump, X
-  to TUNG, ESC to quit") and a highlighted **ENTER to start playing**. ENTER
-  begins the run from both the title and game over, so the jump key is not
-  also the start key. Game-over is **ENTER to play again**.
+  plays out on a timer — four words — then a controls line and a highlighted
+  **ENTER to start playing**. ENTER opens the difficulty menu (not the run) from
+  the title, game over, and win, so the jump key is not also the start key.
+- **Difficulty (`t_state_difficulty`).** Between the title/over/win screens and a
+  run: five rows, easiest to hardest, each the **number of hearts the run starts
+  with** — n00b 10, easy 5, normal 3, hard 2, PRO 1 (`t_diff_*`). UP/DOWN move,
+  ENTER starts, ESC backs to the title. The chosen count is applied in `do_reset`
+  (`pl.hearts = start_hearts`), so it is the only thing difficulty changes. The
+  menu is handled *before* the title/over/win transitions in the frame so the
+  single ENTER that opens it cannot also confirm it (raylib's `is_key_pressed`
+  reads true for every caller that frame); it takes input the frame after it
+  opens. Pause → RESTART keeps the current difficulty (a mid-run restart, not a
+  fresh start), so it skips the menu.
 - **Sahur.** At `SAHUR_DISTANCE`, the sky finishes its turn and the run ends on
   `SAHUR SAVED / NEIGHBOURHOOD WOKEN / W`.
 - **Endless Schizo Mode.** Unlocked by a Sahur clear, selectable from the title
