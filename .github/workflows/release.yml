@@ -47,7 +47,7 @@ on:
       brainrot_ref:
         description: "Brainrotlang/brainrot ref to build every bundle from (tag/branch/SHA)"
         type: string
-        default: "v0.5.1"
+        default: "v0.5.2"
       raylib_ref:
         description: "raysan5/raylib tag to build/vendor (Linux/macOS)"
         type: string
@@ -67,10 +67,10 @@ concurrency:
 env:
   # One pinned brainrot release for EVERY platform, so a tag push and a manual
   # dispatch build the exact same runtime and a shipped bundle is traceable to
-  # one interpreter commit. v0.5.1 is the first release with native Windows
-  # (#337) and raylib.dll (#342); it also satisfies the game's Makefile probe
-  # (needs >= v0.3.0). Bump deliberately.
-  BRAINROT_REF: ${{ github.event.inputs.brainrot_ref || 'v0.5.1' }}
+  # one interpreter commit. v0.5.2 is the pinned default; native Windows (#337)
+  # and raylib.dll (#342) landed in v0.5.1, and it satisfies the game's Makefile
+  # probe (needs >= v0.3.0). Bump deliberately.
+  BRAINROT_REF: ${{ github.event.inputs.brainrot_ref || 'v0.5.2' }}
   RAYLIB_REF: ${{ github.event.inputs.raylib_ref || '5.5' }}
 
 jobs:
