@@ -29,12 +29,31 @@ design, the verified engine constraints, and the upstream dependency list.
 
 ## Controls
 
+Playing:
+
 | | |
 | --- | --- |
-| `SPACE` / `UP` | jump |
-| `X` / `Z` | TUNG (bat) |
-| `R` / `SPACE` | run again, after a game over |
-| `ESC` | quit |
+| `SPACE` / `↑` | jump |
+| `X` / `Z` / `W` | TUNG (swing the bat) |
+| `←` `A` / `→` `D` | move left / right — final boss fight only, where Tung is unpinned |
+
+Menus (title, difficulty, pause, game over, win):
+
+| | |
+| --- | --- |
+| `↑` / `↓` | move the selection |
+| `ENTER` | confirm — start a run, pick a difficulty, or play again |
+
+Anytime:
+
+| | |
+| --- | --- |
+| `ESC` | pause during a run (again to resume) · back out of the difficulty menu |
+| `F11` | toggle fullscreen |
+
+`ENTER` on the title opens the **difficulty** menu — n00b (10 hearts), easy (5),
+normal (3), hard (2), PRO (1) — then starts the run. Pausing offers **RESUME /
+RESTART / QUIT**; RESTART keeps the current difficulty.
 
 ## Running it
 
@@ -52,9 +71,9 @@ raylib module, its `libraylib`, and all the assets, no toolchain required:
 
 Extract the archive and run the launcher — `play.sh` on Linux/macOS,
 `play.bat` (double-click, or run it) on Windows. `SHA256SUMS.txt` verifies the
-download. The bundles are built against a pinned **brainrot v0.5.1** — the first
-release with a native Windows interpreter and native `#cooked` modules
-([brainrot#337](https://github.com/Brainrotlang/brainrot/issues/337)).
+download. The bundles are built against a pinned **brainrot v0.5.2** (native
+Windows and native `#cooked` modules landed in v0.5.1,
+[brainrot#337](https://github.com/Brainrotlang/brainrot/issues/337)).
 
 ### Build from source
 

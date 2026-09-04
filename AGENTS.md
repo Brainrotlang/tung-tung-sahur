@@ -20,7 +20,7 @@ The game runs on the `brainrot` interpreter plus the `rayrot` module; clone
 [`brainrot`](https://github.com/Brainrotlang/brainrot) **next to this repo** and
 build both. `make` probes the interpreter and refuses one that's too old
 (**>= v0.3.0** for the language features the game uses; the release bundles pin
-**v0.5.1**, the first with native Windows):
+**v0.5.2** — native Windows landed in v0.5.1):
 
 ```bash
 git clone https://github.com/Brainrotlang/brainrot ../brainrot

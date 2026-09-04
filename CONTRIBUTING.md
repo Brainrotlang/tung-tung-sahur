@@ -20,8 +20,8 @@ is `DESIGN.md` §15. A PR that adds C, a build step that compiles C, or a vendor
 The game runs on the `brainrot` interpreter + the `rayrot` module. Clone
 `brainrot` **next to this repo** and build both. `make` probes the interpreter
 and tells you (and why) if it's too old — **>= v0.3.0** for the language
-features the game uses; the release bundles pin **v0.5.1**, the first with
-native Windows:
+features the game uses; the release bundles pin **v0.5.2** (native Windows
+landed in v0.5.1):
 
 ```bash
 git clone https://github.com/Brainrotlang/brainrot ../brainrot
